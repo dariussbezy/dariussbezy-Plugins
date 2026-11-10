@@ -7,6 +7,7 @@ import {
   NativeAction as CustomAction,
   rowIcon,
   settingsContent,
+  useSheetBottomPadding,
   NativeGuide as KitGuide,
 } from "../../../shared/native-ui";
 import AccessPanel from "./access-panel";
@@ -249,17 +250,12 @@ const implementation = (() => {
   /* ---- sheet (info card) ---- */
   function sheetParts() {
     if (partsCache && partsCache.ActionSheet) return partsCache;
-    let ActionSheet = null,
-      Close = null;
+    let ActionSheet = null;
     try {
       const a = findByProps("ActionSheet");
       ActionSheet = (a && a.ActionSheet) || null;
     } catch (_) {}
-    try {
-      const c = findByProps("ActionSheetCloseButton");
-      Close = (c && c.ActionSheetCloseButton) || null;
-    } catch (_) {}
-    partsCache = { ActionSheet, Close };
+    partsCache = { ActionSheet };
     return partsCache;
   }
   function closeSheet() {
@@ -326,6 +322,7 @@ const implementation = (() => {
     const ch = getChannel(sheetState.channelId);
     const [active, setActive] = React.useState(null);
     const [contentHeight, setContentHeight] = React.useState(360);
+    const bottomPadding = useSheetBottomPadding();
     const { height: windowHeight } = RN.useWindowDimensions();
     const cap = Math.round(windowHeight * (active ? 0.8 : 0.58));
     const height = Math.min(contentHeight, cap);
@@ -334,7 +331,7 @@ const implementation = (() => {
       : [["Channel", "This channel is no longer available.", "chat"]];
     const body = h(
       Design.Stack,
-      { spacing: 10, style: { paddingBottom: 4 } },
+      { spacing: 10, style: { paddingBottom: bottomPadding } },
       h(Design.BottomSheetTitleHeader, {
         title: "Hidden channel",
         subtitle: channelLabel(ch),

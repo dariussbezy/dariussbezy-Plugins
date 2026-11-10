@@ -24,8 +24,6 @@ export function showToast(text: string) {
 export function findByProps(...props: string[]): Module | undefined {
   if (props.includes("openLazy")) return ActionSheetActionCreators;
   if (props.includes("ActionSheet")) return Design;
-  if (props.includes("ActionSheetCloseButton")) return Design;
-  if (props.includes("IconButton")) return Design;
   if (props.includes("getAPIBaseURL")) {
     const [http] = lookupModule(withProps("HTTP"));
     if ((http as Module)?.HTTP?.get) return (http as Module).HTTP;

@@ -7,6 +7,7 @@ import {
   NativeIconControl,
   rowIcon,
   settingsContent,
+  useSheetBottomPadding,
   NativeGuide as KitGuide,
 } from "../../../shared/native-ui";
 import * as React from "react";
@@ -479,17 +480,12 @@ const implementation = (() => {
   /* ---- jump + sheet ---- */
   function sheetParts() {
     if (partsCache && partsCache.ActionSheet) return partsCache;
-    let ActionSheet = null,
-      Close = null;
+    let ActionSheet = null;
     try {
       const a = findByProps("ActionSheet");
       ActionSheet = (a && a.ActionSheet) || null;
     } catch (_) {}
-    try {
-      const c = findByProps("ActionSheetCloseButton");
-      Close = (c && c.ActionSheetCloseButton) || null;
-    } catch (_) {}
-    partsCache = { ActionSheet, Close };
+    partsCache = { ActionSheet };
     return partsCache;
   }
   function closeSheet() {
@@ -555,6 +551,7 @@ const implementation = (() => {
     React.useEffect(() => {
       resolveRows(rows);
     }, [rows.map((r) => r.c + ":" + (r.needs ? 1 : 0)).join("|")]);
+    const bottomPadding = useSheetBottomPadding();
     const subtitle = rows.length
       ? total +
         (total === 1 ? " unread ping" : " unread pings") +
@@ -564,7 +561,7 @@ const implementation = (() => {
       : "You are all caught up";
     const body = h(
       Design.Stack,
-      { spacing: 12, style: { paddingBottom: 16 } },
+      { spacing: 12, style: { paddingBottom: bottomPadding } },
       h(Design.BottomSheetTitleHeader, { title: "Pings", subtitle }),
       rows.length
         ? h(
@@ -583,7 +580,7 @@ const implementation = (() => {
               })),
             ),
           )
-        : h(Design.Text, null, "No unread pings right now."),
+        : null,
     );
     return parts.ActionSheet ? h(parts.ActionSheet, null, body) : body;
   }

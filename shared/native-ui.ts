@@ -1,3 +1,4 @@
+import { ReactNativeSafeAreaContext } from "@valenced/externals/react-native-safe-area-context";
 import { Image, Pressable, View } from "react-native";
 import { getAssetIdByName } from "@valenced/assets";
 import { createElement as h, isValidElement } from "react";
@@ -121,6 +122,11 @@ export function NativeGuide({ title, steps }: {
   });
 }
 
+export function useSheetBottomPadding() {
+  const { bottom } = ReactNativeSafeAreaContext.useSafeAreaInsets();
+  return Math.max(24, bottom + 8);
+}
+
 export function NativeIconControl({ icon, iconColor, fallback, label, holdLabel, onPress, onLongPress, variant, disabled }: {
   icon?: number;
   iconColor?: string;
@@ -158,5 +164,4 @@ export function NativeIconControl({ icon, iconColor, fallback, label, holdLabel,
         variant: "text-lg/semibold",
         style: { width: 36, height: 36, textAlign: "center", textAlignVertical: "center" },
       }, fallback)));
-
 }

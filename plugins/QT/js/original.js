@@ -9,6 +9,7 @@ import {
   NativeIconControl,
   rowIcon,
   settingsContent,
+  useSheetBottomPadding,
   NativeGuide as KitGuide,
   NativeInput as CustomInput,
 } from "../../../shared/native-ui";
@@ -1569,7 +1570,9 @@ function BulkMessageSelector(props) {
     setBusy(true);
     props.onTranslate(chosen);
   };
-  const bodyHeight = Math.round(RN.Dimensions.get("window").height * 0.78);
+  const bottomPadding = useSheetBottomPadding();
+  const { height } = RN.useWindowDimensions();
+  const bodyHeight = Math.round(height * 0.78);
   return h(
     TranslationSheet,
     {
@@ -1580,7 +1583,7 @@ function BulkMessageSelector(props) {
     },
     h(
       Design.Stack,
-      { style: { height: bodyHeight }, spacing: 8 },
+      { style: { height: bodyHeight, paddingBottom: bottomPadding }, spacing: 8 },
       h(Design.Text, { variant: "text-sm/normal" },
         selected.length + " selected · " + messages.length + " loaded · newest first",
       ),
@@ -2199,6 +2202,9 @@ function TranslateButton(props) {
   const [busy, setBusy] = React.useState(false);
   const [panelOpen, setPanelOpen] = React.useState(false);
   const [panelPage, setPanelPage] = React.useState("main");
+  const [measuredPanelHeight, setMeasuredPanelHeight] = React.useState(0);
+  const bottomPadding = useSheetBottomPadding();
+  const { height: windowHeight } = RN.useWindowDimensions();
   const [source, setSource] = React.useState(
     getChatLanguages().sourceOut || "auto",
   );
@@ -2484,7 +2490,7 @@ function TranslateButton(props) {
           favorites.length
             ? h(
                 Design.Stack,
-                { key: "favorites", spacing: 6, style: { marginVertical: 12 } },
+                { key: "favorites", spacing: 6, style: { marginTop: 10, marginBottom: 6 } },
                 h(Design.Text, { variant: "text-sm/medium", color: "text-muted" }, "Quick languages"),
                 h(
                   RN.View,
@@ -2564,11 +2570,11 @@ function TranslateButton(props) {
             ),
           ),
         ];
-  const height = RN.Dimensions.get("window").height;
-  const panelHeight = Math.min(Math.round(height * 0.78),
-    panelPage === "main" ? (messageRequest ? 315 : 400) : Math.round(height * 0.68));
-  const footer = panelPage === "main"
-    ? h(Design.Stack, { spacing: 6, style: { paddingTop: 8 } },
+  const isMainPanel = panelPage === "main";
+  const panelHeight = Math.min(Math.round(windowHeight * 0.81),
+    isMainPanel ? measuredPanelHeight || 390 : Math.round(windowHeight * 0.68));
+  const footer = isMainPanel
+    ? h(Design.Stack, { spacing: 6, style: { paddingTop: 2 } },
         h(Design.Button, {
           text: busy ? "Translating…" : (messageRequest ? "Translate once" : "Activate once") + " · " + langName(target),
           size: "sm",
@@ -2607,8 +2613,10 @@ function TranslateButton(props) {
     h(NativeIconControl, {
       icon: iconId,
       fallback: "文",
-      variant: "tertiary",
-      iconColor: (translateSendMode ? highlightedTranslate : !!armed) ? ACCENT : paletteNow.text,
+      variant: props.position === "actions" ? (armed ? "primary" : "secondary") : "tertiary",
+      iconColor: props.position === "send"
+        ? (translateSendMode ? highlightedTranslate : !!armed) ? ACCENT : paletteNow.text
+        : undefined,
       label: translateSendMode ? "Translate draft" : "Translate message",
       holdLabel: "Open translation options",
       disabled: busy,
@@ -2628,13 +2636,22 @@ function TranslateButton(props) {
           },
           h(
             RN.View,
-            { style: { height: panelHeight } },
+            { style: { height: panelHeight, paddingBottom: isMainPanel ? 0 : bottomPadding } },
             h(
               BottomSheet.BottomSheetScrollView,
-              { keyboardShouldPersistTaps: "handled", style: { flex: 1 } },
+              {
+                key: isMainPanel ? "main" : "languages",
+                keyboardShouldPersistTaps: "handled",
+                style: { flex: 1 },
+                contentContainerStyle: isMainPanel ? { paddingBottom: bottomPadding } : undefined,
+                onContentSizeChange: isMainPanel
+                  ? (_width, measured) => { if (measured > 0) setMeasuredPanelHeight(Math.ceil(measured)); }
+                  : undefined,
+              },
               ...panelBody,
+              isMainPanel ? footer : null,
             ),
-            footer,
+            isMainPanel ? null : footer,
           ),
         )
       : null,

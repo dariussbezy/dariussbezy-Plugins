@@ -1,3 +1,5 @@
+import { BottomSheet } from "@valenced/externals/gorhom";
+import { useSheetBottomPadding } from "../../../shared/native-ui";
 import * as React from "react";
 import * as RN from "react-native";
 type AnyModule = Record<string, any>;
@@ -26,8 +28,7 @@ export function showToast(text: string) {
 export function findByProps(...props: string[]): Module | undefined {
   if (props.includes("showSimpleActionSheet")) return { showSimpleActionSheet };
   if (props.includes("openLazy")) return ActionSheetActionCreators;
-  if (props.some((p) => ["ActionSheet", "ActionSheetCloseButton"].includes(p)))
-    return Design;
+  if (props.includes("ActionSheet")) return Design;
   const key = props.join("|");
   if (cache.has(key)) return cache.get(key);
   const [value] = lookupModule(withProps(...(props as [string, ...string[]])));
@@ -94,12 +95,9 @@ export function CompactSheet({
 }) {
   const cap = Math.round(RN.Dimensions.get("window").height * maxRatio);
   const [height, setHeight] = React.useState(Math.min(initialHeight, cap));
-  const Sheet = Design.ActionSheet as unknown as React.ComponentType<any>;
-  const Scroll =
-    findByProps("BottomSheetScrollView")?.BottomSheetScrollView ||
-    RN.ScrollView;
+  const bottomPadding = useSheetBottomPadding();
   return React.createElement(
-    Sheet,
+    Design.ActionSheet,
     {
       scrollable: true,
       startExpanded: false,
@@ -108,10 +106,10 @@ export function CompactSheet({
       maxHeight: cap + 32,
     },
     React.createElement(
-      Scroll,
+      BottomSheet.BottomSheetScrollView,
       {
         style: { height, flexGrow: 0 },
-        contentContainerStyle: { paddingBottom: 8 },
+        contentContainerStyle: { paddingBottom: bottomPadding },
         onContentSizeChange: (_width: number, measured: number) => {
           if (measured > 0) setHeight(Math.min(Math.ceil(measured), cap));
         },

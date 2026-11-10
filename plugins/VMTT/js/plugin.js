@@ -396,17 +396,12 @@ const implementation = (() => {
   /* ---- main action ---- */
   function sheetParts() {
     if (partsCache && partsCache.ActionSheet) return partsCache;
-    let ActionSheet = null,
-      Close = null;
+    let ActionSheet = null;
     try {
       const a = findByProps("ActionSheet");
       ActionSheet = (a && a.ActionSheet) || null;
     } catch (_) {}
-    try {
-      const c = findByProps("ActionSheetCloseButton");
-      Close = (c && c.ActionSheetCloseButton) || null;
-    } catch (_) {}
-    partsCache = { ActionSheet, Close };
+    partsCache = { ActionSheet };
     return partsCache;
   }
   const lazySheets = () =>
