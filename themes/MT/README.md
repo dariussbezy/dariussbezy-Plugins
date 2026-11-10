@@ -40,7 +40,7 @@ To return to Discord's appearance, choose the default colors, font and icons in 
 - [refact0r](https://github.com/refact0r/midnight-discord): original Midnight theme. This adaptation uses the customized `midnight-auto-v2_theme.css` in this repository.
 - [Figtree](https://github.com/google/fonts/tree/main/ofl/figtree), by Erik Kennedy: bundled under the SIL Open Font License. The required notice is included with the font files.
 - [Font Awesome](https://fontawesome.com/license/free): original moon icon, converted to PNG for mobile. Icon attribution and license are included in the asset notices.
-- Dariuss: mobile adaptation.
+- dariuss: mobile adaptation.
 
 Mobile sources are in [`js`](js); installation files are in the repository [pool](../../pool). Version: **1.0.0-beta**. Android device testing and iOS device testing are still pending; local tests cover registration, palette values, React rendering, Yoga layout geometry, icon isolation and packaging.
 

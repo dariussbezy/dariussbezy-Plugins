@@ -1,6 +1,6 @@
 {
-  "name": "Dariussbezy's Plugins",
-  "description": "Dariussbezy's plugins for Valenced.",
+  "name": "dariussbezy's Plugins",
+  "description": "dariussbezy's plugins for Valenced.",
   "channels": {
     "dariuss.quick-translate": {
       "beta": "1.0.0-beta"

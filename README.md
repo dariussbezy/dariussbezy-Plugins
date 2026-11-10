@@ -1,6 +1,6 @@
-# Dariussbezy's Plugins
+# dariussbezy's Plugins
 
-All of Dariuss' Valenced plugins and the Midnight mobile theme in one repository, based on the [official Valenced plugin template](https://github.com/Valenced/valenced-plugin-template).
+All of dariuss' Valenced plugins and the Midnight mobile theme in one repository, based on the [official Valenced plugin template](https://github.com/Valenced/valenced-plugin-template).
 
 ## Install
 
@@ -30,6 +30,6 @@ Midnight's colors, Figtree font and moon icon are selected separately under **Va
 
 ## Credits
 
-Plugin adaptations by Dariuss with Codex. Midnight was originally created by [refact0r](https://github.com/refact0r/midnight-discord), with Figtree by Erik Kennedy and the Font Awesome moon icon. Required third-party notices are included with Midnight's assets.
+Plugin adaptations by dariuss with Codex. Midnight was originally created by [refact0r](https://github.com/refact0r/midnight-discord), with Figtree by Erik Kennedy and the Font Awesome moon icon. Required third-party notices are included with Midnight's assets.
 
 The previous individual repositories remain available for historical links; ongoing development is consolidated here.

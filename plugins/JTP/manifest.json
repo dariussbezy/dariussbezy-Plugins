@@ -3,7 +3,7 @@
   "id": "dariuss.jump-to-ping",
   "name": "Jump to Ping",
   "description": "Find unread mentions, replies and DMs, then jump straight to the message.",
-  "author": "Dariuss",
+  "author": "dariuss",
   "icon": "AtIcon",
   "version": "1.0.0-beta",
   "dependencies": {
