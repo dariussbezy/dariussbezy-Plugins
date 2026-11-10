@@ -17,7 +17,7 @@ Choose the plugins you want from the **beta** channel. Existing plugin IDs and v
 | Name | Description | Source |
 | --- | --- | --- |
 | [Quick Translate](plugins/QT/README.md) | Translate messages and drafts with Google or DeepL. | [`plugins/QT`](plugins/QT) |
-| [Jump to Ping](plugins/JTP/README.md) | Find unread mentions, replies and DMs, then jump straight to the message. | [`plugins/JTP`](plugins/JTP) |
+| [Jump to Ping](plugins/JTP/README.md) | Find unread mentions, replies and DMs, then jump straight to the message from the YOUBAR. | [`plugins/JTP`](plugins/JTP) |
 | [Plugin Monitor](plugins/PM/README.md) | Measure JavaScript responsiveness and compare plugin configurations. | [`plugins/PM`](plugins/PM) |
 | [Show Hidden Channels](plugins/SHC/README.md) | Show hidden channel metadata with lock indicators and an information card. | [`plugins/SHC`](plugins/SHC) |
 | [Voice Messages To Text](plugins/VMTT/README.md) | Transcribe voice messages below the audio, with a free server or Groq. | [`plugins/VMTT`](plugins/VMTT) |
