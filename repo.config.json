@@ -1,6 +1,6 @@
 {
-  "name": "dariuss' Valenced Plugins & Themes",
-  "description": "Quick Translate, Jump to Ping, Plugin Monitor, Show Hidden Channels, Voice Messages to Text, Liquid Glass YOUBAR and Midnight Mobile.",
+  "name": "Dariuss Plugins",
+  "description": "Dariussbezy's plugins for Valenced.",
   "channels": {
     "dariuss.quick-translate": {
       "beta": "1.0.0-beta"
