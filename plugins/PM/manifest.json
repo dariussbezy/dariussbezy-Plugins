@@ -3,7 +3,7 @@
   "id": "dariuss.performance-monitor",
   "name": "Plugin Monitor",
   "description": "Measure JavaScript responsiveness and compare plugin configurations.",
-  "author": "dariuss",
+  "author": "Dariuss",
   "icon": "ClockIcon",
   "version": "1.0.0-beta",
   "dependencies": {

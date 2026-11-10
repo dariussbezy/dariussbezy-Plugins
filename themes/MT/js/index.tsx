@@ -8,7 +8,7 @@ export default plugin<{ jsonStorage: { enhancedLayout: boolean } }>({
   jsonStorage: { load: true, default: { enhancedLayout: true } },
   preInit({ themes }) {
     themes.registerGroup("midnight", {
-      name: "Midnight", description: "Midnight by refact0r, adapted for mobile by dariuss.",
+      name: "Midnight", description: "Midnight by refact0r, adapted for mobile by Dariuss.",
     });
     themes.registerTheme("midnight", "auto", {
       name: "Midnight (Auto)",

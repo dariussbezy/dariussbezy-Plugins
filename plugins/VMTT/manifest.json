@@ -3,7 +3,7 @@
   "id": "dariuss.voice-messages-to-text",
   "name": "Voice Messages To Text",
   "description": "Transcribe voice messages below the audio, with a free server or Groq.",
-  "author": "dariuss",
+  "author": "Dariuss",
   "icon": "MicrophoneIcon",
   "version": "1.0.0-beta",
   "dependencies": {

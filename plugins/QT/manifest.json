@@ -3,7 +3,7 @@
   "id": "dariuss.quick-translate",
   "name": "Quick Translate",
   "description": "Translate messages and drafts with Google or DeepL.",
-  "author": "dariuss",
+  "author": "Dariuss",
   "icon": "LanguageIcon",
   "version": "1.0.0-beta",
   "dependencies": {

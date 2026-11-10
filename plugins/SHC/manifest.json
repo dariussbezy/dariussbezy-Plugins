@@ -3,7 +3,7 @@
   "id": "dariuss.show-hidden-channels",
   "name": "Show Hidden Channels",
   "description": "Show hidden channel metadata with lock indicators and an information card.",
-  "author": "dariuss",
+  "author": "Dariuss",
   "icon": "LockIcon",
   "version": "1.0.0-beta",
   "dependencies": {
