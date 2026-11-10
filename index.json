@@ -27,30 +27,6 @@
         }
       }
     },
-    "dariuss.liquid-glass-youbar": {
-      "name": "Liquid Glass YOUBAR",
-      "description": "A glass finish for the Discord bottom dock. Recovery build 3.",
-      "author": "dariuss",
-      "icon": "SparklesIcon",
-      "channels": {
-        "beta": "1.0.0-beta"
-      },
-      "versions": {
-        "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.liquid-glass-youbar@1.0.0-beta.zip",
-          "sha256": "30449a4ab14b7597f4f29a66e9d39a12a834c0d17636a6f51aa1bfe57571bec9",
-          "size": 6874,
-          "dependencies": {
-            "valenced.api": {
-              "version": ">=1 <2"
-            },
-            "discord": {
-              "version": ">=352.6 <352.7"
-            }
-          }
-        }
-      }
-    },
     "dariuss.midnight-theme": {
       "name": "Midnight Mobile",
       "description": "Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon.",
@@ -80,30 +56,6 @@
               "version": ">=1.0.1 <2"
             },
             "valenced.settings.themes": {}
-          }
-        }
-      }
-    },
-    "dariuss.performance-monitor": {
-      "name": "Plugin Monitor",
-      "description": "Measure JavaScript responsiveness and compare plugin configurations.",
-      "author": "dariuss",
-      "icon": "ClockIcon",
-      "channels": {
-        "beta": "1.0.0-beta"
-      },
-      "versions": {
-        "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.performance-monitor@1.0.0-beta.zip",
-          "sha256": "fc3b322066717c82e6c5bef36b2aeaa8cdc0bebcfd21c7416d7fff9e0490da41",
-          "size": 3887,
-          "dependencies": {
-            "valenced.api": {
-              "version": ">=1 <2"
-            },
-            "discord": {
-              "version": ">=352.6 <352.7"
-            }
           }
         }
       }

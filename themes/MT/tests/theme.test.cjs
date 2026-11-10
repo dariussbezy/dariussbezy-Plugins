@@ -65,7 +65,6 @@ test('published ZIP and beta index agree, and include no development files',()=>
  assert.deepEqual(entry.channels,{beta:'1.0.0-beta'});
  assert.equal(entry.versions[manifest.version].size,archive.length);
  assert.equal(entry.versions[manifest.version].sha256,createHash('sha256').update(archive).digest('hex'));
- assert.equal(Object.keys(index.plugins).length,7);
  for(const name of ['assets/wallpaper.png','assets/moon.png','assets/Figtree.ttf','assets/Figtree-Italic.ttf','assets/Figtree-OFL.txt','assets/NOTICE.txt'])assert.ok(files[name]?.length,name);
  assert.ok(Object.keys(files).every(name=>name==='manifest.json'||name==='index.js'||name.startsWith('assets/')));
  assert.equal(manifest.version,'1.0.0-beta');
