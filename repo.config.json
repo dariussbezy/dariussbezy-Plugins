@@ -3,19 +3,19 @@
   "description": "dariussbezy's plugins for Valenced.",
   "channels": {
     "dariuss.quick-translate": {
-      "beta": "1.0.0-beta"
+      "beta": "1.0.1-beta"
     },
     "dariuss.jump-to-ping": {
-      "beta": "1.0.0-beta"
+      "beta": "1.0.1-beta"
     },
     "dariuss.show-hidden-channels": {
-      "beta": "1.0.0-beta"
+      "beta": "1.0.1-beta"
     },
     "dariuss.voice-messages-to-text": {
-      "beta": "1.0.0-beta"
+      "beta": "1.0.1-beta"
     },
     "dariuss.midnight-theme": {
-      "beta": "1.0.0-beta"
+      "beta": "1.0.1-beta"
     }
   }
 }

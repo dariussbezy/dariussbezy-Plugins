@@ -38,7 +38,7 @@ const settingsStore = createPluginStore("voicetotext", {
 });
 const implementation = (() => {
   "use strict";
-  const BUILD = "1.0.0-beta";
+  const BUILD = "1.0.1-beta";
   const SHEET_KEY = "voice-transcript";
   const FLAG_VOICE = 8192;
   const ACCENT = "#8EA1FF";

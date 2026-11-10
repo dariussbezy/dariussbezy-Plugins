@@ -50,7 +50,7 @@ const ChannelStore = store("ChannelStore"),
 /* ------------------------------------------------------------------ */
 /* constants + settings store                                          */
 /* ------------------------------------------------------------------ */
-const BUILD = "1.0.0-beta";
+const BUILD = "1.0.1-beta";
 const ACCENT = "#8EA1FF";
 const MAX_TRANSLATIONS = 300;
 const MAX_CACHE = 200;
@@ -4310,7 +4310,7 @@ const originalPlugin = {
   description:
     "Translate incoming and outgoing messages with Google Translate or DeepL.",
   id: "quicktranslate",
-  version: "1.0.0-beta",
+  version: "1.0.1-beta",
   start() {
     renderErrors = 0;
     pendingRequestCount = 0;

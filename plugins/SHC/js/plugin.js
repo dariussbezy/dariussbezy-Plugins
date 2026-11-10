@@ -29,7 +29,7 @@ const settingsStore = createPluginStore("showhiddenchannels", {
   showPopup: true,
 });
 const implementation = (() => {
-  const BUILD = "1.0.0-beta";
+  const BUILD = "1.0.1-beta";
   const SHEET_KEY = "hidden-channel-info";
   // text, voice, category, announcement, stage, forum, media
   const CHANNEL_TYPES = {

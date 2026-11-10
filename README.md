@@ -22,7 +22,7 @@ Choose the plugins you want from the **beta** channel. Existing plugin IDs and v
 | [Voice Messages To Text](plugins/VMTT/README.md) | Transcribe voice messages below the audio, with a free server or Groq. | [`plugins/VMTT`](plugins/VMTT) |
 | [Midnight Mobile](themes/MT/README.md) | Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon. | [`themes/MT`](themes/MT) |
 
-All current versions are **1.0.0-beta**. Only the beta channel is published.
+All current versions are **1.0.1-beta**. Only the beta channel is published.
 
 Midnight's colors, Figtree font and moon icon are selected separately under **Valenced Settings → Themes**. Font and icon changes require a restart.
 

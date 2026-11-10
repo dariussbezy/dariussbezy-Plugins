@@ -57,17 +57,17 @@ module.exports={load,base};
 test('published ZIP and beta index agree, and include no development files',()=>{
  const {unzipSync,strFromU8}=require('fflate');
  const {createHash}=require('node:crypto');
- const archive=fs.readFileSync(path.join(base,'../../pool/dariuss.midnight-theme@1.0.0-beta.zip'));
+ const archive=fs.readFileSync(path.join(base,'../../pool/dariuss.midnight-theme@1.0.1-beta.zip'));
  const files=unzipSync(archive);
  const manifest=JSON.parse(strFromU8(files['manifest.json']));
  const index=JSON.parse(fs.readFileSync(path.join(base,'../../index.json')));
  const entry=index.plugins[manifest.id];
- assert.deepEqual(entry.channels,{beta:'1.0.0-beta'});
+ assert.deepEqual(entry.channels,{beta:'1.0.1-beta'});
  assert.equal(entry.versions[manifest.version].size,archive.length);
  assert.equal(entry.versions[manifest.version].sha256,createHash('sha256').update(archive).digest('hex'));
  for(const name of ['assets/wallpaper.png','assets/moon.png','assets/Figtree.ttf','assets/Figtree-Italic.ttf','assets/Figtree-OFL.txt','assets/NOTICE.txt'])assert.ok(files[name]?.length,name);
  assert.ok(Object.keys(files).every(name=>name==='manifest.json'||name==='index.js'||name.startsWith('assets/')));
- assert.equal(manifest.version,'1.0.0-beta');
+ assert.equal(manifest.version,'1.0.1-beta');
  assert.equal(manifest.dependencies['valenced.api'].version,'>=1 <2');
 });
 

@@ -1,6 +1,6 @@
 # Jump to Ping for Valenced
 
-Find unread pings in one place and jump to their messages. Version: **1.0.0-beta**.
+Find unread pings in one place and jump to their messages. Version: **1.0.1-beta**.
 
 ## Features
 
