@@ -1,0 +1,27 @@
+{
+  "name": "dariuss' Valenced Plugins & Themes",
+  "description": "Quick Translate, Jump to Ping, Plugin Monitor, Show Hidden Channels, Voice Messages to Text, Liquid Glass YOUBAR and Midnight Mobile.",
+  "channels": {
+    "dariuss.quick-translate": {
+      "beta": "1.0.0-beta"
+    },
+    "dariuss.jump-to-ping": {
+      "beta": "1.0.0-beta"
+    },
+    "dariuss.performance-monitor": {
+      "beta": "1.0.0-beta"
+    },
+    "dariuss.show-hidden-channels": {
+      "beta": "1.0.0-beta"
+    },
+    "dariuss.voice-messages-to-text": {
+      "beta": "1.0.0-beta"
+    },
+    "dariuss.liquid-glass-youbar": {
+      "beta": "1.0.0-beta"
+    },
+    "dariuss.midnight-theme": {
+      "beta": "1.0.0-beta"
+    }
+  }
+}

@@ -1,0 +1,184 @@
+{
+  "format": 1,
+  "name": "dariuss' Valenced Plugins & Themes",
+  "description": "Quick Translate, Jump to Ping, Plugin Monitor, Show Hidden Channels, Voice Messages to Text, Liquid Glass YOUBAR and Midnight Mobile.",
+  "plugins": {
+    "dariuss.jump-to-ping": {
+      "name": "Jump to Ping",
+      "description": "Find unread mentions, replies and DMs, then jump straight to the message.",
+      "author": "dariuss",
+      "icon": "AtIcon",
+      "channels": {
+        "beta": "1.0.0-beta"
+      },
+      "versions": {
+        "1.0.0-beta": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.jump-to-ping@1.0.0-beta.zip",
+          "sha256": "222d84fb71e6fcb9f6ef769e8e8c4dfd17136bd88bd61069d8a2bc6e3594b122",
+          "size": 9857,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": ">=352.6 <352.7"
+            }
+          }
+        }
+      }
+    },
+    "dariuss.liquid-glass-youbar": {
+      "name": "Liquid Glass YOUBAR",
+      "description": "A glass finish for the Discord bottom dock. Recovery build 3.",
+      "author": "dariuss",
+      "icon": "SparklesIcon",
+      "channels": {
+        "beta": "1.0.0-beta"
+      },
+      "versions": {
+        "1.0.0-beta": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.liquid-glass-youbar@1.0.0-beta.zip",
+          "sha256": "30449a4ab14b7597f4f29a66e9d39a12a834c0d17636a6f51aa1bfe57571bec9",
+          "size": 6874,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": ">=352.6 <352.7"
+            }
+          }
+        }
+      }
+    },
+    "dariuss.midnight-theme": {
+      "name": "Midnight Mobile",
+      "description": "Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon.",
+      "author": "dariuss",
+      "contributors": [
+        "refact0r (original Midnight theme)",
+        "Font Awesome (moon icon)",
+        "Erik Kennedy (Figtree)"
+      ],
+      "icon": "MoonIcon",
+      "channels": {
+        "beta": "1.0.0-beta"
+      },
+      "versions": {
+        "1.0.0-beta": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.midnight-theme@1.0.0-beta.zip",
+          "sha256": "67c3be029db552aed51599c4d275f82dbafc36e63f8d5d93a7b4517bf9e62cf7",
+          "size": 1923693,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": ">=352.6 <352.7"
+            },
+            "valenced.api.themes": {
+              "version": ">=1.0.1 <2"
+            },
+            "valenced.settings.themes": {}
+          }
+        }
+      }
+    },
+    "dariuss.performance-monitor": {
+      "name": "Plugin Monitor",
+      "description": "Measure JavaScript responsiveness and compare plugin configurations.",
+      "author": "dariuss",
+      "icon": "ClockIcon",
+      "channels": {
+        "beta": "1.0.0-beta"
+      },
+      "versions": {
+        "1.0.0-beta": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.performance-monitor@1.0.0-beta.zip",
+          "sha256": "fc3b322066717c82e6c5bef36b2aeaa8cdc0bebcfd21c7416d7fff9e0490da41",
+          "size": 3887,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": ">=352.6 <352.7"
+            }
+          }
+        }
+      }
+    },
+    "dariuss.quick-translate": {
+      "name": "Quick Translate",
+      "description": "Translate messages and drafts with Google or DeepL.",
+      "author": "dariuss",
+      "icon": "LanguageIcon",
+      "channels": {
+        "beta": "1.0.0-beta"
+      },
+      "versions": {
+        "1.0.0-beta": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.quick-translate@1.0.0-beta.zip",
+          "sha256": "dabd3513a93d8d347b2abd1d765c35e43993d600613cdc21ead41cd8df188c1f",
+          "size": 38628,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": ">=352.6 <352.7"
+            }
+          }
+        }
+      }
+    },
+    "dariuss.show-hidden-channels": {
+      "name": "Show Hidden Channels",
+      "description": "Show hidden channel metadata with lock indicators and an information card.",
+      "author": "dariuss",
+      "icon": "LockIcon",
+      "channels": {
+        "beta": "1.0.0-beta"
+      },
+      "versions": {
+        "1.0.0-beta": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.show-hidden-channels@1.0.0-beta.zip",
+          "sha256": "079e2c2e888d88223fab43f20418b36a79f2164f30203d0d87c38d920208db85",
+          "size": 11363,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": ">=352.6 <352.7"
+            }
+          }
+        }
+      }
+    },
+    "dariuss.voice-messages-to-text": {
+      "name": "Voice Messages To Text",
+      "description": "Transcribe voice messages below the audio, with a free server or Groq.",
+      "author": "dariuss",
+      "icon": "MicrophoneIcon",
+      "channels": {
+        "beta": "1.0.0-beta"
+      },
+      "versions": {
+        "1.0.0-beta": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.voice-messages-to-text@1.0.0-beta.zip",
+          "sha256": "9cc49a422090d8c7c4a324772ebb4d1187436173e215cb1d83a91bd8136fac91",
+          "size": 18450,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": ">=352.6 <352.7"
+            }
+          }
+        }
+      }
+    }
+  }
+}
