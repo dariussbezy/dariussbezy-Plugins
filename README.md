@@ -1,6 +1,6 @@
 # dariussbezy's Plugins
 
-dariuss' Valenced plugins and the Midnight mobile theme in one repository, based on the [official Valenced plugin template](https://github.com/Valenced/valenced-plugin-template).
+dariussbezy's Valenced plugins and themes.
 
 ## Install
 
