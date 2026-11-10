@@ -2613,9 +2613,9 @@ function TranslateButton(props) {
     h(NativeIconControl, {
       icon: iconId,
       fallback: "文",
-      variant: highlightedTranslate ? "primary" : props.position === "actions" ? "secondary" : "tertiary",
+      variant: highlightedTranslate ? "primary" : "tertiary",
       iconColor: props.position === "actions"
-        ? armed ? ACCENT : undefined
+        ? armed ? ACCENT : paletteNow.text
         : highlightedTranslate ? undefined : paletteNow.text,
       label: translateSendMode ? "Translate draft" : "Translate message",
       holdLabel: "Open translation options",
