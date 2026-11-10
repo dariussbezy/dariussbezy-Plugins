@@ -108,7 +108,7 @@ test('composer keeps its own clipping, height and layout options',async()=>{
   await act(async()=>{await f.start();tree=Renderer.create(f.render('composer',{style:{overflow,height:56}}))});
   const styles=tree.root.findByType('NativeComposer').props.style;
   const flat=Object.assign({},...styles);
-  assert.equal(flat.overflow,overflow);assert.equal(flat.height,56);
+  assert.equal(flat.overflow,overflow);assert.equal(flat.height,56);assert.equal(flat.borderRadius,14);
   assert.equal(flat.marginHorizontal,undefined);assert.equal(flat.borderWidth,undefined);
   assert.equal(tree.root.findAllByType('View').length,0);
   await act(async()=>{await f.stop();tree.unmount()});
@@ -136,10 +136,10 @@ test('Home icon uses the moon pack on the mobile navigation button',async()=>{
  await f.stop();
 });
 
-test('wallpaper stays sharp and native controls keep opaque base colors',async()=>{
+test('wallpaper uses a light blur and native controls keep opaque base colors',async()=>{
  const f=fixture({enabled:false});await f.start();
  const theme=f.registered.registerTheme;
- assert.equal(theme.background.blur,0);
+ assert.equal(theme.background.blur,3);
  for(const base of ['dark','darker','midnight','light'])for(const token of ['BACKGROUND_BASE_LOWER','CHAT_INPUT_BACKGROUND','CHANNELTEXTAREA_BACKGROUND','BACKGROUND_FLOATING']){
   assert.match(theme.getColors().semantic[base][token],/^#[0-9a-f]{6}$/i,base+'/'+token);
  }

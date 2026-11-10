@@ -24,14 +24,14 @@ You can also install [the beta ZIP](../../pool/dariuss.midnight-theme@1.0.0-beta
 ## Features
 
 - The original blue accents, navy palette, text colors and status colors. Native controls keep opaque base colors; Valenced handles translucency on supported gradient surfaces.
-- The original sharp wallpaper, bundled locally. It is not globally blurred.
+- The original wallpaper, bundled locally and softened with a subtle background blur.
 - Dark and light palettes following Discord's appearance, including automatic appearance when enabled in Discord.
 - Figtree with normal, medium, semibold, bold, extra bold and italic variants. Code blocks keep Discord's monospace font.
 - The original Font Awesome moon appears in the Home/DMs navigation button. Other chat icons remain unchanged. Custom icon packs are respected; the optional Midnight Moon pack also replaces Home/Clyde assets.
-- Optional **Rounded surfaces** styles supported existing surfaces without adding native containers, changing their size or clipping the message composer. It applies only while Midnight is the selected color theme. Restart after changing this option.
+- Optional **Rounded surfaces** gives the channel list, channel header and message composer proportionate corner radii while preserving their layout. It applies only while Midnight is the selected color theme. Restart after changing this option.
 - Native Discord settings controls. No recurring network requests, timers or screenshot-based blur.
 
-Mobile uses React Native, so desktop CSS cannot be installed directly. Window controls, mouse hover effects and the desktop multi-column arrangement do not transfer to a phone. Translucency uses Valenced's background API. The wallpaper remains sharp; desktop CSS panel blur is not applied globally to it. Surface styling targets Discord 352.6 and skips components it cannot identify.
+Mobile uses React Native, so desktop CSS cannot be installed directly. Window controls, mouse hover effects and the desktop multi-column arrangement do not transfer to a phone. Translucency uses Valenced's background API. Valenced applies the blur to the wallpaper layer, keeping text and controls sharp. Surface styling targets Discord 352.6 and skips components it cannot identify.
 
 To return to Discord's appearance, choose the default colors, font and icons in Themes, or disable Midnight Mobile and restart.
 

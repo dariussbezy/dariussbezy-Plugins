@@ -14,7 +14,7 @@ export default plugin<{ jsonStorage: { enhancedLayout: boolean } }>({
       name: "Midnight (Auto)",
       description: "Blue accents, translucent navy panels and the original Midnight wallpaper. Follows Discord's light or dark appearance.",
       getColors: () => palette,
-      background: { path: "assets/wallpaper.png", opacity: 1, blur: 0, dimming: 0.7 },
+      background: { path: "assets/wallpaper.png", opacity: 1, blur: 3, dimming: 0.7 },
     });
     const families: Record<string, import("@valenced/themes-api/types").FontVariant[]> = {};
     for (const [suffix, weight] of Object.entries({ Normal: 400, Medium: 500, Semibold: 600, Bold: 700, ExtraBold: 800 })) {

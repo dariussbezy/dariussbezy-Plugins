@@ -8,8 +8,8 @@ import * as Native from "@valenced/modules/native";
 import { pluginDistDirFor } from "@valenced/plugins/constants";
 
 export const ProviderId = "dariuss.midnight-theme";
-const Names = new Set(["ChannelHeader", "ChatInput", "ChannelListLayout", "GuildsBarMessages", "ChatIcon"]);
-const Surfaces = new Set(["ChannelHeader", "ChatInput", "ChannelListLayout"]);
+const SurfaceRadii = new Map([["ChannelHeader", 16], ["ChatInput", 14], ["ChannelListLayout", 18]]);
+const Names = new Set([...SurfaceRadii.keys(), "GuildsBarMessages", "ChatIcon"]);
 type Element = React.ReactElement<any>;
 type IconState = { active: boolean; renderer: React.ElementType<any> | null; source: { uri: string } | null };
 let active = false;
@@ -73,10 +73,11 @@ function Surface({ original }: { original: Element }) {
     }, [store]),
     () => store?.theme === "light", () => false,
   );
-  if (!enabled || original.props.style === undefined) return original;
+  const borderRadius = SurfaceRadii.get(componentName(original.type) ?? "");
+  if (!enabled || borderRadius === undefined || original.props.style === undefined) return original;
   // Style existing surfaces without adding a Yoga parent, insets or clipping.
   return React.cloneElement(original, {
-    style: [original.props.style, { borderRadius: 16, borderColor: light ? "#5973A021" : "#6888E424" }],
+    style: [original.props.style, { borderRadius, borderColor: light ? "#5973A021" : "#6888E424" }],
   });
 }
 function NavigationScope({ original }: { original: Element }) {
@@ -152,7 +153,7 @@ export function startAppearance(roundedSurfaces: boolean, report: (error: unknow
         }
         if (hasBaseIcon(namespace)) setIcons({ renderer: namespace.BaseIconImage });
         for (const { type, name } of resolveTargets(namespace, Names)) {
-          if (hooked.has(type) || (Surfaces.has(name) && !roundedSurfaces)) continue;
+          if (hooked.has(type) || (SurfaceRadii.has(name) && !roundedSurfaces)) continue;
           hooked.add(type);
           const Decorator = name === "GuildsBarMessages" ? NavigationScope : name === "ChatIcon" ? MoonIcon : Surface;
           cleanup.push(afterJSX(type, element => decorateElement(element, Decorator)));
