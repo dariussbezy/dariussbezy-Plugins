@@ -158,7 +158,7 @@ export function NativeIconControl({ icon, iconColor, fallback, label, holdLabel,
     importantForAccessibility: "no-hide-descendants",
   }, icon
     ? iconColor
-      ? h(Image, { source: icon, resizeMode: "contain", style: { width: 22, height: 22, tintColor: iconColor } })
+      ? h(Image, { source: icon, resizeMode: "contain", style: { width: 18, height: 18, tintColor: iconColor } })
       : h(Design.IconButton, { icon, variant, size: "sm" })
     : h(Design.Text, {
         variant: "text-lg/semibold",
