@@ -14,7 +14,7 @@ export default plugin<{ jsonStorage: { enhancedLayout: boolean } }>({
       name: "Midnight (Auto)",
       description: "Blue accents, translucent navy panels and the original Midnight wallpaper. Follows Discord's light or dark appearance.",
       getColors: () => palette,
-      background: { path: "assets/wallpaper.png", opacity: 1, blur: 12, dimming: 0.55 },
+      background: { path: "assets/wallpaper.png", opacity: 1, blur: 0, dimming: 0.7 },
     });
     const families: Record<string, import("@valenced/themes-api/types").FontVariant[]> = {};
     for (const [suffix, weight] of Object.entries({ Normal: 400, Medium: 500, Semibold: 600, Bold: 700, ExtraBold: 800 })) {
@@ -28,17 +28,17 @@ export default plugin<{ jsonStorage: { enhancedLayout: boolean } }>({
       name: "Midnight Figtree", description: "Original Figtree typography, including bold and italic.", families,
     });
     themes.registerIconPack("midnight", "moon", {
-      name: "Midnight Moon", description: "Original Font Awesome moon in place of the Discord Clyde logo.",
-      icons: { ClydeIcon: "assets/moon.png" },
+      name: "Midnight Moon", description: "Original moon logo for Home and mobile DMs navigation.",
+      icons: { ClydeIcon: "assets/moon.png", HomeIcon: "assets/moon.png" },
     });
   },
   async init() {
     Settings = (await import("./settings")).default;
   },
   async start({ jsonStorage, cleanup, plugin: instance }) {
-    const { startLayout } = await import("./layout");
+    const { startAppearance } = await import("./layout");
     const settings = await jsonStorage.get();
-    cleanup(startLayout(settings.enhancedLayout !== false, (error: unknown) => instance.reportError(error)));
+    cleanup(startAppearance(settings.enhancedLayout !== false, (error: unknown) => instance.reportError(error)));
     if (instance.startedLate) instance.requireReload();
   },
   SettingsComponent: props => Settings ? Settings(props) : null,

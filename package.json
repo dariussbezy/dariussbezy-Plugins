@@ -25,12 +25,13 @@
     "@biomejs/biome": "^2.5.12",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
-    "react-native": "0.81.5",
-    "typescript": "^5.9.0",
-    "fflate": "^0.8.3",
     "esbuild": "^0.25.0",
+    "fflate": "^0.8.3",
     "react": "19.1.0",
-    "react-test-renderer": "19.1.0"
+    "react-native": "0.81.5",
+    "react-test-renderer": "19.1.0",
+    "typescript": "^5.9.0",
+    "yoga-layout": "3.2.1"
   },
   "engines": {
     "node": ">=24"

@@ -67,8 +67,8 @@
       "versions": {
         "1.0.0-beta": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.midnight-theme@1.0.0-beta.zip",
-          "sha256": "67c3be029db552aed51599c4d275f82dbafc36e63f8d5d93a7b4517bf9e62cf7",
-          "size": 1923693,
+          "sha256": "fdd6d30b4b5886d3be1fa4c95930784216697fed596b230c4e86d14b64bbd34a",
+          "size": 1924751,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"

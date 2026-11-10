@@ -12,8 +12,8 @@ export default function Settings({ api: { jsonStorage, plugin: instance } }: any
     h(Stack, { spacing: 24 },
       h(TableRowGroup, { title: "Appearance", children: null },
         h(TableSwitchRow, {
-          label: "Enhanced layout",
-          subLabel: "Separate rounded panels for supported channel lists, headers and the message composer. Applies only while Midnight is selected. Restart Discord after changing this option.",
+          label: "Rounded surfaces",
+          subLabel: "Round supported existing surfaces without moving or clipping Discord controls. Applies only while Midnight is selected. Restart Discord after changing this option.",
           value,
           onValueChange: async (enhancedLayout: boolean) => {
             await jsonStorage.set({ enhancedLayout });
@@ -23,7 +23,7 @@ export default function Settings({ api: { jsonStorage, plugin: instance } }: any
       ),
       h(TableRowGroup, { title: "Setup", children: null },
         row("Choose Midnight (Auto)", "Open Valenced Settings → Themes → Color themes → Midnight."),
-        row("Font and moon icon", "Choose Midnight Figtree under Fonts and Midnight Moon under Icons. Restart Discord after applying fonts or icons."),
+        row("Font and moon icon", "The navigation moon is included with Midnight and default icons. Choose Midnight Figtree under Fonts; Midnight Moon under Icons also replaces Home/Clyde icons. Restart after font or icon changes."),
         row("Automatic appearance", "The palette follows Discord's appearance. Select automatic appearance in Discord to follow your device."),
       ),
       h(TableRowGroup, { title: "About", children: null },

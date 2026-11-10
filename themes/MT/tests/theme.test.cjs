@@ -21,7 +21,7 @@ test('mobile palette exists and contains dark, darker, midnight and light',()=>{
   for(const c of Object.values(p.semantic[theme]))assert.match(c,/^#[a-f0-9]{6}([a-f0-9]{2})?$/i);
  }
  assert.notEqual(p.semantic.dark.TEXT_NORMAL,p.semantic.light.TEXT_NORMAL);
- assert.equal(p.semantic.dark.BACKGROUND_BASE_LOWER,'#0D152B99');
+ assert.equal(p.semantic.dark.BACKGROUND_BASE_LOWER,'#0D152B');
 });
 test('selection is enabled only for this theme provider',()=>{
  const {isMidnightSelection}=load('layout.tsx');
@@ -41,11 +41,11 @@ test('memo and forwardRef exports resolve without changing component identities'
  assert.equal(resolveTargets({default:{}},new Set(['ChannelHeader'])).length,0);
  assert.equal(resolveTargets(null,new Set(['ChannelHeader'])).length,0);
 });
-test('frame preserves original element, key, ref, children and press handler',()=>{
- const {frameElement}=load('layout.tsx');
+test('decorator preserves original element, key, ref, children and press handler',()=>{
+ const {decorateElement}=load('layout.tsx');
  function Original(){};function Frame(){};const ref={current:null},press=()=>{};
  const original=React.createElement(Original,{key:'original-key',ref,onPress:press},'child');
- const framed=frameElement(original,Frame,'header');
+ const framed=decorateElement(original,Frame);
  assert.equal(framed.type,Frame);assert.equal(framed.key,'original-key');
  assert.equal(framed.props.original,original);
  assert.equal(framed.props.original.props.ref,ref);
@@ -70,4 +70,19 @@ test('published ZIP and beta index agree, and include no development files',()=>
  assert.ok(Object.keys(files).every(name=>name==='manifest.json'||name==='index.js'||name.startsWith('assets/')));
  assert.equal(manifest.version,'1.0.0-beta');
  assert.equal(manifest.dependencies['valenced.api'].version,'>=1 <2');
+});
+
+test('decorators preserve missing React keys instead of creating duplicate null keys',()=>{
+ const {decorateElement}=load('layout.tsx');
+ function Icon(){};function Decorator(){};
+ const original=React.createElement(Icon,{});
+ assert.equal(original.key,null);
+ assert.equal(decorateElement(original,Decorator).key,null);
+});
+
+test('elements hidden by earlier JSX hooks remain hidden',()=>{
+ const {decorateElement}=load('layout.tsx');
+ function Decorator(){};
+ assert.equal(decorateElement(null,Decorator),null);
+ assert.equal(decorateElement(undefined,Decorator),undefined);
 });
