@@ -22,7 +22,7 @@ test('single index serves all seven beta plugins with valid artifact digests',()
  for(const {dir,manifest}of sources()){
   const item=index.plugins[manifest.id];assert.deepEqual(item.channels,{beta:'1.0.0-beta'});
   const entry=item.versions[manifest.version];const file=manifest.id+'@'+manifest.version+'.zip';const zip=fs.readFileSync(path.join(root,'pool',file));
-  assert.equal(entry.url,'https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/'+file);
+  assert.equal(entry.url,'https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/'+file);
   assert.equal(entry.size,zip.length);assert.equal(entry.sha256,createHash('sha256').update(zip).digest('hex'));
   const files=unzipSync(zip);assert.deepEqual(JSON.parse(strFromU8(files['manifest.json'])),manifest);
   assert.ok(files[manifest.dist.script]);

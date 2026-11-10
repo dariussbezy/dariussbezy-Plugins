@@ -18,7 +18,7 @@ Show hidden channel metadata in the server channel list, using the native Discor
 Add this Repository URL in **Valenced → Plugins → Advanced**:
 
 ```text
-https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/main/index.json
+https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/main/index.json
 ```
 
 Select **beta**, install **Show Hidden Channels**, enable it and restart Discord. Open its settings to configure **Show lock icon** and **Show info card**.

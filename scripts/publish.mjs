@@ -12,6 +12,6 @@ for (const root of ['plugins', 'themes']) {
   }
 }
 const cli = resolve('node_modules/@valenced/plugin-cli/bin/valenced-plugin.js');
-const result = spawnSync(process.execPath, [cli, 'generate-index', '--dist', 'pool', '--base-url', 'https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool', '--out', 'index.json'], { stdio: 'inherit' });
+const result = spawnSync(process.execPath, [cli, 'generate-index', '--dist', 'pool', '--base-url', 'https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool', '--out', 'index.json'], { stdio: 'inherit' });
 if (result.status !== 0) throw new Error('Official index generation failed');
 console.log('Prepared all plugin archives and the single repository index on main.');

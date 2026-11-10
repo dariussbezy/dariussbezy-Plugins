@@ -1,4 +1,4 @@
-# Valenced Plugins & Themes
+# dariussbezy-Plugins
 
 All of dariuss' Valenced plugins and the Midnight mobile theme in one repository, based on the [official Valenced plugin template](https://github.com/Valenced/valenced-plugin-template).
 
@@ -7,7 +7,7 @@ All of dariuss' Valenced plugins and the Midnight mobile theme in one repository
 Add this single URL in **Valenced Settings → Plugins → Advanced → Repository URL**:
 
 ```text
-https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/main/index.json
+https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/main/index.json
 ```
 
 Choose the plugins you want from the **beta** channel. Existing plugin IDs and versions are preserved. You can remove the old individual repository entries from Valenced after adding this repository; installed plugin settings remain associated with their existing IDs. Restart Discord after updates when requested.

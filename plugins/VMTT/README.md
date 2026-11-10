@@ -9,7 +9,7 @@ Read Discord voice messages as text, with the transcript displayed **below the v
 In Valenced, open **Plugins → Advanced → Repository URL**, paste this URL and add the repository:
 
 ```text
-https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/main/index.json
+https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/main/index.json
 ```
 
 Find **Voice Messages To Text**, select **beta**, install it and restart Discord.
@@ -36,7 +36,7 @@ Open the plugin settings to choose a service and test the connection. For Groq, 
 
 Long-press a voice message to transcribe it. Once it is ready, long-press again for transcript and translation actions. Enable **Also open a result card** if you prefer a separate reading view.
 
-For transcript translation and fallback language detection, update Quick Translate from [its repository](https://github.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes) and restart Discord after updating both plugins.
+For transcript translation and fallback language detection, update Quick Translate from [its repository](https://github.com/dariussbezy/dariussbezy-Plugins) and restart Discord after updating both plugins.
 
 The package includes a small Android spacing module for Discord 352.6. Restart Discord after updating so the native adjustment loads. The shared script continues to work without this Android-specific adjustment.
 

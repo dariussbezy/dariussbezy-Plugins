@@ -16,7 +16,7 @@ A small diagnostic plugin with a plain list of installed plugins. Version: **1.0
 Add this Repository URL in **Valenced → Plugins → Advanced**:
 
 ```text
-https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/main/index.json
+https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/main/index.json
 ```
 
 Select **beta**, install **Plugin Monitor**, enable it, and open its settings. The current beta targets Valenced 1.3.0 and Discord 352.6 alpha. On-device behavior still needs verification.

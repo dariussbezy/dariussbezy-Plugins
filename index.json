@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "name": "Dariuss Plugins",
+  "name": "dariussbezy-Plugins",
   "description": "Dariussbezy's plugins for Valenced.",
   "plugins": {
     "dariuss.jump-to-ping": {
@@ -13,7 +13,7 @@
       },
       "versions": {
         "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.jump-to-ping@1.0.0-beta.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.jump-to-ping@1.0.0-beta.zip",
           "sha256": "b669ab7151ddff919625a1a1f18d1b452534e96c8de4893fb788ca4e19e17ae8",
           "size": 8081,
           "dependencies": {
@@ -37,7 +37,7 @@
       },
       "versions": {
         "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.liquid-glass-youbar@1.0.0-beta.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.liquid-glass-youbar@1.0.0-beta.zip",
           "sha256": "30449a4ab14b7597f4f29a66e9d39a12a834c0d17636a6f51aa1bfe57571bec9",
           "size": 6874,
           "dependencies": {
@@ -66,7 +66,7 @@
       },
       "versions": {
         "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.midnight-theme@1.0.0-beta.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.midnight-theme@1.0.0-beta.zip",
           "sha256": "fdd6d30b4b5886d3be1fa4c95930784216697fed596b230c4e86d14b64bbd34a",
           "size": 1924751,
           "dependencies": {
@@ -94,7 +94,7 @@
       },
       "versions": {
         "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.performance-monitor@1.0.0-beta.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.performance-monitor@1.0.0-beta.zip",
           "sha256": "fc3b322066717c82e6c5bef36b2aeaa8cdc0bebcfd21c7416d7fff9e0490da41",
           "size": 3887,
           "dependencies": {
@@ -118,7 +118,7 @@
       },
       "versions": {
         "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.quick-translate@1.0.0-beta.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.quick-translate@1.0.0-beta.zip",
           "sha256": "d40dde32c5521bd795ce55795e328a78aa24e08f400dee4bafb378fb8d3ee856",
           "size": 36970,
           "dependencies": {
@@ -142,7 +142,7 @@
       },
       "versions": {
         "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.show-hidden-channels@1.0.0-beta.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.show-hidden-channels@1.0.0-beta.zip",
           "sha256": "7ad7fbb31f0e049838a2d5ab22a37cedee64dd2a5711b3d20542c42edfc422f2",
           "size": 9188,
           "dependencies": {
@@ -166,7 +166,7 @@
       },
       "versions": {
         "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.voice-messages-to-text@1.0.0-beta.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.voice-messages-to-text@1.0.0-beta.zip",
           "sha256": "34405c0e0e3fc4f0702f814cad9f723b0e388a676002372574c5b7acabe97a1d",
           "size": 16004,
           "dependencies": {

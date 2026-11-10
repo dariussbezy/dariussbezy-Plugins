@@ -7,7 +7,7 @@ The Midnight desktop theme, adapted for **Valenced on Discord mobile**. The orig
 Add this URL in **Valenced Settings → Plugins → Advanced → Repository URL**:
 
 ```text
-https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/main/index.json
+https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/main/index.json
 ```
 
 Install **Midnight Mobile** from the **beta** channel, then restart Discord. Keep Valenced's community repository enabled so the Themes dependencies can be installed.

@@ -24,7 +24,7 @@ Translate Discord messages and drafts with Google Translate or DeepL. Current ve
 In Valenced, open **Plugins → Advanced → Repository URL**, paste this address and add the repository:
 
 ```text
-https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/main/index.json
+https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/main/index.json
 ```
 
 Find **Quick Translate**, install it and enable it. Open the plugin's settings to choose your languages and translation service.
