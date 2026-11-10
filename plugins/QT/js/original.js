@@ -6,7 +6,9 @@ import {
   NativeRow as CustomRow,
   NativeSwitch as CustomSwitch,
   NativeAction as CustomAction,
-  NativeOverview as KitHero,
+  NativeIconControl,
+  rowIcon,
+  settingsContent,
   NativeGuide as KitGuide,
   NativeInput as CustomInput,
 } from "../../../shared/native-ui";
@@ -2255,7 +2257,7 @@ function TranslateButton(props) {
       },
     );
   };
-  const iconId = findAssetId("LanguageIcon");
+  const iconId = findAssetId("LanguageIcon") || findAssetId("GlobeIcon");
   const translateSendMode =
     props.position === "send" && !!armed && settings.draftBeforeSend !== false;
   const highlightedTranslate =
@@ -2636,24 +2638,16 @@ function TranslateButton(props) {
   return h(
     React.Fragment,
     null,
-    iconId
-      ? h(Design.IconButton, {
-          icon: iconId,
-          size: "sm",
-          variant: highlightedTranslate ? "primary" : armed ? "active" : "tertiary",
-          label: translateSendMode ? "Translate draft" : "Translate message",
-          disabled: busy,
-          onPress,
-          onLongPress: openPanel,
-        })
-      : h(Design.Button, {
-          text: "Translate",
-          size: "sm",
-          variant: highlightedTranslate ? "primary" : "tertiary",
-          disabled: busy,
-          onPress,
-          onLongPress: openPanel,
-        }),
+    h(NativeIconControl, {
+      icon: iconId,
+      fallback: "文",
+      variant: highlightedTranslate ? "primary" : armed ? "active" : "tertiary",
+      label: translateSendMode ? "Translate draft" : "Translate message",
+      holdLabel: "Open translation options",
+      disabled: busy,
+      onPress,
+      onLongPress: openPanel,
+    }),
     panelOpen
       ? h(
           TranslationSheet,
@@ -2869,14 +2863,8 @@ function WordLanguageRulesPage() {
     {
       style: { flex: 1 },
       keyboardShouldPersistTaps: "handled",
-      contentContainerStyle: { padding: 16, paddingBottom: 42 },
+      contentContainerStyle: settingsContent,
     },
-    h(KitHero, {
-      icon: "lang",
-      title: "Word language rules",
-      subtitle: "Help Auto-detect understand specific words",
-      stats: [["Rules", rules.length]],
-    }),
     h(
       CustomSection,
       { title: editing ? "Edit rule" : "Add rule" },
@@ -3448,7 +3436,7 @@ function HistoryPage() {
     RN.ScrollView,
     {
       style: { flex: 1 },
-      contentContainerStyle: { padding: 16, paddingBottom: 42 },
+      contentContainerStyle: settingsContent,
     },
     h(
       RN.View,
@@ -3677,10 +3665,11 @@ function Settings() {
   const go = (title, render) =>
     navigation.push("DariussQuickTranslatePage", { title, render });
   const C = palette();
-  const toggle = (title, subtitle, value, change) =>
+  const toggle = (title, subtitle, value, change, icon) =>
     h(CustomRow, {
       title,
       subtitle,
+      icon,
       trailing: h(CustomSwitch, { value, onChange: change }),
     });
   if (!settings._hasHydrated)
@@ -3704,23 +3693,8 @@ function Settings() {
     RN.ScrollView,
     {
       style: { flex: 1 },
-      contentContainerStyle: { padding: 16, paddingBottom: 42 },
+      contentContainerStyle: settingsContent,
     },
-    h(KitHero, {
-      icon: "lang",
-      title: "Quick Translate",
-      subtitle: "Translation preferences for your chats",
-      stats: [
-        [
-          "Saved",
-          Array.isArray(settings.historyEntries)
-            ? settings.historyEntries.length
-            : 0,
-        ],
-        ["Service", settings.provider === "deepl" ? "DeepL" : "Google"],
-        ["Output", langName(settings.targetOut)],
-      ],
-    }),
     h(
       Design.TableRadioGroup,
       {
@@ -3730,11 +3704,13 @@ function Settings() {
       },
       h(Design.TableRadioRow, {
         value: "google",
+        icon: rowIcon("lang"),
         label: "Google Translate",
         subLabel: "No key required · selected by default",
       }),
       h(Design.TableRadioRow, {
         value: "deepl",
+        icon: rowIcon("key"),
         label: "DeepL",
         subLabel: "Uses your personal API key · Google fallback",
       }),
@@ -3883,113 +3859,6 @@ function Settings() {
     ),
     h(
       CustomSection,
-      { title: "Appearance" },
-      toggle(
-        "Immersive translation",
-        "Show the translation below the original message. Turn off to replace its text.",
-        !!settings.immersive,
-        (v) => {
-          updateQuickTranslateSettings({ immersive: v });
-          refreshTranslated();
-        },
-      ),
-      toggle(
-        "Show detected source language",
-        "Show a compact source → target code below the translation.",
-        !!settings.showSourceLanguage,
-        (v) => {
-          updateQuickTranslateSettings({ showSourceLanguage: v });
-          refreshTranslated();
-          if (v)
-            toast("Translate a message to see its source and target codes");
-        },
-      ),
-      h(CustomRow, {
-        title: "Translation color",
-        trailing: h(
-          RN.View,
-          { style: { flexDirection: "row", alignItems: "center" } },
-          h(RN.View, {
-            style: {
-              width: 15,
-              height: 15,
-              borderRadius: 5,
-              backgroundColor: translationColor(),
-              marginRight: 9,
-            },
-          }),
-          h(Design.Text, { style: { color: C.sub, fontSize: 21 } }, "›"),
-        ),
-        last: true,
-        onPress: () => go("Translation color", ColorPicker),
-      }),
-    ),
-    h(
-      CustomSection,
-      { title: "Incoming messages" },
-      toggle(
-        "Immersive auto-translate",
-        "Show auto-translations below original.",
-        !!settings.autoIncomingImmersive,
-        (v) => {
-          updateQuickTranslateSettings({ autoIncomingImmersive: v });
-          refreshTranslated();
-        },
-      ),
-      h(CustomRow, {
-        title: "Automatic channels and DMs",
-        subtitle: (settings.autoChannelIds || []).length + " selected",
-        icon: "☷",
-        last: true,
-        onPress: () => {
-          toast("Loading, please wait…");
-          const timer = setTimeout(() => {
-            if (pluginStarted)
-              go("Automatic channels and DMs", AutoChannelsPage);
-          }, 100);
-          unpatches.push(() => clearTimeout(timer));
-        },
-      }),
-    ),
-    h(
-      CustomSection,
-      { title: "Translation history & cache" },
-      toggle(
-        "Keep translations after restart",
-        "Restore saved translations when Discord restarts.",
-        settings.keepMessageTranslations !== false,
-        (v) => {
-          updateQuickTranslateSettings({
-            keepMessageTranslations: v,
-            messageTranslations: v ? settings.messageTranslations || [] : [],
-          });
-        },
-      ),
-      h(CustomRow, {
-        title: "Translation history",
-        subtitle: (settings.historyEntries || []).length + " saved locally",
-        icon: "◷",
-        onPress: () => go("Translation history", HistoryPage),
-      }),
-      h(
-        RN.View,
-        { style: { paddingHorizontal: 13, paddingBottom: 11 } },
-        h(
-          Design.Text,
-          { style: { color: C.sub, fontSize: 12, marginTop: 10 } },
-          "Removes saved history, message translations and cached results.",
-        ),
-        h(CustomAction, {
-          title: "Clear translation history & cache",
-          secondary: true,
-          onPress: () => {
-            clearTranslationData();
-          },
-        }),
-      ),
-    ),
-    h(
-      CustomSection,
       { title: "Chat composer" },
       toggle(
         "Show translate button",
@@ -4000,6 +3869,7 @@ function Settings() {
           updateQuickTranslateSettings({ showButton: v });
           notifyButton();
         },
+        "lang",
       ),
       toggle(
         "Translate before sending",
@@ -4009,18 +3879,21 @@ function Settings() {
           updateQuickTranslateSettings({ draftBeforeSend: v });
           notifyButton();
         },
+        "reply",
       ),
       toggle(
         "Highlight Translate Draft button",
         "Use a blue background to distinguish Translate from Send.",
         settings.highlightDraftButton !== false,
         (v) => updateQuickTranslateSettings({ highlightDraftButton: v }),
+        "paint",
       ),
       toggle(
         "Remember language per chat",
         "Store each chat’s default language separately.",
         settings.rememberLanguagesPerChat !== false,
         (v) => updateQuickTranslateSettings({ rememberLanguagesPerChat: v }),
+        "chat",
       ),
       toggle(
         "Keep translate active",
@@ -4030,9 +3903,11 @@ function Settings() {
           updateQuickTranslateSettings({ keepArmed: v });
           notifyButton();
         },
+        "power",
       ),
       h(CustomRow, {
         title: "Button position",
+        icon: "gear",
         subtitle:
           settings.anchor === "send"
             ? "Next to the Send button. To turn off translation, hold the Translate icon and tap Turn off Translate."
@@ -4071,12 +3946,6 @@ function Settings() {
         },
       }),
       toggle(
-        "Save translation history",
-        "Store translated messages and drafts locally in Translation history.",
-        settings.saveHistory !== false,
-        (v) => updateQuickTranslateSettings({ saveHistory: v }),
-      ),
-      toggle(
         "Hide Gift button",
         "Hide the Gift button in the chat composer.",
         !!settings.hideGiftButton,
@@ -4084,6 +3953,127 @@ function Settings() {
           updateQuickTranslateSettings({ hideGiftButton: v });
           toast("Restart Discord to apply this setting");
         },
+        "GiftIcon",
+      ),
+    ),
+    h(
+      CustomSection,
+      { title: "Appearance" },
+      toggle(
+        "Immersive translation",
+        "Show the translation below the original message. Turn off to replace its text.",
+        !!settings.immersive,
+        (v) => {
+          updateQuickTranslateSettings({ immersive: v });
+          refreshTranslated();
+        },
+        "text",
+      ),
+      toggle(
+        "Show detected source language",
+        "Show a compact source → target code below the translation.",
+        !!settings.showSourceLanguage,
+        (v) => {
+          updateQuickTranslateSettings({ showSourceLanguage: v });
+          refreshTranslated();
+          if (v)
+            toast("Translate a message to see its source and target codes");
+        },
+        "lang",
+      ),
+      h(CustomRow, {
+        title: "Translation color",
+        icon: "paint",
+        trailing: h(
+          RN.View,
+          { style: { flexDirection: "row", alignItems: "center" } },
+          h(RN.View, {
+            style: {
+              width: 15,
+              height: 15,
+              borderRadius: 5,
+              backgroundColor: translationColor(),
+              marginRight: 9,
+            },
+          }),
+          h(Design.Text, { style: { color: C.sub, fontSize: 21 } }, "›"),
+        ),
+        last: true,
+        onPress: () => go("Translation color", ColorPicker),
+      }),
+    ),
+    h(
+      CustomSection,
+      { title: "Incoming messages" },
+      toggle(
+        "Immersive auto-translate",
+        "Show auto-translations below original.",
+        !!settings.autoIncomingImmersive,
+        (v) => {
+          updateQuickTranslateSettings({ autoIncomingImmersive: v });
+          refreshTranslated();
+        },
+        "bell",
+      ),
+      h(CustomRow, {
+        title: "Automatic channels and DMs",
+        subtitle: (settings.autoChannelIds || []).length + " selected",
+        icon: "☷",
+        last: true,
+        onPress: () => {
+          toast("Loading, please wait…");
+          const timer = setTimeout(() => {
+            if (pluginStarted)
+              go("Automatic channels and DMs", AutoChannelsPage);
+          }, 100);
+          unpatches.push(() => clearTimeout(timer));
+        },
+      }),
+    ),
+    h(
+      CustomSection,
+      { title: "Translation history & cache" },
+      toggle(
+        "Save translation history",
+        "Store translated messages and drafts locally in Translation history.",
+        settings.saveHistory !== false,
+        (v) => updateQuickTranslateSettings({ saveHistory: v }),
+        "time",
+      ),
+      toggle(
+        "Keep translations after restart",
+        "Restore saved translations when Discord restarts.",
+        settings.keepMessageTranslations !== false,
+        (v) => {
+          updateQuickTranslateSettings({
+            keepMessageTranslations: v,
+            messageTranslations: v ? settings.messageTranslations || [] : [],
+          });
+        },
+        "store",
+      ),
+      h(CustomRow, {
+        title: "Translation history",
+        subtitle: (settings.historyEntries || []).length + " saved locally",
+        icon: "◷",
+        onPress: () => go("Translation history", HistoryPage),
+      }),
+      h(
+        RN.View,
+        { style: { paddingHorizontal: 13, paddingBottom: 11 } },
+        h(
+          Design.Text,
+          { style: { color: C.sub, fontSize: 12, marginTop: 10 } },
+          "Removes saved history, message translations and cached results.",
+        ),
+        h(CustomAction, {
+          title: "Clear translation history & cache",
+          icon: "trash",
+          secondary: true,
+          onPress: () => {
+            clearTranslationData();
+          },
+        }),
       ),
     ),
     h(KitGuide, {
@@ -4426,7 +4416,6 @@ export {
   CustomSwitch,
   CustomAction,
   CustomInput,
-  KitHero,
   KitGuide,
   palette,
   protect,

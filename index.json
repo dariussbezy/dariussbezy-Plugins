@@ -14,8 +14,8 @@
       "versions": {
         "1.0.0-beta": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.jump-to-ping@1.0.0-beta.zip",
-          "sha256": "bdaa409815ecfa03dc178a6c6c30513bb4f25788d9250cc02c380136795ba234",
-          "size": 7526,
+          "sha256": "e1eac5f13f00ef2d2ae33e3ca4581f71ebde1f59fe01b9a8af20371fbcb75c53",
+          "size": 8014,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
@@ -119,8 +119,8 @@
       "versions": {
         "1.0.0-beta": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.quick-translate@1.0.0-beta.zip",
-          "sha256": "9abbbcd1352764b487b7d05d3ebf9b5940d0882d97fcafd6eb6bb276f39ed0cd",
-          "size": 36148,
+          "sha256": "b2f2a434de03c2b995b35d4bb67e82d27f2fbf05ba8b8c66c176585e51419849",
+          "size": 36667,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
@@ -143,8 +143,8 @@
       "versions": {
         "1.0.0-beta": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.show-hidden-channels@1.0.0-beta.zip",
-          "sha256": "280190179bd25f6154ba6c3965bd798bb1c2e21ea20e0aa57c7308426e4c8ea3",
-          "size": 9118,
+          "sha256": "375dc710d8053edd87ff51e09f218a9bc6f4ebd93a460e5ea6c176ec7194be97",
+          "size": 9043,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
@@ -167,8 +167,8 @@
       "versions": {
         "1.0.0-beta": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.voice-messages-to-text@1.0.0-beta.zip",
-          "sha256": "c3601fb40c0e3819d1c6bb0893a497a8da2a27e6b918cfaaced8bcaffcaec8b0",
-          "size": 15762,
+          "sha256": "3d45b9e2ab5d86e56ca87e9e7cff85b917efe9aa4fd8a0625d258a96fa47dc4b",
+          "size": 16019,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"

@@ -4,7 +4,9 @@ import {
   NativeRow as CustomRow,
   NativeSwitch as CustomSwitch,
   NativeAction as CustomAction,
-  NativeOverview as KitHero,
+  NativeIconControl,
+  rowIcon,
+  settingsContent,
   NativeGuide as KitGuide,
 } from "../../../shared/native-ui";
 import * as React from "react";
@@ -67,7 +69,6 @@ const implementation = (() => {
   let loadRequested = false;
   let initialized = false;
   let partsCache = null;
-  let iconButtonCache = null;
 
   const cfg = () => pingStore.useStore.getState();
   const setSetting = (key, value) =>
@@ -575,6 +576,7 @@ const implementation = (() => {
               ...rows.map((row) => h(Design.TableRow, {
                 key: row.c,
                 label: channelLabel(row.c, row.g),
+                icon: rowIcon(row.dm ? "chat" : "at"),
                 subLabel: rowSubtitle(row),
                 arrow: true,
                 onPress: () => jumpToPing(row),
@@ -639,14 +641,6 @@ const implementation = (() => {
     }
     return null;
   }
-  function iconButton() {
-    if (iconButtonCache) return iconButtonCache;
-    try {
-      const m = findByProps("IconButton");
-      iconButtonCache = (m && m.IconButton) || null;
-    } catch (_) {}
-    return iconButtonCache;
-  }
   function PingButton(p) {
     const h = React.createElement;
     const [, bump] = React.useState(0);
@@ -659,19 +653,18 @@ const implementation = (() => {
     }, []);
     const rows = getRows();
     if (!rows.length && cfg().hideWhenEmpty) return null;
-    const IconButton = iconButton();
     const asset = pingIcon();
-    if (!IconButton || !asset) return null;
+    if (!asset) return null;
     const hasNp = !!p.hasNameplate;
     const total = totalOf(rows);
     return h(
       RN.View,
       null,
-      h(IconButton, {
-        size: "sm",
+      h(NativeIconControl, {
         variant: hasNp ? "secondary-overlay" : "tertiary",
         icon: asset,
         label: "Pings",
+        holdLabel: "Jump to newest ping",
         onPress: openPings,
         onLongPress: jumpToNewest,
       }),
@@ -723,7 +716,6 @@ const implementation = (() => {
     const [, bump] = React.useState(0);
     const h = React.createElement;
     const s = cfg();
-    const rows = getRows();
     const toggle = (key, title, subtitle, icon, last) =>
       h(CustomRow, {
         key,
@@ -754,7 +746,7 @@ const implementation = (() => {
         ],
         [
           "Jump to",
-          "Tap Jump to (or the row) to open the chat and scroll to the first unread ping. Uncached pings are resolved from recent channel messages; if no exact match is found, the chat opens at its oldest unread message.",
+          "Tap the row to open the chat and scroll to the first unread ping. Uncached pings are resolved from recent channel messages; if no exact match is found, the chat opens at its oldest unread message.",
         ],
         [
           "When pings disappear",
@@ -767,18 +759,8 @@ const implementation = (() => {
       {
         style: { flex: 1 },
         keyboardShouldPersistTaps: "handled",
-        contentContainerStyle: { padding: 16, paddingBottom: 42 },
+        contentContainerStyle: settingsContent,
       },
-      h(KitHero, {
-        key: "hero",
-        icon: "at",
-        title: "Jump to Ping",
-        subtitle: "Unread pings in one tap",
-        stats: [
-          ["Unread", totalOf(rows)],
-          ["Chats", rows.length],
-        ],
-      }),
       h(
         CustomSection,
         { key: "button", title: "Button" },
@@ -812,6 +794,8 @@ const implementation = (() => {
         { key: "preview", title: "Preview" },
         h(CustomAction, {
           title: "Open ping list",
+          icon: "at",
+          top: 0,
           secondary: true,
           onPress: openPings,
         }),

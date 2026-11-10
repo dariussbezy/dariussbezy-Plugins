@@ -4,7 +4,8 @@ import {
   NativeRow as CustomRow,
   NativeSwitch as CustomSwitch,
   NativeAction as CustomAction,
-  NativeOverview as KitHero,
+  rowIcon,
+  settingsContent,
   NativeGuide as KitGuide,
 } from "../../../shared/native-ui";
 import * as React from "react";
@@ -779,7 +780,7 @@ const implementation = (() => {
     const body = h(
       Design.Stack,
       { spacing: 10, style: { paddingBottom: 8 } },
-      h(Design.BottomSheetTitleHeader, { title: "Transcript", subtitle: sub }),
+      h(Design.BottomSheetTitleHeader, { title: "Transcript", subtitle: sub, leading: rowIcon("mic") }),
       h(
         Design.Card,
         { style: { padding: 12 } },
@@ -847,10 +848,11 @@ const implementation = (() => {
   }
 
   /* ---- settings ---- */
-  function SelectRow({ title, subtitle, value, onPress }) {
+  function SelectRow({ title, subtitle, value, onPress, icon }) {
     return React.createElement(Design.TableRow, {
       label: title,
       subLabel: subtitle,
+      icon: rowIcon(icon),
       trailing: React.createElement(Design.TableRow.TrailingText, { text: value }),
       arrow: true,
       onPress,
@@ -984,18 +986,8 @@ const implementation = (() => {
       {
         style: { flex: 1 },
         keyboardShouldPersistTaps: "handled",
-        contentContainerStyle: { padding: 16, paddingBottom: 42 },
+        contentContainerStyle: settingsContent,
       },
-      h(KitHero, {
-        key: "hero",
-        icon: "mic",
-        title: "Voice Messages to Text",
-        subtitle: "Read voice messages as text",
-        stats: [
-          ["Transcribed", transcripts.size],
-          ["Service", p.name],
-        ],
-      }),
       h(
         CustomSection,
         {
@@ -1054,6 +1046,7 @@ const implementation = (() => {
         h(CustomAction, {
           key: "test",
           title: "Test connection",
+          icon: "test",
           secondary: true,
           compact: true,
           onPress: testConnection,
@@ -1125,6 +1118,7 @@ const implementation = (() => {
         h(CustomAction, {
           key: "clear",
           title: "Clear transcripts (" + transcripts.size + ")",
+          icon: "trash",
           danger: true,
           secondary: true,
           compact: true,

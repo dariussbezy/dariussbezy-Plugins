@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Design } from "@valenced/discord/design";
-import { NativeAction as Action, NativeRow as Row, NativeSection as Section } from "../../../shared/native-ui";
+import { NativeRow as Row, NativeSection as Section } from "../../../shared/native-ui";
 import { findByStoreName } from "./valenced";
 import {
   createAccessEvaluator,
@@ -108,13 +108,14 @@ function snapshot(channelId: string) {
     unknown,
   };
 }
-export default function AccessPanel({ channelId }: { channelId: string }) {
-  const [roleLimit, setRoles] = React.useState(20),
-    [memberLimit, setMembers] = React.useState(20),
-    [ruleLimit, setRules] = React.useState(10),
-    [showMembers, toggleMembers] = React.useState(false),
-    [showRules, toggleRules] = React.useState(false),
-    [showRoles, toggleRoles] = React.useState(false);
+type AccessSection = "roles" | "members" | "rules";
+
+export default function AccessPanel({ channelId, active, onSelect }: {
+  channelId: string;
+  active: AccessSection | null;
+  onSelect: (section: AccessSection | null) => void;
+}) {
+  const [limit, setLimit] = React.useState(0);
   const data = React.useMemo(() => {
     try {
       return snapshot(channelId);
@@ -122,89 +123,60 @@ export default function AccessPanel({ channelId }: { channelId: string }) {
       return null;
     }
   }, [channelId]);
-  const note = (text: string) => <Design.Text variant="text-sm/normal">{text}</Design.Text>;
-  const control = (label: string, onPress: () => void) => (
-    <Action title={label} secondary compact top={0} onPress={onPress} />
-  );
-  const list = (items: { id: string; name: string }[]) =>
-    items.map(({ id, name }) => <Design.TableRow key={id} label={name} />);
-  if (!data) return note("Access details unavailable.");
+  if (!data) return <Design.Text color="text-muted">Access details unavailable.</Design.Text>;
+
+  const sections = [
+    { key: "roles", title: "Allowed roles", icon: "shield", items: data.allowedRoles, preview: 6 },
+    { key: "members", title: "Allowed members", icon: "GroupIcon", items: data.allowedMembers, preview: 6 },
+    { key: "rules", title: "Permission overrides", icon: "lock", items: data.rules, preview: 3 },
+  ] as const;
+  const section = sections.find((entry) => entry.key === active);
+  const visibleCount = Math.min(section?.items.length ?? 0, limit || section?.preview || 0);
+  const details = active === "roles" && (!data.rolesKnown || !data.rulesKnown)
+    ? "Some access data is unavailable."
+    : active === "members"
+      ? `${data.cachedCount} cached members checked${data.limited ? " · scan limited to 500" : ""}${data.unknown ? ` · ${data.unknown} undetermined` : ""}.`
+      : active === "rules" && !data.rulesKnown
+        ? "Permission data unavailable."
+        : undefined;
+
   return (
-    <Design.Stack>
-      {control(
-        `${showRoles ? "Hide" : "Show"} allowed roles · ${data.allowedRoles.length}`,
-        () => toggleRoles((v) => !v),
-      )}
-      {showRoles ? (
-        <Section title={`Allowed roles · ${data.allowedRoles.length}`}>
-          <Design.Stack style={{ padding: 12 }}>
-            {list(data.allowedRoles.slice(0, roleLimit))}
-            {!data.rolesKnown || !data.rulesKnown
-              ? note("Some access data is unavailable.")
-              : !data.allowedRoles.length
-                ? note("No roles found in the available data.")
-                : null}
-            {data.allowedRoles.length > roleLimit
-              ? control("Show more roles", () => setRoles((n) => n + 20))
-              : null}
-          </Design.Stack>
-        </Section>
-      ) : null}
-      {control(
-        `${showMembers ? "Hide" : "Show"} members · ${data.allowedMembers.length}`,
-        () => toggleMembers((v) => !v),
-      )}
-      {showMembers ? (
-        <Section title="Allowed members">
-          <Design.Stack style={{ padding: 12 }}>
-            {note(
-              `${data.cachedCount} members checked${data.limited ? " · scan limited to 500" : ""}${data.unknown ? ` · ${data.unknown} undetermined` : ""}. This is not a full server member list.`,
-            )}
-            {list(data.allowedMembers.slice(0, memberLimit))}
-            {!data.allowedMembers.length
-              ? note("No members identified from the available data.")
-              : null}
-            {data.allowedMembers.length > memberLimit
-              ? control("Show more members", () => setMembers((n) => n + 20))
-              : null}
-          </Design.Stack>
-        </Section>
-      ) : null}
-      {control(
-        `${showRules ? "Hide" : "Show"} permissions · ${data.rules.length}`,
-        () => toggleRules((v) => !v),
-      )}
-      {showRules ? (
-        <Section title="Permission overrides">
-          <Design.Stack style={{ paddingHorizontal: 14, paddingTop: 12 }}>
-            {note(
-              "Explicit channel rules. Unlisted permissions are inherited.",
-            )}
-          </Design.Stack>
-          {data.rules.slice(0, ruleLimit).map((r: any) => (
+    <Design.Stack spacing={10}>
+      <Section title="Access">
+        {sections.map(({ key, title, icon, items }) => (
+          <Row
+            key={key}
+            title={title}
+            icon={icon}
+            subtitle={`${items.length} · ${active === key ? "Tap to hide" : "Tap to view"}`}
+            onPress={() => {
+              setLimit(0);
+              onSelect(active === key ? null : key);
+            }}
+          />
+        ))}
+      </Section>
+      {section && (
+        <Section title={section.title} footer={details}>
+          {section.key === "rules" ? (
+            data.rules.slice(0, visibleCount).map(({ id, name, details }) => (
+              <Row key={id} title={name} subtitle={details} subtitleLines={100} />
+            ))
+          ) : (
             <Row
-              key={r.id}
-              title={r.name}
-              subtitle={r.details}
+              title={section.items.length ? `Showing ${visibleCount} of ${section.items.length}` : "No entries in available data"}
+              subtitle={section.items.slice(0, visibleCount).map(({ name }) => name).join(" · ")}
               subtitleLines={100}
             />
-          ))}
-          {!data.rulesKnown || !data.rules.length ? (
-            <Design.Stack style={{ paddingHorizontal: 14, paddingTop: 6 }}>
-              {note(
-                !data.rulesKnown
-                  ? "Permission data unavailable."
-                  : "No explicit overrides.",
-              )}
-            </Design.Stack>
-          ) : null}
-          {data.rules.length > ruleLimit ? (
-            <Design.Stack style={{ padding: 12 }}>
-              {control("Show more permissions", () => setRules((n) => n + 10))}
-            </Design.Stack>
-          ) : null}
+          )}
+          {section.key === "rules" && !section.items.length && (
+            <Row title="No explicit overrides in available data" />
+          )}
+          {section.items.length > visibleCount && (
+            <Row title="Show more" icon="plus" onPress={() => setLimit(visibleCount + section.preview)} />
+          )}
         </Section>
-      ) : null}
+      )}
     </Design.Stack>
   );
 }

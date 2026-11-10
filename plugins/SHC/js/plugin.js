@@ -1,10 +1,12 @@
+import { BottomSheet } from "@valenced/externals/gorhom";
 import { Design } from "@valenced/discord/design";
 import {
   NativeSection as CustomSection,
   NativeRow as CustomRow,
   NativeSwitch as CustomSwitch,
   NativeAction as CustomAction,
-  NativeOverview as KitHero,
+  rowIcon,
+  settingsContent,
   NativeGuide as KitGuide,
 } from "../../../shared/native-ui";
 import AccessPanel from "./access-panel";
@@ -213,23 +215,6 @@ const implementation = (() => {
     ];
   }
 
-  function hiddenIn(guildId) {
-    const out = [];
-    try {
-      const map =
-        guildId && ChannelStore && ChannelStore.getMutableGuildChannelsForGuild
-          ? ChannelStore.getMutableGuildChannelsForGuild(guildId)
-          : null;
-      for (const ch of map ? Object.values(map) : [])
-        if (ch && ch.type !== 4 && isHidden(ch)) out.push(ch);
-    } catch (_) {}
-    out.sort(
-      (a, b) =>
-        (a.position || 0) - (b.position || 0) ||
-        String(a.name).localeCompare(String(b.name)),
-    );
-    return out;
-  }
   const currentGuildId = () => {
     try {
       return (SelectedGuildStore && SelectedGuildStore.getGuildId()) || null;
@@ -237,14 +222,6 @@ const implementation = (() => {
       return null;
     }
   };
-  function serversWithHidden() {
-    let n = 0;
-    try {
-      for (const id of Object.keys(GuildStore.getGuilds()))
-        if (hiddenIn(id).length) n++;
-    } catch (_) {}
-    return n;
-  }
 
   /* ---- "No Access" names ---- */
   // Discord's private-channel-hiding experiment stops sending the real names of channels you cannot access.
@@ -267,21 +244,6 @@ const implementation = (() => {
       }),
     );
     return true;
-  }
-  const isPlaceholder = (name) =>
-    /^no access$/i.test(String(name == null ? "" : name).trim());
-  function missingNames() {
-    let n = 0;
-    try {
-      for (const id of Object.keys(GuildStore.getGuilds())) {
-        const map = ChannelStore.getMutableGuildChannelsForGuild
-          ? ChannelStore.getMutableGuildChannelsForGuild(id)
-          : null;
-        for (const ch of map ? Object.values(map) : [])
-          if (ch && isPlaceholder(ch.name)) n++;
-      }
-    } catch (_) {}
-    return n;
   }
 
   /* ---- sheet (info card) ---- */
@@ -358,79 +320,57 @@ const implementation = (() => {
     sheetState = { channelId: String(ch.id), onOpen };
     return openSheet();
   }
-  function HiddenSheetContent({ children }) {
-    // Resolve inside the sheet, after its provider has initialized the scrollable library.
-    const Scroll =
-      findByProps("BottomSheetScrollView")?.BottomSheetScrollView ||
-      RN.ScrollView;
-    return React.createElement(
-      Scroll,
-      {
-        style: {
-          height: Math.round(RN.Dimensions.get("window").height * 0.75),
-        },
-        contentContainerStyle: { paddingBottom: 24 },
-        nestedScrollEnabled: true,
-        showsVerticalScrollIndicator: true,
-        keyboardShouldPersistTaps: "handled",
-      },
-      children,
-    );
-  }
   function HiddenSheet() {
     const h = React.createElement;
     const parts = sheetParts();
     const ch = getChannel(sheetState.channelId);
+    const [active, setActive] = React.useState(null);
+    const [contentHeight, setContentHeight] = React.useState(360);
+    const { height: windowHeight } = RN.useWindowDimensions();
+    const cap = Math.round(windowHeight * (active ? 0.8 : 0.58));
+    const height = Math.min(contentHeight, cap);
     const rows = ch
       ? infoRows(ch)
-      : [["Channel", "This channel is no longer available."]];
+      : [["Channel", "This channel is no longer available.", "chat"]];
     const body = h(
       Design.Stack,
       { spacing: 10, style: { paddingBottom: 12 } },
       h(Design.BottomSheetTitleHeader, {
         title: "Hidden channel",
         subtitle: channelLabel(ch),
+        leading: rowIcon("lock"),
       }),
       h(
         CustomSection,
-        { compact: true },
-        ...rows.map((r, i) =>
-          h(CustomRow, {
-            key: r[0],
-            title: r[0],
-            subtitle: r[1],
-            icon: r[2],
-            dense: true,
-            last: i === rows.length - 1,
-          }),
-        ),
+        null,
+        ...rows.map(([title, subtitle, icon]) => h(CustomRow, { key: title, title, subtitle, icon })),
       ),
-      ch
-        ? h(AccessPanel, {
-            channelId: String(ch.id),
-          })
-        : null,
-      ch
-        ? h(
-            CustomSection,
-            { key: "actions", compact: true },
-            h(CustomAction, {
-              title: "Open anyway",
-              compact: true,
-              onPress: () => openAnyway(sheetState.channelId),
-            }),
-          )
-        : null,
+      ch ? h(AccessPanel, { channelId: String(ch.id), active, onSelect: setActive }) : null,
+      ch ? h(CustomAction, {
+        title: "Open anyway",
+        icon: "link",
+        compact: true,
+        top: 0,
+        onPress: () => openAnyway(sheetState.channelId),
+      }) : null,
     );
     return parts.ActionSheet
       ? h(
           parts.ActionSheet,
           {
             scrollable: true,
-            startExpanded: true,
-            maxHeight: Math.round(RN.Dimensions.get("window").height * 0.9),
+            startExpanded: false,
+            startHeight: height + 24,
+            contentHeight: height,
+            maxHeight: cap + 24,
           },
-          h(HiddenSheetContent, null, body),
+          h(BottomSheet.BottomSheetScrollView, {
+            style: { height, flexGrow: 0 },
+            keyboardShouldPersistTaps: "handled",
+            onContentSizeChange: (_width, measured) => {
+              if (measured > 0) setContentHeight(Math.ceil(measured));
+            },
+          }, body),
         )
       : body;
   }
@@ -676,18 +616,8 @@ const implementation = (() => {
       {
         style: { flex: 1 },
         keyboardShouldPersistTaps: "handled",
-        contentContainerStyle: { padding: 16, paddingBottom: 42 },
+        contentContainerStyle: settingsContent,
       },
-      h(KitHero, {
-        key: "hero",
-        icon: "lock",
-        title: "Show Hidden Channels",
-        subtitle: "See channels you cannot access",
-        stats: [
-          ["Servers", serversWithHidden()],
-          ["No Access", missingNames()],
-        ],
-      }),
       h(
         CustomSection,
         { key: "options", title: "Options" },
