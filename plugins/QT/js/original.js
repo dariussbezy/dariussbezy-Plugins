@@ -2613,10 +2613,10 @@ function TranslateButton(props) {
     h(NativeIconControl, {
       icon: iconId,
       fallback: "文",
-      variant: props.position === "actions" ? (armed ? "primary" : "secondary") : "tertiary",
-      iconColor: props.position === "send"
-        ? (translateSendMode ? highlightedTranslate : !!armed) ? ACCENT : paletteNow.text
-        : undefined,
+      variant: highlightedTranslate ? "primary" : props.position === "actions" ? "secondary" : "tertiary",
+      iconColor: props.position === "actions"
+        ? armed ? ACCENT : undefined
+        : highlightedTranslate ? undefined : paletteNow.text,
       label: translateSendMode ? "Translate draft" : "Translate message",
       holdLabel: "Open translation options",
       disabled: busy,
@@ -3864,7 +3864,7 @@ function Settings() {
       ),
       toggle(
         "Highlight Translate Draft button",
-        "Tint the Translate Draft icon blue.",
+        "Use a blue Send-style button for Translate Draft.",
         settings.highlightDraftButton !== false,
         (v) => updateQuickTranslateSettings({ highlightDraftButton: v }),
         "paint",

@@ -119,8 +119,8 @@
       "versions": {
         "1.0.0-beta": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.quick-translate@1.0.0-beta.zip",
-          "sha256": "88bd7b88e37a2a895faa1595c5925349100c6d8b6c868b0a69e8bc676a7f3aac",
-          "size": 36971,
+          "sha256": "da0250f9c620ae4d26e03978408f7b9b2d5745d3464e59bcc5d218fb0113c02e",
+          "size": 36976,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
