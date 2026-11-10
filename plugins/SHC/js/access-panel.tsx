@@ -1,5 +1,6 @@
 import * as React from "react";
-import * as RN from "react-native";
+import { Design } from "@valenced/discord/design";
+import { NativeAction as Action, NativeRow as Row, NativeSection as Section } from "../../../shared/native-ui";
 import { findByStoreName } from "./valenced";
 import {
   createAccessEvaluator,
@@ -107,13 +108,7 @@ function snapshot(channelId: string) {
     unknown,
   };
 }
-export default function AccessPanel({
-  channelId,
-  palette,
-  Section,
-  Row,
-  Action,
-}: any) {
+export default function AccessPanel({ channelId }: { channelId: string }) {
   const [roleLimit, setRoles] = React.useState(20),
     [memberLimit, setMembers] = React.useState(20),
     [ruleLimit, setRules] = React.useState(10),
@@ -127,59 +122,23 @@ export default function AccessPanel({
       return null;
     }
   }, [channelId]);
-  const C = palette();
-  const note = (s: string) => (
-    <RN.Text
-      style={{ color: C.sub, fontSize: 12, lineHeight: 16, marginBottom: 6 }}
-    >
-      {s}
-    </RN.Text>
-  );
+  const note = (text: string) => <Design.Text variant="text-sm/normal">{text}</Design.Text>;
   const control = (label: string, onPress: () => void) => (
-    <RN.View style={{ marginBottom: 10 }}>
-      <Action title={label} secondary compact top={0} onPress={onPress} />
-    </RN.View>
+    <Action title={label} secondary compact top={0} onPress={onPress} />
   );
-  const chips = (items: any[]) => (
-    <RN.View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-      {items.map((item) => (
-        <RN.View
-          key={item.id}
-          style={{
-            backgroundColor: C.chip || C.card,
-            borderRadius: 17,
-            paddingHorizontal: 14,
-            paddingVertical: 8,
-            marginRight: 8,
-            marginBottom: 8,
-            maxWidth: "100%",
-          }}
-        >
-          <RN.Text
-            style={{
-              color: C.text,
-              fontSize: 14,
-              fontWeight: "600",
-              flexShrink: 1,
-            }}
-          >
-            {item.name}
-          </RN.Text>
-        </RN.View>
-      ))}
-    </RN.View>
-  );
+  const list = (items: { id: string; name: string }[]) =>
+    items.map(({ id, name }) => <Design.TableRow key={id} label={name} />);
   if (!data) return note("Access details unavailable.");
   return (
-    <RN.View>
+    <Design.Stack>
       {control(
         `${showRoles ? "Hide" : "Show"} allowed roles · ${data.allowedRoles.length}`,
         () => toggleRoles((v) => !v),
       )}
       {showRoles ? (
-        <Section title={`Allowed roles · ${data.allowedRoles.length}`} compact>
-          <RN.View style={{ padding: 12 }}>
-            {chips(data.allowedRoles.slice(0, roleLimit))}
+        <Section title={`Allowed roles · ${data.allowedRoles.length}`}>
+          <Design.Stack style={{ padding: 12 }}>
+            {list(data.allowedRoles.slice(0, roleLimit))}
             {!data.rolesKnown || !data.rulesKnown
               ? note("Some access data is unavailable.")
               : !data.allowedRoles.length
@@ -188,7 +147,7 @@ export default function AccessPanel({
             {data.allowedRoles.length > roleLimit
               ? control("Show more roles", () => setRoles((n) => n + 20))
               : null}
-          </RN.View>
+          </Design.Stack>
         </Section>
       ) : null}
       {control(
@@ -196,19 +155,19 @@ export default function AccessPanel({
         () => toggleMembers((v) => !v),
       )}
       {showMembers ? (
-        <Section title="Allowed members" compact>
-          <RN.View style={{ padding: 12 }}>
+        <Section title="Allowed members">
+          <Design.Stack style={{ padding: 12 }}>
             {note(
               `${data.cachedCount} members checked${data.limited ? " · scan limited to 500" : ""}${data.unknown ? ` · ${data.unknown} undetermined` : ""}. This is not a full server member list.`,
             )}
-            {chips(data.allowedMembers.slice(0, memberLimit))}
+            {list(data.allowedMembers.slice(0, memberLimit))}
             {!data.allowedMembers.length
               ? note("No members identified from the available data.")
               : null}
             {data.allowedMembers.length > memberLimit
               ? control("Show more members", () => setMembers((n) => n + 20))
               : null}
-          </RN.View>
+          </Design.Stack>
         </Section>
       ) : null}
       {control(
@@ -216,38 +175,36 @@ export default function AccessPanel({
         () => toggleRules((v) => !v),
       )}
       {showRules ? (
-        <Section title="Permission overrides" compact>
-          <RN.View style={{ paddingHorizontal: 14, paddingTop: 12 }}>
+        <Section title="Permission overrides">
+          <Design.Stack style={{ paddingHorizontal: 14, paddingTop: 12 }}>
             {note(
               "Explicit channel rules. Unlisted permissions are inherited.",
             )}
-          </RN.View>
+          </Design.Stack>
           {data.rules.slice(0, ruleLimit).map((r: any) => (
             <Row
               key={r.id}
               title={r.name}
               subtitle={r.details}
               subtitleLines={100}
-              dense
-              noIcon
             />
           ))}
           {!data.rulesKnown || !data.rules.length ? (
-            <RN.View style={{ paddingHorizontal: 14, paddingTop: 6 }}>
+            <Design.Stack style={{ paddingHorizontal: 14, paddingTop: 6 }}>
               {note(
                 !data.rulesKnown
                   ? "Permission data unavailable."
                   : "No explicit overrides.",
               )}
-            </RN.View>
+            </Design.Stack>
           ) : null}
           {data.rules.length > ruleLimit ? (
-            <RN.View style={{ padding: 12 }}>
+            <Design.Stack style={{ padding: 12 }}>
               {control("Show more permissions", () => setRules((n) => n + 10))}
-            </RN.View>
+            </Design.Stack>
           ) : null}
         </Section>
       ) : null}
-    </RN.View>
+    </Design.Stack>
   );
 }

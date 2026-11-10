@@ -126,89 +126,22 @@ export function CompactSheet({
 let pickKey: string | undefined;
 function showSimpleActionSheet(config: any) {
   pickKey = config.key;
-  const light = findByStoreName("ThemeStore")?.theme === "light";
-  const text = light ? "#060607" : "#FFFFFF";
-  const card = light ? "#F2F3F5" : "#2B2D31";
-  const divider = light ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)";
   const Component = () =>
     React.createElement(
       CompactSheet,
       { initialHeight: 64 + config.options.length * 56 },
+      React.createElement(Design.BottomSheetTitleHeader, { title: config.header.title }),
       React.createElement(
-        RN.View,
-        { style: { paddingHorizontal: 16, paddingBottom: 8 } },
-        React.createElement(
-          RN.Text,
-          {
-            style: {
-              textAlign: "center",
-              paddingTop: 4,
-              paddingBottom: 20,
-              fontSize: 18,
-              fontWeight: "700",
-              color: text,
-            },
-          },
-          config.header.title,
-        ),
-        React.createElement(
-          RN.View,
-          {
-            style: {
-              borderRadius: 18,
-              overflow: "hidden",
-              backgroundColor: card,
-            },
-          },
-          ...config.options.map((option: any, index: number) =>
-            React.createElement(
-              RN.Pressable,
-              {
-                key: index,
-                onPress: option.onPress,
-                accessibilityRole: "radio",
-                accessibilityState: { selected: !!option.selected },
-                style: ({ pressed }: { pressed: boolean }) => ({
-                  minHeight: 56,
-                  paddingHorizontal: 16,
-                  paddingVertical: 16,
-                  flexDirection: "row" as const,
-                  alignItems: "center" as const,
-                  backgroundColor: pressed ? divider : "transparent",
-                }),
-              },
-              React.createElement(
-                RN.Text,
-                { style: { flex: 1, fontSize: 16, color: text } },
-                option.label,
-              ),
-              option.selected
-                ? React.createElement(
-                    RN.Text,
-                    {
-                      style: {
-                        color: "#5865F2",
-                        fontSize: 18,
-                        fontWeight: "700",
-                      },
-                    },
-                    "✓",
-                  )
-                : null,
-              index < config.options.length - 1
-                ? React.createElement(RN.View, {
-                    style: {
-                      position: "absolute",
-                      bottom: 0,
-                      left: 16,
-                      right: 16,
-                      height: 1,
-                      backgroundColor: divider,
-                    },
-                  })
-                : null,
-            ),
-          ),
+        Design.TableRowGroup,
+        null,
+        ...config.options.map((option: any, index: number) =>
+          React.createElement(Design.TableCheckboxRow, {
+            key: index,
+            label: option.label,
+            value: String(index),
+            checked: !!option.selected,
+            onPress: option.onPress,
+          }),
         ),
       ),
     );

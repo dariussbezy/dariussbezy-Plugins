@@ -1,6 +1,6 @@
 # Show Hidden Channels for Valenced
 
-Show hidden channel metadata in the server channel list, using the original Show Hidden Channels interface. Version: **1.0.0-beta**.
+Show hidden channel metadata in the server channel list, using the native Discord interface. Version: **1.0.0-beta**.
 
 ## Features
 
@@ -8,9 +8,9 @@ Show hidden channel metadata in the server channel list, using the original Show
 - **Lock indicators**, with an option to turn them off.
 - **Information card** showing only creation, last-message and last-pin dates. Missing dates are labeled **Unknown**.
 - **Open anyway** opens the channel view; hidden-channel message history is not loaded. Hidden voice channels cannot be joined through the plugin.
-- **Compact role and member chips**, laid out side by side and wrapping onto additional lines, calculated from original role permissions and channel overrides, including owner and Administrator access.
+- **Role and member lists**, calculated from original role permissions and channel overrides, including owner and Administrator access.
 - **Permission overrides** listing explicit allowed and denied permissions for each role or member.
-- **Info card toggle**, plus the original settings cards, counters, quick guide and light/dark colors.
+- **Info card toggle**, plus Discord settings rows, counters and a quick guide.
 - **No Access name handling**, using a best-effort session-only override of the matching client experiment. Persisted experiment preferences are not changed.
 
 ## Installation
@@ -35,7 +35,7 @@ The No Access handling applies only to the matching client experiment in this se
 
 ## Access details
 
-The card uses Discord’s BottomSheetScrollView inside its action sheet, with a bounded viewport for longer content. Cards and section buttons use the original plugin controls, with padded content inside rounded containers. Open a hidden channel's information card to see **Allowed roles**, **Allowed members** and **Permission overrides**. Roles, members and permission sections start collapsed and can be expanded. Use **Show more** to browse additional entries. Close and reopen the card to reread the current Discord cache.
+The card uses Discord’s BottomSheetScrollView inside its action sheet, with a bounded viewport for longer content. The card uses Discord settings rows and buttons. Open a hidden channel's information card to see **Allowed roles**, **Allowed members** and **Permission overrides**. Roles, members and permission sections start collapsed and can be expanded. Use **Show more** to browse additional entries. Close and reopen the card to reread the current Discord cache.
 
 Visibility is calculated from the original metadata, independently of this plugin's local visibility patch. The calculation applies the @everyone role, base role permissions, @everyone overrides, combined role denies/allows, and finally member overrides. Server owners and roles with Administrator bypass channel restrictions.
 
