@@ -334,7 +334,7 @@ const implementation = (() => {
       : [["Channel", "This channel is no longer available.", "chat"]];
     const body = h(
       Design.Stack,
-      { spacing: 10, style: { paddingBottom: 12 } },
+      { spacing: 10, style: { paddingBottom: 4 } },
       h(Design.BottomSheetTitleHeader, {
         title: "Hidden channel",
         subtitle: channelLabel(ch),
@@ -343,7 +343,12 @@ const implementation = (() => {
       h(
         CustomSection,
         null,
-        ...rows.map(([title, subtitle, icon]) => h(CustomRow, { key: title, title, subtitle, icon })),
+        ...rows.map(([title, value, icon]) => h(CustomRow, {
+          key: title,
+          title,
+          icon,
+          trailing: h(Design.TableRow.TrailingText, { text: value }),
+        })),
       ),
       ch ? h(AccessPanel, { channelId: String(ch.id), active, onSelect: setActive }) : null,
       ch ? h(CustomAction, {

@@ -14,8 +14,8 @@
       "versions": {
         "1.0.0-beta": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.jump-to-ping@1.0.0-beta.zip",
-          "sha256": "e1eac5f13f00ef2d2ae33e3ca4581f71ebde1f59fe01b9a8af20371fbcb75c53",
-          "size": 8014,
+          "sha256": "89885a6d85edda7aed163cb84ffd06732b358d29d8b3685e1d998ce0660507ca",
+          "size": 8081,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
@@ -119,8 +119,8 @@
       "versions": {
         "1.0.0-beta": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.quick-translate@1.0.0-beta.zip",
-          "sha256": "b2f2a434de03c2b995b35d4bb67e82d27f2fbf05ba8b8c66c176585e51419849",
-          "size": 36667,
+          "sha256": "6c0a34dae3961356cd49b1577ac4b2a6ef4c830a1d6c9574e3e5b2dea4461b35",
+          "size": 36775,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
@@ -143,8 +143,8 @@
       "versions": {
         "1.0.0-beta": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Valenced-Plugins-Themes/refs/heads/main/pool/dariuss.show-hidden-channels@1.0.0-beta.zip",
-          "sha256": "375dc710d8053edd87ff51e09f218a9bc6f4ebd93a460e5ea6c176ec7194be97",
-          "size": 9043,
+          "sha256": "01132f84f19a354146ee7c59a800ed675d24d900b9392b1cb5170c9043ef0fc5",
+          "size": 9164,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"

@@ -1,3 +1,4 @@
+import { View } from "react-native";
 import * as React from "react";
 import { Design } from "@valenced/discord/design";
 import { NativeRow as Row, NativeSection as Section } from "../../../shared/native-ui";
@@ -126,9 +127,9 @@ export default function AccessPanel({ channelId, active, onSelect }: {
   if (!data) return <Design.Text color="text-muted">Access details unavailable.</Design.Text>;
 
   const sections = [
-    { key: "roles", title: "Allowed roles", icon: "shield", items: data.allowedRoles, preview: 6 },
-    { key: "members", title: "Allowed members", icon: "GroupIcon", items: data.allowedMembers, preview: 6 },
-    { key: "rules", title: "Permission overrides", icon: "lock", items: data.rules, preview: 3 },
+    { key: "roles", title: "Allowed roles", short: "Roles", items: data.allowedRoles, preview: 6 },
+    { key: "members", title: "Allowed members", short: "Members", items: data.allowedMembers, preview: 6 },
+    { key: "rules", title: "Permission overrides", short: "Rules", items: data.rules, preview: 3 },
   ] as const;
   const section = sections.find((entry) => entry.key === active);
   const visibleCount = Math.min(section?.items.length ?? 0, limit || section?.preview || 0);
@@ -142,20 +143,24 @@ export default function AccessPanel({ channelId, active, onSelect }: {
 
   return (
     <Design.Stack spacing={10}>
-      <Section title="Access">
-        {sections.map(({ key, title, icon, items }) => (
-          <Row
+      <Design.Text variant="text-sm/medium" color="text-muted">Access</Design.Text>
+      <View style={{ flexDirection: "row", gap: 6 }}>
+        {sections.map(({ key, title, short, items }) => (
+          <Design.Button
             key={key}
-            title={title}
-            icon={icon}
-            subtitle={`${items.length} · ${active === key ? "Tap to hide" : "Tap to view"}`}
+            text={`${short} · ${items.length}`}
+            size="sm"
+            variant={active === key ? "primary" : "secondary"}
+            accessibilityLabel={`${title}, ${items.length}`}
+            accessibilityState={{ expanded: active === key }}
+            style={{ flex: 1, minWidth: 0 }}
             onPress={() => {
               setLimit(0);
               onSelect(active === key ? null : key);
             }}
           />
         ))}
-      </Section>
+      </View>
       {section && (
         <Section title={section.title} footer={details}>
           {section.key === "rules" ? (

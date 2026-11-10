@@ -54,7 +54,7 @@ const ACCENT = "#8EA1FF";
 const MAX_TRANSLATIONS = 300;
 const MAX_CACHE = 200;
 const MAX_HISTORY = 100;
-const MAX_FAVS = 6;
+const MAX_FAVS = 5;
 const REQUEST_GAP = 1200;
 const MAX_PENDING_AUTO_REQUESTS = 4;
 const DEFAULT_429_COOLDOWN = 60000;
@@ -169,7 +169,7 @@ const { useStore: useQuickTranslate } = createPluginStore("quicktranslate", {
   provider: "google",
   deeplApiKey: "",
   anchor: "actions",
-  favLangs: ["en", "es", "fr", "de", "ro", "ru"],
+  favLangs: ["en", "es", "fr", "de", "ro"],
   showSourceLanguage: false,
   autoChannelIds: [],
   autoIncomingImmersive: true,
@@ -1569,16 +1569,18 @@ function BulkMessageSelector(props) {
     setBusy(true);
     props.onTranslate(chosen);
   };
+  const bodyHeight = Math.round(RN.Dimensions.get("window").height * 0.78);
   return h(
     TranslationSheet,
     {
+      bodyHeight,
       sheetKey: "dariuss-qt-bulk-select-" + props.request.nonce,
       title: "Bulk translate",
       onClose: props.onClose,
     },
     h(
       Design.Stack,
-      { style: { height: RN.Dimensions.get("window").height * 0.72 }, spacing: 8 },
+      { style: { height: bodyHeight }, spacing: 8 },
       h(Design.Text, { variant: "text-sm/normal" },
         selected.length + " selected · " + messages.length + " loaded · newest first",
       ),
@@ -2186,6 +2188,11 @@ function patchActionSheet() {
 /* ------------------------------------------------------------------ */
 /* chat bar button                                                     */
 /* ------------------------------------------------------------------ */
+function quickLanguages(settings) {
+  return Array.isArray(settings.favLangs)
+    ? [...new Set(settings.favLangs)].filter((code) => LANG_NAME.has(code)).slice(0, MAX_FAVS)
+    : [];
+}
 function TranslateButton(props) {
   const h = React.createElement;
   const settings = useQuickTranslate();
@@ -2311,9 +2318,7 @@ function TranslateButton(props) {
       pendingMessageRequest = null;
     setMessageRequest(null);
   };
-  const favorites = (settings.favLangs || []).filter((code) =>
-    LANG_NAME.has(code),
-  );
+  const favorites = quickLanguages(settings);
   const paletteNow = palette();
   const sourceLanguages = [["auto", "Auto-detect"], ...LANGS];
   const selectTargetLanguage = (code) => {
@@ -2478,93 +2483,24 @@ function TranslateButton(props) {
           ),
           favorites.length
             ? h(
-                CustomSection,
-                { key: "favorites", title: "Favorite languages" },
-                ...favorites.map((code) => h(Design.TableCheckboxRow, {
-                  key: code,
-                  value: code,
-                  label: languageLabel(code),
-                  checked: code === target,
-                  onPress: () => selectTargetLanguage(code),
-                })),
-              )
-            : null,
-          h(
-            CustomSection,
-            { key: "once-section", title: "Translate once", compact: true },
-            h(
-              Design.Text,
-              {
-                style: {
-                  color: paletteNow.sub,
-                  fontSize: 12,
-                  lineHeight: 16,
-                  paddingHorizontal: 14,
-                  paddingTop: 4,
-                },
-              },
-              messageRequest
-                ? messageRequest.messages?.length > 1
-                  ? "Translate the selected messages with your chosen service and language."
-                  : "Translate this message with your selected service and language."
-                : "Arms the Translate button for one draft. After it translates, your usual language is restored.",
-            ),
-            h(
-              RN.View,
-              { style: { paddingHorizontal: 12, paddingBottom: 8 } },
-              h(CustomAction, {
-                title: busy
-                  ? "Translating…"
-                  : (messageRequest
-                      ? "Translate once · "
-                      : "Activate once · ") + langName(target),
-                disabled: busy,
-                onPress: activateOnce,
-              }),
-            ),
-          ),
-          !messageRequest
-            ? h(
-                CustomSection,
-                {
-                  key: "permanent-section",
-                  title: "Permanent language",
-                  compact: true,
-                },
-                h(
-                  Design.Text,
-                  {
-                    style: {
-                      color: paletteNow.sub,
-                      fontSize: 12,
-                      lineHeight: 16,
-                      paddingHorizontal: 14,
-                      paddingTop: 4,
-                    },
-                  },
-                  "Changes the usual target for this chat until you choose another language.",
-                ),
+                Design.Stack,
+                { key: "favorites", spacing: 6, style: { marginVertical: 12 } },
+                h(Design.Text, { variant: "text-sm/medium", color: "text-muted" }, "Quick languages"),
                 h(
                   RN.View,
-                  { style: { paddingHorizontal: 12, paddingBottom: 8 } },
-                  h(CustomAction, {
-                    title: "Set " + langName(target) + " as usual",
-                    secondary: true,
-                    onPress: setPermanentLanguage,
-                  }),
+                  { style: { flexDirection: "row", gap: 6 } },
+                  ...favorites.map((code) => h(Design.Button, {
+                    key: code,
+                    text: code.toUpperCase(),
+                    size: "sm",
+                    variant: code === target ? "primary" : "secondary",
+                    accessibilityLabel: langName(code),
+                    accessibilityState: { selected: code === target },
+                    style: { flex: 1, minWidth: 0 },
+                    onPress: () => selectTargetLanguage(code),
+                  })),
                 ),
               )
-            : null,
-          !messageRequest && lastOriginal != null
-            ? h(CustomAction, {
-                key: "restore",
-                title: "Restore original text",
-                secondary: true,
-                onPress: () => {
-                  closePanel();
-                  restoreOriginal();
-                },
-              })
             : null,
         ]
       : [
@@ -2627,21 +2563,52 @@ function TranslateButton(props) {
               }),
             ),
           ),
-          panelPage === "target"
-            ? h(CustomAction, {
-                key: "confirm-target",
-                title: "Confirm " + langName(target),
-                onPress: confirmTargetLanguage,
-              })
-            : null,
         ];
+  const height = RN.Dimensions.get("window").height;
+  const panelHeight = Math.min(Math.round(height * 0.78),
+    panelPage === "main" ? (messageRequest ? 315 : 400) : Math.round(height * 0.68));
+  const footer = panelPage === "main"
+    ? h(Design.Stack, { spacing: 6, style: { paddingTop: 8 } },
+        h(Design.Button, {
+          text: busy ? "Translating…" : (messageRequest ? "Translate once" : "Activate once") + " · " + langName(target),
+          size: "sm",
+          disabled: busy,
+          onPress: activateOnce,
+        }),
+        !messageRequest && h(Design.Button, {
+          text: "Set " + langName(target) + " as usual",
+          size: "sm",
+          variant: "secondary",
+          onPress: setPermanentLanguage,
+        }),
+        !messageRequest && lastOriginal != null && h(Design.Button, {
+          text: "Restore original text",
+          size: "sm",
+          variant: "secondary",
+          onPress: () => { closePanel(); restoreOriginal(); },
+        }),
+        !messageRequest && armed && h(Design.Button, {
+          text: "Turn off Translate",
+          size: "sm",
+          variant: "secondary",
+          onPress: () => { armed = null; notifyButton(); closePanel(); },
+        }),
+      )
+    : panelPage === "target"
+      ? h(Design.Button, {
+          text: "Confirm " + langName(target),
+          size: "sm",
+          onPress: confirmTargetLanguage,
+        })
+      : null;
   return h(
     React.Fragment,
     null,
     h(NativeIconControl, {
       icon: iconId,
       fallback: "文",
-      variant: highlightedTranslate ? "primary" : armed ? "active" : "tertiary",
+      variant: "tertiary",
+      iconColor: (translateSendMode ? highlightedTranslate : !!armed) ? ACCENT : paletteNow.text,
       label: translateSendMode ? "Translate draft" : "Translate message",
       holdLabel: "Open translation options",
       disabled: busy,
@@ -2657,23 +2624,18 @@ function TranslateButton(props) {
               ? messageRequest.messages?.length > 1 ? "Translate messages" : "Translate message"
               : "Translate draft",
             onClose: closePanel,
+            bodyHeight: panelHeight,
           },
           h(
-            BottomSheet.BottomSheetScrollView,
-            { keyboardShouldPersistTaps: "handled", style: { maxHeight: RN.Dimensions.get("window").height * 0.7 } },
-            ...panelBody,
+            RN.View,
+            { style: { height: panelHeight } },
+            h(
+              BottomSheet.BottomSheetScrollView,
+              { keyboardShouldPersistTaps: "handled", style: { flex: 1 } },
+              ...panelBody,
+            ),
+            footer,
           ),
-          panelPage === "main" && !messageRequest && armed
-            ? h(CustomAction, {
-                title: "Turn off Translate",
-                secondary: true,
-                onPress: () => {
-                  armed = null;
-                  notifyButton();
-                  closePanel();
-                },
-              })
-            : null,
         )
       : null,
     bulkSelectionRequest && props.position === settings.anchor
@@ -2780,9 +2742,9 @@ function ComposerSendSlot(props) {
         collapsable: false,
         style: {
           position: "relative",
-          alignItems: "flex-end",
-          justifyContent: "flex-end",
-          alignSelf: "flex-end",
+          alignItems: "center",
+          justifyContent: "center",
+          alignSelf: "center",
         },
       },
       h(
@@ -2802,10 +2764,12 @@ function ComposerSendSlot(props) {
           pointerEvents: "box-none",
           style: {
             position: "absolute",
+            top: 0,
             bottom: 0,
+            left: 0,
             right: 0,
-            alignItems: "flex-end",
-            justifyContent: "flex-end",
+            alignItems: "center",
+            justifyContent: "center",
           },
         },
         props.button,
@@ -2817,8 +2781,8 @@ function ComposerSendSlot(props) {
       pointerEvents: "box-none",
       style: {
         flexDirection: "row",
-        alignItems: "flex-end",
-        alignSelf: "flex-end",
+        alignItems: "center",
+        alignSelf: "center",
         flexGrow: 0,
         flexShrink: 0,
       },
@@ -3024,7 +2988,7 @@ function FavPicker() {
   const settings = useQuickTranslate();
   const [query, setQuery] = React.useState("");
   const q = query.trim().toLowerCase();
-  const favs = settings.favLangs || [];
+  const favs = quickLanguages(settings);
   const list = LANGS.filter(
     ([c, n]) =>
       !q || n.toLowerCase().includes(q) || c.toLowerCase().includes(q),
@@ -3851,7 +3815,7 @@ function Settings() {
       h(CustomRow, {
         title: "Quick languages",
         subtitle:
-          (settings.favLangs || []).length + " of " + MAX_FAVS + " selected",
+          quickLanguages(settings).length + " of " + MAX_FAVS + " selected",
         icon: "★",
         last: true,
         onPress: () => go("Quick languages", FavPicker),
@@ -3883,7 +3847,7 @@ function Settings() {
       ),
       toggle(
         "Highlight Translate Draft button",
-        "Use a blue background to distinguish Translate from Send.",
+        "Tint the Translate Draft icon blue.",
         settings.highlightDraftButton !== false,
         (v) => updateQuickTranslateSettings({ highlightDraftButton: v }),
         "paint",

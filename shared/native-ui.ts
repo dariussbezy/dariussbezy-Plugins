@@ -1,4 +1,4 @@
-import { Pressable, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
 import { getAssetIdByName } from "@valenced/assets";
 import { createElement as h, isValidElement } from "react";
 import type { ComponentProps, ReactNode } from "react";
@@ -121,8 +121,9 @@ export function NativeGuide({ title, steps }: {
   });
 }
 
-export function NativeIconControl({ icon, fallback, label, holdLabel, onPress, onLongPress, variant, disabled }: {
+export function NativeIconControl({ icon, iconColor, fallback, label, holdLabel, onPress, onLongPress, variant, disabled }: {
   icon?: number;
+  iconColor?: string;
   fallback?: string;
   label: string;
   holdLabel: string;
@@ -144,13 +145,15 @@ export function NativeIconControl({ icon, fallback, label, holdLabel, onPress, o
     disabled,
     onPress,
     onLongPress,
-    style: { opacity: disabled ? 0.5 : 1, flexShrink: 0, alignSelf: "center" },
+    style: { opacity: disabled ? 0.5 : 1, flexShrink: 0, alignSelf: "center", ...(iconColor ? { width: 32, height: 36, alignItems: "center", justifyContent: "center" } : null) },
   }, h(View, {
     pointerEvents: "none",
     accessibilityElementsHidden: true,
     importantForAccessibility: "no-hide-descendants",
   }, icon
-    ? h(Design.IconButton, { icon, variant, size: "sm" })
+    ? iconColor
+      ? h(Image, { source: icon, resizeMode: "contain", style: { width: 22, height: 22, tintColor: iconColor } })
+      : h(Design.IconButton, { icon, variant, size: "sm" })
     : h(Design.Text, {
         variant: "text-lg/semibold",
         style: { width: 36, height: 36, textAlign: "center", textAlignVertical: "center" },

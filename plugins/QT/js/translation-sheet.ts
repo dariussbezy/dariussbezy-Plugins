@@ -4,9 +4,10 @@ import { ActionSheetActionCreators } from "@valenced/discord/actions";
 import { Design } from "@valenced/discord/design";
 import { useWindowDimensions } from "react-native";
 
-export function TranslationSheet({ sheetKey, title, children, onClose }: {
+export function TranslationSheet({ sheetKey, title, bodyHeight, children, onClose }: {
   sheetKey: string;
   title: string;
+  bodyHeight: number;
   children: ReactNode;
   onClose: () => void;
 }) {
@@ -30,15 +31,18 @@ export function TranslationSheet({ sheetKey, title, children, onClose }: {
     };
   }, []);
   useLayoutEffect(() => {
+    const sheetHeight = Math.min(Math.round(height * 0.92), bodyHeight + 64);
     sheet.update(h(Design.ActionSheet, {
-      startExpanded: true,
+      startExpanded: false,
+      startHeight: sheetHeight,
+      contentHeight: bodyHeight,
       scrollable: true,
-      maxHeight: Math.round(height * 0.9),
+      maxHeight: sheetHeight,
       header: h(Design.BottomSheetTitleHeader, { title }),
       onDismiss: () => { if (active.current) onClose(); },
       children,
     }));
-  }, [sheet, height, title, children, onClose]);
+  }, [sheet, height, title, bodyHeight, children, onClose]);
   useEffect(() => {
     active.current = true;
     ActionSheetActionCreators.openLazy(Promise.resolve({ default: sheet.Component }), sheetKey, {});
