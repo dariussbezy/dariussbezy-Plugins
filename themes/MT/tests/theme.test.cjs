@@ -13,6 +13,22 @@ function load(file,modules={}) {
  return module.exports;
 }
 const exists=fs.existsSync(path.join(base,'js/palette.json'));
+test('primary and secondary button labels remain readable in every appearance and state',()=>{
+ const palette=JSON.parse(fs.readFileSync(path.join(base,'js/palette.json')));
+ function luminance(hex){
+  const rgb=hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4);
+  return rgb[0]*0.2126+rgb[1]*0.7152+rgb[2]*0.0722;
+ }
+ for(const [appearance,colors] of Object.entries(palette.semantic)){
+  for(const control of ['PRIMARY','SECONDARY']){
+   for(const state of ['DEFAULT','HOVER','ACTIVE']){
+    const a=luminance(colors['CONTROL_'+control+'_BACKGROUND_'+state]);
+    const b=luminance(colors['CONTROL_'+control+'_TEXT_'+state]);
+    assert.ok((Math.max(a,b)+0.05)/(Math.min(a,b)+0.05)>=4.5,appearance+' '+control+' '+state);
+   }
+  }
+ }
+});
 test('mobile palette exists and contains dark, darker, midnight and light',()=>{
  assert.ok(exists,'Missing mobile palette');
  const p=JSON.parse(fs.readFileSync(path.join(base,'js/palette.json')));
@@ -57,17 +73,17 @@ module.exports={load,base};
 test('published ZIP and beta index agree, and include no development files',()=>{
  const {unzipSync,strFromU8}=require('fflate');
  const {createHash}=require('node:crypto');
- const archive=fs.readFileSync(path.join(base,'../../pool/dariuss.midnight-theme@1.0.1-beta.zip'));
+ const archive=fs.readFileSync(path.join(base,'../../pool/dariuss.midnight-theme@1.0.2-beta.zip'));
  const files=unzipSync(archive);
  const manifest=JSON.parse(strFromU8(files['manifest.json']));
  const index=JSON.parse(fs.readFileSync(path.join(base,'../../index.json')));
  const entry=index.plugins[manifest.id];
- assert.deepEqual(entry.channels,{beta:'1.0.1-beta'});
+ assert.deepEqual(entry.channels,{beta:'1.0.2-beta'});
  assert.equal(entry.versions[manifest.version].size,archive.length);
  assert.equal(entry.versions[manifest.version].sha256,createHash('sha256').update(archive).digest('hex'));
  for(const name of ['assets/wallpaper.png','assets/moon.png','assets/Figtree.ttf','assets/Figtree-Italic.ttf','assets/Figtree-OFL.txt','assets/NOTICE.txt'])assert.ok(files[name]?.length,name);
  assert.ok(Object.keys(files).every(name=>name==='manifest.json'||name==='index.js'||name.startsWith('assets/')));
- assert.equal(manifest.version,'1.0.1-beta');
+ assert.equal(manifest.version,'1.0.2-beta');
  assert.equal(manifest.dependencies['valenced.api'].version,'>=1 <2');
 });
 
