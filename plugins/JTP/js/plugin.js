@@ -29,7 +29,7 @@ const pingStore = createPluginStore("jumptoping", {
   includeDMs: false,
 });
 const implementation = (() => {
-  const BUILD = "1.0.3-beta";
+  const BUILD = "1.0.4-beta";
   const SHEET_KEY = "jump-to-ping";
   const MAX_CHANNELS = 300;
   const PER_CHANNEL = 25;
@@ -291,7 +291,6 @@ const implementation = (() => {
   }
 
   function loadedMention(channelId, oldest) {
-    if (!oldest) return null;
     try {
       const ms = MessageStore && MessageStore.getMessages(channelId);
       const arr =
@@ -300,7 +299,7 @@ const implementation = (() => {
       const me = myId();
       const ch = getChannel(channelId);
       for (const m of arr) {
-        if (!m || !m.id || !gte(m.id, oldest)) continue;
+        if (!m || !m.id || (oldest && !gte(m.id, oldest))) continue;
         const kind = pingKind(m, ch, me);
         if (kind) return entryFrom(m, kind);
       }
@@ -353,12 +352,13 @@ const implementation = (() => {
     const epoch = generation;
     const ch = getChannel(channelId),
       me = myId();
-    let after = decId(oldest);
+    let after = oldest ? decId(oldest) : null;
+    let before = null;
     const found = [];
     for (let page = 0; page < 3; page++) {
       const res = await api.get({
         url: "/channels/" + channelId + "/messages",
-        query: { limit: 50, after },
+        query: { limit: 50, ...(after ? { after } : before ? { before } : {}) },
       });
       if (!loadRequested || epoch !== generation)
         throw new Error("Request cancelled");
@@ -371,7 +371,8 @@ const implementation = (() => {
         if (kind) found.push(entryFrom(m, kind));
       }
       if (list.length < 50) break;
-      after = list[list.length - 1].id;
+      if (oldest) after = list[list.length - 1].id;
+      else before = list[0].id;
     }
     fetchedMessages.delete(String(channelId));
     fetchedMessages.set(String(channelId), found);
@@ -422,7 +423,7 @@ const implementation = (() => {
   }
   async function ensureResolved(r) {
     const cached = resolved.get(r.c);
-    if (cached && cached.oldest === String(r.oldest)) return cached.entry;
+    if (cached?.entry && cached.oldest === String(r.oldest)) return cached.entry;
     const epoch = generation;
     try {
       const entry = await fetchPing(r.c, r.oldest);
@@ -463,11 +464,17 @@ const implementation = (() => {
           ? ReadStateStore.getOldestUnreadMessageId(channelId)
           : null;
       } catch (_) {}
+      if (!oldest) {
+        try {
+          const ack = ReadStateStore.getLastAckedMessageId?.(channelId);
+          if (ack && /^\d+$/.test(String(ack))) oldest = String(BigInt(ack) + 1n);
+        } catch (_) {}
+      }
       let hit = remaining?.[0] || pickMessage(channelId, oldest);
       let needs = false;
-      if (!hit && oldest) {
+      if (!hit) {
         const cached = resolved.get(String(channelId));
-        if (cached && cached.oldest === String(oldest)) hit = cached.entry;
+        if (cached?.entry && cached.oldest === String(oldest)) hit = cached.entry;
         else needs = true;
       }
       const id = hit ? hit.id : oldest || null;
@@ -542,7 +549,9 @@ const implementation = (() => {
     for (const item of values) {
       if ((!r.oldest || gte(item.id, r.oldest)) && !visited.has(item.id)) unique.set(item.id, item);
     }
-    if (!unique.size && r.id && !visited.has(r.id)) unique.set(r.id, r);
+    const exact = resolved.get(r.c)?.entry;
+    if (!unique.size && exact && !visited.has(exact.id)) unique.set(exact.id, exact);
+    if (!unique.size && r.id && !r.needs && !visited.has(r.id)) unique.set(r.id, r);
     return [...unique.values()].sort((a, b) => a.id === b.id ? 0 : gte(a.id, b.id) ? 1 : -1);
   }
   function visitPing(row, message) {
@@ -607,7 +616,7 @@ const implementation = (() => {
         setSelected(row);
         setLoading(true);
         try {
-          if (row.oldest) await ensureResolved(row);
+          await ensureResolved(row);
           if (!loadRequested) return;
           const messages = messagesFor(row);
           if (messages.length) remainingPings.set(row.c, messages);
@@ -639,9 +648,9 @@ const implementation = (() => {
       h(Design.TableRowGroup, null, ...items.map(item => h(Design.TableRow, {
         ...item, labelLineClamp: 1, subLabelLineClamp: 2, arrow: true,
       }))),
-      selected && !loading ? h(Design.TableRow, {
-        label: messages.length + " messages available",
-        subLabel: "Unvisited pings stay here for this session even if Discord marks the chat read. Up to 150 recent messages are searched.",
+      selected && !loading && !messages.length ? h(Design.TableRow, {
+        label: "Retry loading messages",
+        onPress: () => { void choose(selected).catch(() => toast("Could not load pings")); },
       }) : null,
     );
     return parts.ActionSheet ? h(parts.ActionSheet, {

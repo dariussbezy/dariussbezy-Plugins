@@ -35,7 +35,7 @@ test('visiting one message retains the next message after Discord acknowledges t
  captured.set('c',[{id:'100',t:'first'},{id:'200',t:'second'}]);
  const jumps=[];
  const api=vm.runInNewContext('(function(){'+source.slice(start,end)+';return {messagesFor,visitPing};})()',{
-  remainingPings,visitedPings,captured,fetchedMessages,MAX_CHANNELS:300,
+  remainingPings,visitedPings,captured,fetchedMessages,resolved:new Map(),MAX_CHANNELS:300,
   gte:(a,b)=>BigInt(a)>=BigInt(b),schedule:()=>{},jumpTo:(...args)=>jumps.push(args),
  });
  const row={c:'c',oldest:'100',id:'100'};
@@ -46,4 +46,25 @@ test('visiting one message retains the next message after Discord acknowledges t
  api.visitPing(row,api.messagesFor(row)[0]);
  assert.equal(api.messagesFor(row).length,0);
  assert.deepEqual(jumps,[['c','100'],['c','200']]);
+});
+test('message lookup fetches recent DM messages when no oldest unread ID exists',async()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../plugins/JTP/js/plugin.js'),'utf8');
+ const start=source.indexOf('async function fetchPingPage(');
+ const end=source.indexOf('\n  function remember(',start);
+ const fetchedMessages=new Map(),queries=[];
+ const fetchPage=vm.runInNewContext('('+source.slice(start,end)+')',{
+  restApi:()=>({get:async request=>{
+   queries.push(request.query);
+   return {body:[{id:'200',author:{id:'other'}},{id:'100',author:{id:'other'}}]};
+  }}),
+  generation:1,loadRequested:true,getChannel:()=>({type:1}),myId:()=> 'me',
+  pingKind:()=> 'dm',entryFrom:m=>({id:m.id,t:'DM text'}),
+  fetchedMessages,MAX_CHANNELS:300,gte:(a,b)=>BigInt(a)>=BigInt(b),
+ });
+ const first=await fetchPage('dm',null);
+ assert.equal(first.id,'100');
+ assert.equal(fetchedMessages.get('dm').length,2);
+ assert.equal(queries[0].limit,50);
+ assert.equal('after' in queries[0],false);
+ assert.equal('before' in queries[0],false);
 });
