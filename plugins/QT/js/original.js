@@ -2284,7 +2284,8 @@ function TranslateButton(props) {
       const job = armed;
       run(job.tl, job.sl).then((ok) => {
         if (ok) {
-          armed = job.oneShot ? job.resume || null : null;
+          // A translated draft must return to Send, including one-time overrides.
+          armed = null;
           notifyButton();
         }
       });

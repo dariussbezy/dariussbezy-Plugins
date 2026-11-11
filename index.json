@@ -202,7 +202,7 @@
       "author": "dariuss",
       "icon": "LanguageIcon",
       "channels": {
-        "beta": "1.0.2-beta"
+        "beta": "1.0.3-beta"
       },
       "versions": {
         "1.0.0-beta": {
@@ -231,6 +231,17 @@
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.quick-translate@1.0.2-beta.zip",
           "sha256": "00a84924762e3a0c7a37d8a4f432cfc4e8449225ea53053024f7bb0136f43b2e",
           "size": 36967,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
+        },
+        "1.0.3-beta": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.quick-translate@1.0.3-beta.zip",
+          "sha256": "2210b81f03be6ab807ebb108a4b9aff20587413420dc3d048df70a2d1d681d8d",
+          "size": 36953,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"

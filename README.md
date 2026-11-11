@@ -26,7 +26,7 @@ For an existing installation, open the plugin's options, set **Repository** to *
 | [Ghost Ping Logger](plugins/GPL/README.md) | Keep a local journal of deleted mentions and replies, with ghost ping alerts. | [`plugins/GPL`](plugins/GPL) |
 | [Midnight Mobile](themes/MT/README.md) | Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon. | [`themes/MT`](themes/MT) |
 
-Jump to Ping is **1.1.0-beta**. Adv. Message Logger and Ghost Ping Logger are **1.0.0-beta**. Midnight Mobile and Quick Translate are **1.0.2-beta**. Show Hidden Channels and Voice Messages To Text are **1.0.1-beta**. Only the beta channel is published.
+Jump to Ping is **1.1.0-beta**. Adv. Message Logger and Ghost Ping Logger are **1.0.0-beta**. Quick Translate is **1.0.3-beta**. Midnight Mobile is **1.0.2-beta**. Show Hidden Channels and Voice Messages To Text are **1.0.1-beta**. Only the beta channel is published.
 
 AML and GPL work independently and cooperate when both are enabled. Their beta version numbers have been reset to **1.0.0-beta** with the latest fixes included. If you already installed a higher test version, select **1.0.0-beta** manually and then resume following **beta**; an update check does not offer downgrades.
 
