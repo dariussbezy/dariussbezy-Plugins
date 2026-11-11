@@ -5,7 +5,7 @@
   "description": "Find unread mentions, replies and DMs, then jump straight to the message.",
   "author": "dariuss",
   "icon": "AtIcon",
-  "version": "1.0.2-beta",
+  "version": "1.0.3-beta",
   "dependencies": {
     "valenced.api": {
       "version": ">=1 <2"

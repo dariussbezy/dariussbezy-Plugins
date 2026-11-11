@@ -22,7 +22,7 @@ Choose the plugins you want from the **beta** channel. Existing plugin IDs and v
 | [Voice Messages To Text](plugins/VMTT/README.md) | Transcribe voice messages below the audio, with a free server or Groq. | [`plugins/VMTT`](plugins/VMTT) |
 | [Midnight Mobile](themes/MT/README.md) | Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon. | [`themes/MT`](themes/MT) |
 
-Midnight Mobile, Quick Translate and Jump to Ping are **1.0.2-beta**. The other plugins are **1.0.1-beta**. Only the beta channel is published.
+Jump to Ping is **1.0.3-beta**. Midnight Mobile and Quick Translate are **1.0.2-beta**. The other plugins are **1.0.1-beta**. Only the beta channel is published.
 
 Midnight's colors, Figtree font and moon icon are selected separately under **Valenced Settings → Themes**. Font and icon changes require a restart.
 

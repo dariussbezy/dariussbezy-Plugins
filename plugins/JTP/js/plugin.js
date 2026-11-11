@@ -29,7 +29,7 @@ const pingStore = createPluginStore("jumptoping", {
   includeDMs: false,
 });
 const implementation = (() => {
-  const BUILD = "1.0.2-beta";
+  const BUILD = "1.0.3-beta";
   const SHEET_KEY = "jump-to-ping";
   const MAX_CHANNELS = 300;
   const PER_CHANNEL = 25;
@@ -45,6 +45,9 @@ const implementation = (() => {
   const unpatches = [];
   const listeners = new Set();
   const captured = new Map();
+  const fetchedMessages = new Map();
+  const remainingPings = new Map();
+  const visitedPings = new Map();
   let ReadStateStore;
   let MessageStore;
   let UserStore;
@@ -248,10 +251,14 @@ const implementation = (() => {
   function drop(channelId, id) {
     if (!channelId || !id) return;
     const key = String(channelId);
+    const remaining = (remainingPings.get(key) || []).filter(item => item.id !== String(id));
+    if (remaining.length) remainingPings.set(key, remaining);
+    else remainingPings.delete(key);
     const list = captured.get(key);
-    if (!list) return;
     const cached = resolved.get(key);
     if (cached?.entry?.id === String(id)) resolved.delete(key);
+    fetchedMessages.set(key, (fetchedMessages.get(key) || []).filter(item => item.id !== String(id)));
+    if (!list) return;
     const kept = list.filter((x) => x.id !== String(id));
     if (kept.length) captured.set(key, kept);
     else captured.delete(key);
@@ -347,6 +354,7 @@ const implementation = (() => {
     const ch = getChannel(channelId),
       me = myId();
     let after = decId(oldest);
+    const found = [];
     for (let page = 0; page < 3; page++) {
       const res = await api.get({
         url: "/channels/" + channelId + "/messages",
@@ -360,12 +368,15 @@ const implementation = (() => {
         .sort((x, y) => (x.id === y.id ? 0 : gte(x.id, y.id) ? 1 : -1));
       for (const m of list) {
         const kind = pingKind(m, ch, me);
-        if (kind) return entryFrom(m, kind);
+        if (kind) found.push(entryFrom(m, kind));
       }
       if (list.length < 50) break;
       after = list[list.length - 1].id;
     }
-    return null;
+    fetchedMessages.delete(String(channelId));
+    fetchedMessages.set(String(channelId), found);
+    while (fetchedMessages.size > MAX_CHANNELS) fetchedMessages.delete(fetchedMessages.keys().next().value);
+    return found[0] || null;
   }
   function remember(channelId, oldest, entry) {
     resolved.delete(String(channelId));
@@ -435,11 +446,13 @@ const implementation = (() => {
       ids = Array.from(captured.keys());
     }
     const rows = [];
-    for (const channelId of ids) {
+    for (const channelId of new Set([...ids.map(String), ...remainingPings.keys()])) {
       let count = 0;
       try {
         count = ReadStateStore.getMentionCount(channelId) || 0;
       } catch (_) {}
+      const remaining = remainingPings.get(String(channelId));
+      if (remaining?.length) count = remaining.length;
       if (count <= 0) continue;
       const ch = getChannel(channelId);
       const dm = isDM(ch);
@@ -450,7 +463,7 @@ const implementation = (() => {
           ? ReadStateStore.getOldestUnreadMessageId(channelId)
           : null;
       } catch (_) {}
-      let hit = pickMessage(channelId, oldest);
+      let hit = remaining?.[0] || pickMessage(channelId, oldest);
       let needs = false;
       if (!hit && oldest) {
         const cached = resolved.get(String(channelId));
@@ -520,6 +533,29 @@ const implementation = (() => {
       if (loadRequested && epoch === generation) jumpTo(r.c, e ? e.id : r.id);
     });
   }
+  function messagesFor(r) {
+    const values = remainingPings.get(r.c) || [
+      ...(captured.get(r.c) || []), ...(fetchedMessages.get(r.c) || []),
+    ];
+    const visited = visitedPings.get(r.c) || new Set();
+    const unique = new Map();
+    for (const item of values) {
+      if ((!r.oldest || gte(item.id, r.oldest)) && !visited.has(item.id)) unique.set(item.id, item);
+    }
+    if (!unique.size && r.id && !visited.has(r.id)) unique.set(r.id, r);
+    return [...unique.values()].sort((a, b) => a.id === b.id ? 0 : gte(a.id, b.id) ? 1 : -1);
+  }
+  function visitPing(row, message) {
+    let visited = visitedPings.get(row.c);
+    if (!visited) visitedPings.set(row.c, visited = new Set());
+    visited.add(message.id);
+    const rest = messagesFor(row).filter(item => item.id !== message.id);
+    if (rest.length) remainingPings.set(row.c, rest);
+    else remainingPings.delete(row.c);
+    while (visitedPings.size > MAX_CHANNELS) visitedPings.delete(visitedPings.keys().next().value);
+    schedule();
+    jumpTo(row.c, message.id);
+  }
 
   function rowSubtitle(r) {
     const what = r.dm
@@ -538,9 +574,9 @@ const implementation = (() => {
   function PingSheet() {
     const h = React.createElement;
     const [, bump] = React.useState(0);
-    const [expanded, setExpanded] = React.useState(false);
-    const [headerHeight, setHeaderHeight] = React.useState(88);
-    const [firstRowsHeight, setFirstRowsHeight] = React.useState(252);
+    const [selected, setSelected] = React.useState(null);
+    const [loading, setLoading] = React.useState(false);
+    const [contentHeight, setContentHeight] = React.useState(300);
     const { height: windowHeight } = RN.useWindowDimensions();
     React.useEffect(() => {
       const fn = () => bump((x) => x + 1);
@@ -557,8 +593,7 @@ const implementation = (() => {
     }, [rows.map((r) => r.c + ":" + (r.needs ? 1 : 0)).join("|")]);
     const bottomPadding = useSheetBottomPadding();
     const maxHeight = Math.floor(windowHeight * 0.85);
-    const initialHeight = Math.min(maxHeight, headerHeight + firstRowsHeight + bottomPadding + 24);
-    const viewportHeight = Math.max(80, (expanded ? maxHeight : initialHeight) - headerHeight - bottomPadding - 24);
+    const initialHeight = Math.min(maxHeight, 100 + Math.min(rows.length || 1, 3) * 96 + bottomPadding + 32);
     const subtitle = rows.length
       ? total +
         (total === 1 ? " unread ping" : " unread pings") +
@@ -566,42 +601,56 @@ const implementation = (() => {
         rows.length +
         (rows.length === 1 ? " chat" : " chats")
       : "You are all caught up";
-    const body = h(
-      Design.Stack,
-      { spacing: 12, style: { paddingBottom: bottomPadding } },
-      h(RN.View, { onLayout: event => setHeaderHeight(Math.ceil(event.nativeEvent.layout.height)) },
-        h(Design.BottomSheetTitleHeader, { title: "Pings", subtitle })),
-      rows.length
-        ? h(
-            BottomSheet.BottomSheetScrollView,
-            { style: { height: viewportHeight, flexGrow: 0 }, keyboardShouldPersistTaps: "handled" },
-            h(RN.View, { onLayout: event => setFirstRowsHeight(Math.ceil(event.nativeEvent.layout.height)) },
-            h(
-              Design.TableRowGroup,
-              null,
-              ...rows.slice(0, 3).map((row) => h(Design.TableRow, {
-                key: row.c,
-                label: channelLabel(row.c, row.g),
-                icon: rowIcon(row.dm ? "chat" : "at"),
-                subLabel: rowSubtitle(row),
-                subLabelLineClamp: 2,
-                arrow: true,
-                onPress: () => jumpToPing(row),
-              })),
-            )),
-            rows.length > 3 ? h(Design.TableRowGroup, null,
-              ...rows.slice(3).map(row => h(Design.TableRow, {
-                key: row.c, label: channelLabel(row.c, row.g),
-                icon: rowIcon(row.dm ? "chat" : "at"), subLabel: rowSubtitle(row),
-                subLabelLineClamp: 2, arrow: true, onPress: () => jumpToPing(row),
-              }))) : null,
-          )
-        : null,
+    async function choose(row) {
+      if (loading) return;
+      if (row.count > 1) {
+        setSelected(row);
+        setLoading(true);
+        try {
+          if (row.oldest) await ensureResolved(row);
+          if (!loadRequested) return;
+          const messages = messagesFor(row);
+          if (messages.length) remainingPings.set(row.c, messages);
+          schedule();
+        } finally { if (loadRequested) setLoading(false); }
+      } else {
+        if (row.needs) await ensureResolved(row);
+        const message = messagesFor(row)[0];
+        if (message) visitPing(row, message);
+        else toast("Could not find this ping. Try again.");
+      }
+    }
+    const messages = selected ? messagesFor(selected) : [];
+    const items = selected ? messages.map(message => ({
+      key: message.id, label: message.an || "Message",
+      subLabel: (message.t || "(No text)") + "\n" + fmtTime(message.at),
+      onPress: () => visitPing(selected, message),
+    })) : rows.map(row => ({
+      key: row.c, label: channelLabel(row.c, row.g),
+      icon: rowIcon(row.dm ? "chat" : "at"), subLabel: rowSubtitle(row),
+      onPress: () => { void choose(row).catch(() => toast("Could not load pings")); },
+    }));
+    const body = h(BottomSheet.BottomSheetScrollView, {
+      style: { flex: 1 }, contentContainerStyle: { paddingBottom: bottomPadding + 24 },
+      keyboardShouldPersistTaps: "handled",
+      onContentSizeChange: (_width, height) => setContentHeight(Math.ceil(height)),
+    }, selected ? h(Design.Button, { text: "Back to chats", variant: "secondary", onPress: () => setSelected(null) }) : null,
+      loading ? h(Design.TableRow, { label: "Loading messages…" }) : null,
+      h(Design.TableRowGroup, null, ...items.map(item => h(Design.TableRow, {
+        ...item, labelLineClamp: 1, subLabelLineClamp: 2, arrow: true,
+      }))),
+      selected && !loading ? h(Design.TableRow, {
+        label: messages.length + " messages available",
+        subLabel: "Unvisited pings stay here for this session even if Discord marks the chat read. Up to 150 recent messages are searched.",
+      }) : null,
     );
     return parts.ActionSheet ? h(parts.ActionSheet, {
       scrollable: true, startExpanded: false, startHeight: initialHeight,
-      maxHeight, contentHeight: maxHeight - 24,
-      onExpand: () => setExpanded(true),
+      maxHeight, contentHeight: Math.min(maxHeight, contentHeight + 100),
+      header: h(Design.BottomSheetTitleHeader, {
+        title: selected ? channelLabel(selected.c, selected.g) : "Pings",
+        subtitle: selected ? "Choose a message to jump to" : subtitle,
+      }),
     }, body) : body;
   }
 
@@ -766,8 +815,8 @@ const implementation = (() => {
           "Tap the row to open the chat and scroll to the first unread ping. Uncached pings are resolved from recent channel messages; if no exact match is found, the chat opens at its oldest unread message.",
         ],
         [
-          "When pings disappear",
-          "The list follows Discord's own unread counters, so a chat leaves the list as soon as you read it in Discord. Turn off Only show with pings if you want the button to stay visible all the time.",
+        "Visit every ping",
+          "Tap a chat with several pings to choose a message. Found messages you have not visited stay in Pings for this session even when Discord marks the chat read. Reopen Pings to visit the next one. Restarting clears this local queue.",
         ],
       ],
     });
@@ -852,6 +901,9 @@ const implementation = (() => {
       return;
     }
     captured.clear();
+    fetchedMessages.clear();
+    remainingPings.clear();
+    visitedPings.clear();
     for (const type of [
       "MESSAGE_CREATE",
       "MESSAGE_ACK",
