@@ -460,11 +460,11 @@ const implementation = (() => {
       try {
         count = ReadStateStore.getMentionCount(channelId) || 0;
       } catch (_) {}
-      const remaining = cfg().keepUnvisitedPings ? remainingPings.get(String(channelId)) : undefined;
-      if (remaining?.length) count = remaining.length;
-      if (count <= 0) continue;
       const ch = getChannel(channelId);
       const dm = isDM(ch);
+      const remaining = !dm && cfg().keepUnvisitedPings ? remainingPings.get(String(channelId)) : undefined;
+      if (remaining?.length) count = remaining.length;
+      if (count <= 0) continue;
       if (dm && !cfg().includeDMs) continue;
       let oldest = null;
       try {
@@ -550,11 +550,12 @@ const implementation = (() => {
     });
   }
   function messagesFor(r) {
-    const queued = cfg().keepUnvisitedPings ? remainingPings.get(r.c) : undefined;
+    const keepUnvisited = !r.dm && cfg().keepUnvisitedPings;
+    const queued = keepUnvisited ? remainingPings.get(r.c) : undefined;
     const values = queued || [
       ...(captured.get(r.c) || []), ...(fetchedMessages.get(r.c) || []),
     ];
-    const visited = cfg().keepUnvisitedPings ? visitedPings.get(r.c) || new Set() : new Set();
+    const visited = keepUnvisited ? visitedPings.get(r.c) || new Set() : new Set();
     const unique = new Map();
     for (const item of values) {
       if ((!r.oldest || gte(item.id, r.oldest)) && !visited.has(item.id)) unique.set(item.id, item);
@@ -568,7 +569,7 @@ const implementation = (() => {
     return queued ? ordered : count ? ordered.slice(-count) : [];
   }
   function visitPing(row, message) {
-    if (!cfg().keepUnvisitedPings) {
+    if (row.dm || !cfg().keepUnvisitedPings) {
       remainingPings.delete(row.c);
       visitedPings.delete(row.c);
       jumpTo(row.c, message.id);
@@ -632,7 +633,11 @@ const implementation = (() => {
     }, [rows.map((r) => r.c + ":" + (r.needs ? 1 : 0)).join("|")]);
     const bottomPadding = useSheetBottomPadding();
     const maxHeight = Math.floor(windowHeight * 0.85);
-    const initialHeight = Math.min(maxHeight, 100 + Math.min(rows.length || 1, 3) * 96 + bottomPadding + 32);
+    const messages = selected ? messagesFor(selected) : [];
+    const visibleCount = selected
+      ? Math.max(1, messages.length, selected.count || 0)
+      : Math.min(rows.length || 1, 3);
+    const initialHeight = Math.min(maxHeight, 100 + (selected ? 48 : 0) + visibleCount * 96 + bottomPadding + 32);
     const subtitle = rows.length
       ? total +
         (total === 1 ? " ping" : " pings") +
@@ -642,6 +647,12 @@ const implementation = (() => {
       : "You are all caught up";
     async function choose(row) {
       if (loading) return;
+      if (row.dm) {
+        remainingPings.delete(row.c);
+        visitedPings.delete(row.c);
+        jumpToPing(row);
+        return;
+      }
       if (row.count > 1) {
         setSelected(row);
         setLoading(true);
@@ -659,7 +670,6 @@ const implementation = (() => {
         else toast("Could not find this ping. Try again.");
       }
     }
-    const messages = selected ? messagesFor(selected) : [];
     const items = selected ? messages.map(message => ({
       key: message.id, label: message.an || "Message",
       subLabel: (message.t || "(No text)") + "\n" + fmtTime(message.at),
@@ -692,8 +702,9 @@ const implementation = (() => {
       }) : null,
     );
     return parts.ActionSheet ? h(parts.ActionSheet, {
+      key: selected ? selected.c : "chats",
       scrollable: true, startExpanded: false, startHeight: initialHeight,
-      maxHeight, contentHeight: Math.min(maxHeight, contentHeight + 100),
+      maxHeight, contentHeight: Math.min(maxHeight, Math.max(initialHeight, contentHeight + 100)),
       header: h(Design.BottomSheetTitleHeader, {
         title: selected ? channelLabel(selected.c, selected.g) : "Pings",
         subtitle: selected ? "Choose a message to jump to" : subtitle,
@@ -901,7 +912,7 @@ const implementation = (() => {
           "chat",
           false,
         ),
-        toggle("keepUnvisitedPings", "Keep unvisited pings", "Keep found pings in a local queue after jumping, even when Discord marks the chat read. Resets when Discord restarts.", "at", true),
+        toggle("keepUnvisitedPings", "Keep unvisited pings", "Keep channel pings in a local queue after jumping, even when Discord marks the channel read. Does not apply to DMs. Resets when Discord restarts.", "at", true),
       ),
       h(
         CustomSection,

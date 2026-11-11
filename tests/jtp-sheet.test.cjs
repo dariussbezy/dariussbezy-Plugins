@@ -88,3 +88,61 @@ test('message lookup fetches recent DM messages when no oldest unread ID exists'
  assert.equal('after' in queries[0],false);
  assert.equal('before' in queries[0],false);
 });
+
+function messageSheetFixture({ selected = null, rows = [] } = {}) {
+ const source=fs.readFileSync(path.join(__dirname,'../plugins/JTP/js/plugin.js'),'utf8');
+ const start=source.indexOf('function PingSheet()'),end=source.indexOf('\n  function fallbackMenu',start);
+ let stateIndex=0;
+ const selections=[],jumps=[];
+ const h=(type,props,...children)=>({type,props:props||{},children});
+ const render=vm.runInNewContext('('+source.slice(start,end)+')',{
+  React:{createElement:h,useState:value=>{
+   const index=stateIndex++;
+   return [index===1?selected:value,index===1?value=>selections.push(value):()=>{}];
+  },useEffect:()=>{}},
+  RN:{useWindowDimensions:()=>({height:800})},BottomSheet:{BottomSheetScrollView:'Scroll'},
+  Design:{Button:'Button',TableRow:'Row',TableRowGroup:'Group',BottomSheetTitleHeader:'Header'},
+  getRows:()=>rows,totalOf:()=>rows.length,sheetParts:()=>({ActionSheet:'Sheet'}),resolveRows:()=>{},
+  useSheetBottomPadding:()=>24,channelLabel:id=>id,rowIcon:()=>null,rowSubtitle:()=>'',listeners:new Set(),
+  messagesFor:row=>Array.from({length:row.count},(_,i)=>({id:String(i),t:'Ping',at:1})),
+  cfg:()=>({keepUnvisitedPings:true}),remainingPings:new Map(),visitedPings:new Map(),
+  ensureResolved:async()=>{},schedule:()=>{},loadRequested:true,fmtTime:()=>'',toast:()=>{},
+  jumpToPing:row=>jumps.push(row.c),visitPing:()=>{},
+ });
+ return {tree:render(),selections,jumps};
+}
+
+test('the channel message picker opens taller for more messages and stays within the screen',()=>{
+ const heights=[1,4,20].map(count=>{
+  const {tree}=messageSheetFixture({selected:{c:'channel',count},rows:[{c:'channel',count}]});
+  assert.equal(tree.props.key,'channel');
+  assert.ok(tree.props.contentHeight>=tree.props.startHeight);
+  return tree.props.startHeight;
+ });
+ assert.ok(heights[1]>heights[0]);
+ assert.ok(heights[2]>heights[1]);
+ assert.ok(heights[2]<=680);
+});
+
+test('a DM with multiple unread messages opens directly instead of selecting individual messages',async()=>{
+ const row={c:'dm',count:8,dm:true};
+ const f=messageSheetFixture({rows:[row]});
+ function nodes(tree){return [tree,...tree.children.flat(Infinity).filter(x=>x&&typeof x==='object').flatMap(nodes)];}
+ nodes(f.tree).find(node=>node.type==='Row'&&node.props.key==='dm').props.onPress();
+ await new Promise(setImmediate);
+ assert.deepEqual(f.jumps,['dm']);
+ assert.equal(f.selections.length,0);
+});
+
+test('keep unvisited pings never retains DM messages',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../plugins/JTP/js/plugin.js'),'utf8');
+ const start=source.indexOf('function messagesFor('),end=source.indexOf('\n  function rowSubtitle',start);
+ const remainingPings=new Map([['dm',[{id:'1'},{id:'2'}]]]),visitedPings=new Map();
+ const api=vm.runInNewContext('(function(){'+source.slice(start,end)+';return {visitPing};})()',{
+  cfg:()=>({keepUnvisitedPings:true}),remainingPings,visitedPings,captured:new Map(),fetchedMessages:new Map(),resolved:new Map(),
+  MAX_CHANNELS:300,gte:(a,b)=>BigInt(a)>=BigInt(b),schedule:()=>{},jumpTo:()=>{},
+ });
+ api.visitPing({c:'dm',dm:true,count:2},{id:'1'});
+ assert.equal(remainingPings.has('dm'),false);
+ assert.equal(visitedPings.has('dm'),false);
+});

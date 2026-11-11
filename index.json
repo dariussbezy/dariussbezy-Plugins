@@ -124,8 +124,8 @@
         },
         "1.1.0-beta": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.jump-to-ping@1.1.0-beta.zip",
-          "sha256": "314aaef1e04650116ac26c700059cc410ce9c549d411d5778d64e18ee64728bf",
-          "size": 9353,
+          "sha256": "9ef1287ffdcc80e7d77b56b001138657098c11896fbbfb254351a3f5b10846d3",
+          "size": 9413,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
