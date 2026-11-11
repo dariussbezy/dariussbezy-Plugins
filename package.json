@@ -10,7 +10,7 @@
     "plan-releases": "valenced-plugin plan-releases --plugins-dir plugins --plugins-dir themes",
     "serve": "valenced-plugin serve",
     "lint": "biome check",
-    "lint:types": "tsc -p plugins/QT/tsconfig.json --noEmit && tsc -p plugins/JTP/tsconfig.json --noEmit && tsc -p plugins/SHC/tsconfig.json --noEmit && tsc -p plugins/VMTT/tsconfig.json --noEmit && tsc -p themes/MT/tsconfig.json --noEmit && tsc -p plugins/AML/tsconfig.json --noEmit && tsc -p plugins/GPL/tsconfig.json --noEmit",
+    "lint:types": "tsc -p plugins/QT/tsconfig.json --noEmit && tsc -p plugins/JTP/tsconfig.json --noEmit && tsc -p plugins/SHC/tsconfig.json --noEmit && tsc -p plugins/VMTT/tsconfig.json --noEmit && tsc -p themes/MT/tsconfig.json --noEmit && tsc -p plugins/AML/tsconfig.json --noEmit && tsc -p plugins/GPL/tsconfig.json --noEmit && tsc -p plugins/NTM/tsconfig.json --noEmit",
     "test": "node --test tests/*.test.cjs themes/MT/tests/*.test.cjs",
     "publish:local": "node scripts/publish.mjs",
     "pretest": "npm run build:all",

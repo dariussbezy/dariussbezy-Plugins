@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "id": "dariuss.no-tap-mention",
+  "name": "No Tap Mention",
+  "description": "Disable tapping a message author's name to insert a mention.",
+  "author": "dariussbezy",
+  "icon": "PersonIcon",
+  "version": "1.0.0",
+  "dependencies": {
+    "valenced.api": {
+      "version": ">=1 <2"
+    },
+    "discord": {}
+  },
+  "dist": {
+    "script": "index.js"
+  }
+}

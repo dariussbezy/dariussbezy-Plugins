@@ -6,7 +6,7 @@ const {createHash}=require('node:crypto');
 const {unzipSync,strFromU8}=require('fflate');
 const root=path.resolve(__dirname,'..');
 const read=file=>JSON.parse(fs.readFileSync(path.join(root,file),'utf8'));
-const expected=['dariuss.quick-translate','dariuss.jump-to-ping','dariuss.show-hidden-channels','dariuss.voice-messages-to-text','dariuss.midnight-theme','dariuss.advanced-message-logger','dariuss.ghost-ping-logger'];
+const expected=['dariuss.quick-translate','dariuss.jump-to-ping','dariuss.show-hidden-channels','dariuss.voice-messages-to-text','dariuss.midnight-theme','dariuss.advanced-message-logger','dariuss.ghost-ping-logger','dariuss.no-tap-mention'];
 function sources(){return ['plugins','themes'].flatMap(dir=>fs.readdirSync(path.join(root,dir)).map(name=>({dir:dir+'/'+name,manifest:read(dir+'/'+name+'/manifest.json')})))}
 test('one template repository contains every plugin and theme without examples',()=>{
  for(const file of ['build.gradle.kts','settings.gradle.kts','gradlew','gradle/wrapper/gradle-wrapper.jar','tsconfig.base.json','repo.config.json','package.json'])assert.ok(fs.existsSync(path.join(root,file)),file);
@@ -17,10 +17,10 @@ test('one template repository contains every plugin and theme without examples',
   assert.ok(['index.ts','index.tsx'].some(file=>fs.existsSync(path.join(root,source.dir,'js',file))));
  }
 });
-test('single index serves all seven beta add-ons with valid artifact digests',()=>{
+test('single index serves all eight add-ons with valid artifact digests',()=>{
  const index=read('index.json');assert.deepEqual(Object.keys(index.plugins).sort(),[...expected].sort());
  for(const {dir,manifest}of sources()){
-  const item=index.plugins[manifest.id];assert.deepEqual(item.channels,{beta:manifest.version});
+  const item=index.plugins[manifest.id];assert.deepEqual(item.channels,manifest.id==='dariuss.no-tap-mention'?{latest:manifest.version}:{beta:manifest.version});
   const entry=item.versions[manifest.version];const file=manifest.id+'@'+manifest.version+'.zip';const zip=fs.readFileSync(path.join(root,'pool',file));
   assert.equal(entry.url,'https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/'+file);
   assert.equal(entry.size,zip.length);assert.equal(entry.sha256,createHash('sha256').update(zip).digest('hex'));

@@ -22,6 +22,9 @@
     },
     "dariuss.ghost-ping-logger": {
       "beta": "1.0.0-beta"
+    },
+    "dariuss.no-tap-mention": {
+      "latest": "1.0.0"
     }
   }
 }

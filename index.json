@@ -196,6 +196,28 @@
         }
       }
     },
+    "dariuss.no-tap-mention": {
+      "name": "No Tap Mention",
+      "description": "Disable tapping a message author's name to insert a mention.",
+      "author": "dariussbezy",
+      "icon": "PersonIcon",
+      "channels": {
+        "latest": "1.0.0"
+      },
+      "versions": {
+        "1.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.no-tap-mention@1.0.0.zip",
+          "sha256": "be60425c43853c1d0355e6cd6f6f92602f5ff4cc824a952da35f93c4de81f6a5",
+          "size": 1035,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
+        }
+      }
+    },
     "dariuss.quick-translate": {
       "name": "Quick Translate",
       "description": "Translate messages and drafts with Google or DeepL.",
