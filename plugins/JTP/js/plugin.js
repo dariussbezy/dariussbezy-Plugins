@@ -1,4 +1,5 @@
 import { Design } from "@valenced/discord/design";
+import { BottomSheet } from "@valenced/externals/gorhom";
 import {
   NativeSection as CustomSection,
   NativeRow as CustomRow,
@@ -28,9 +29,8 @@ const pingStore = createPluginStore("jumptoping", {
   includeDMs: false,
 });
 const implementation = (() => {
-  const BUILD = "1.0.1-beta";
+  const BUILD = "1.0.2-beta";
   const SHEET_KEY = "jump-to-ping";
-  const MAX_ROWS = 50;
   const MAX_CHANNELS = 300;
   const PER_CHANNEL = 25;
   const SNIPPET = 160;
@@ -473,7 +473,7 @@ const implementation = (() => {
       });
     }
     rows.sort((a, b) => (b.at || 0) - (a.at || 0));
-    return rows.slice(0, MAX_ROWS);
+    return rows;
   }
   const totalOf = (rows) => rows.reduce((n, r) => n + r.count, 0);
 
@@ -538,6 +538,10 @@ const implementation = (() => {
   function PingSheet() {
     const h = React.createElement;
     const [, bump] = React.useState(0);
+    const [expanded, setExpanded] = React.useState(false);
+    const [headerHeight, setHeaderHeight] = React.useState(88);
+    const [firstRowsHeight, setFirstRowsHeight] = React.useState(252);
+    const { height: windowHeight } = RN.useWindowDimensions();
     React.useEffect(() => {
       const fn = () => bump((x) => x + 1);
       listeners.add(fn);
@@ -552,6 +556,9 @@ const implementation = (() => {
       resolveRows(rows);
     }, [rows.map((r) => r.c + ":" + (r.needs ? 1 : 0)).join("|")]);
     const bottomPadding = useSheetBottomPadding();
+    const maxHeight = Math.floor(windowHeight * 0.85);
+    const initialHeight = Math.min(maxHeight, headerHeight + firstRowsHeight + bottomPadding + 24);
+    const viewportHeight = Math.max(80, (expanded ? maxHeight : initialHeight) - headerHeight - bottomPadding - 24);
     const subtitle = rows.length
       ? total +
         (total === 1 ? " unread ping" : " unread pings") +
@@ -562,27 +569,40 @@ const implementation = (() => {
     const body = h(
       Design.Stack,
       { spacing: 12, style: { paddingBottom: bottomPadding } },
-      h(Design.BottomSheetTitleHeader, { title: "Pings", subtitle }),
+      h(RN.View, { onLayout: event => setHeaderHeight(Math.ceil(event.nativeEvent.layout.height)) },
+        h(Design.BottomSheetTitleHeader, { title: "Pings", subtitle })),
       rows.length
         ? h(
-            RN.ScrollView,
-            { style: { maxHeight: RN.Dimensions.get("window").height * 0.6 } },
+            BottomSheet.BottomSheetScrollView,
+            { style: { height: viewportHeight, flexGrow: 0 }, keyboardShouldPersistTaps: "handled" },
+            h(RN.View, { onLayout: event => setFirstRowsHeight(Math.ceil(event.nativeEvent.layout.height)) },
             h(
               Design.TableRowGroup,
               null,
-              ...rows.map((row) => h(Design.TableRow, {
+              ...rows.slice(0, 3).map((row) => h(Design.TableRow, {
                 key: row.c,
                 label: channelLabel(row.c, row.g),
                 icon: rowIcon(row.dm ? "chat" : "at"),
                 subLabel: rowSubtitle(row),
+                subLabelLineClamp: 2,
                 arrow: true,
                 onPress: () => jumpToPing(row),
               })),
-            ),
+            )),
+            rows.length > 3 ? h(Design.TableRowGroup, null,
+              ...rows.slice(3).map(row => h(Design.TableRow, {
+                key: row.c, label: channelLabel(row.c, row.g),
+                icon: rowIcon(row.dm ? "chat" : "at"), subLabel: rowSubtitle(row),
+                subLabelLineClamp: 2, arrow: true, onPress: () => jumpToPing(row),
+              }))) : null,
           )
         : null,
     );
-    return parts.ActionSheet ? h(parts.ActionSheet, null, body) : body;
+    return parts.ActionSheet ? h(parts.ActionSheet, {
+      scrollable: true, startExpanded: false, startHeight: initialHeight,
+      maxHeight, contentHeight: maxHeight - 24,
+      onExpand: () => setExpanded(true),
+    }, body) : body;
   }
 
   function fallbackMenu() {
