@@ -10,7 +10,9 @@ Add this single URL in **Valenced Settings → Plugins → Advanced → Reposito
 https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/main/index.json
 ```
 
-Choose the plugins you want from the **beta** channel. Existing plugin IDs and versions are preserved. You can remove the old individual repository entries from Valenced after adding this repository; installed plugin settings remain associated with their existing IDs. Restart Discord after updates when requested.
+Choose the plugins you want from the **beta** channel. Existing plugin IDs are preserved. Restart Discord after updates when requested.
+
+For an existing installation, open the plugin's options, set **Repository** to **dariussbezy's Plugins**, select the **beta** channel and enable **Allow updates**. Adding this catalog alone does not switch the repository an installed plugin follows. Switch each plugin before removing its old individual repository entry.
 
 ## Plugins and theme
 
@@ -20,9 +22,13 @@ Choose the plugins you want from the **beta** channel. Existing plugin IDs and v
 | [Jump to Ping](plugins/JTP/README.md) | Find unread mentions, replies and DMs, then jump straight to the message from the YOUBAR. | [`plugins/JTP`](plugins/JTP) |
 | [Show Hidden Channels](plugins/SHC/README.md) | Show hidden channel metadata with lock indicators and an information card. | [`plugins/SHC`](plugins/SHC) |
 | [Voice Messages To Text](plugins/VMTT/README.md) | Transcribe voice messages below the audio, with a free server or Groq. | [`plugins/VMTT`](plugins/VMTT) |
+| [Adv. Message Logger](plugins/AML/README.md) | Keep a local journal of edited and deleted messages, with in-chat history. | [`plugins/AML`](plugins/AML) |
+| [Ghost Ping Logger](plugins/GPL/README.md) | Keep a local journal of deleted mentions and replies, with ghost ping alerts. | [`plugins/GPL`](plugins/GPL) |
 | [Midnight Mobile](themes/MT/README.md) | Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon. | [`themes/MT`](themes/MT) |
 
-Jump to Ping is **1.0.5-beta**. Midnight Mobile and Quick Translate are **1.0.2-beta**. The other plugins are **1.0.1-beta**. Only the beta channel is published.
+Jump to Ping is **1.1.0-beta**. Adv. Message Logger and Ghost Ping Logger are **1.0.0-beta**. Midnight Mobile and Quick Translate are **1.0.2-beta**. Show Hidden Channels and Voice Messages To Text are **1.0.1-beta**. Only the beta channel is published.
+
+AML and GPL work independently and cooperate when both are enabled. Their beta version numbers have been reset to **1.0.0-beta** with the latest fixes included. If you already installed a higher test version, select **1.0.0-beta** manually and then resume following **beta**; an update check does not offer downgrades.
 
 Midnight's colors, Figtree font and moon icon are selected separately under **Valenced Settings → Themes**. Font and icon changes require a restart.
 

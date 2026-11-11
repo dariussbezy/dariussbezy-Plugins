@@ -31,7 +31,7 @@ const pingStore = createPluginStore("jumptoping", {
   keepUnvisitedPings: false,
 });
 const implementation = (() => {
-  const BUILD = "1.0.5-beta";
+  const BUILD = "1.1.0-beta";
   const SHEET_KEY = "jump-to-ping";
   const MAX_CHANNELS = 300;
   const PER_CHANNEL = 25;
