@@ -35,10 +35,10 @@ test('visiting one message retains the next message after Discord acknowledges t
  captured.set('c',[{id:'100',t:'first'},{id:'200',t:'second'}]);
  const jumps=[];
  const api=vm.runInNewContext('(function(){'+source.slice(start,end)+';return {messagesFor,visitPing};})()',{
-  remainingPings,visitedPings,captured,fetchedMessages,resolved:new Map(),MAX_CHANNELS:300,
+  remainingPings,visitedPings,captured,fetchedMessages,resolved:new Map(),MAX_CHANNELS:300,cfg:()=>({keepUnvisitedPings:true}),
   gte:(a,b)=>BigInt(a)>=BigInt(b),schedule:()=>{},jumpTo:(...args)=>jumps.push(args),
  });
- const row={c:'c',oldest:'100',id:'100'};
+ const row={c:'c',oldest:'100',id:'100',count:2};
  api.visitPing(row,api.messagesFor(row)[0]);
  captured.clear();
  assert.equal(api.messagesFor(row).length,1);
@@ -46,6 +46,26 @@ test('visiting one message retains the next message after Discord acknowledges t
  api.visitPing(row,api.messagesFor(row)[0]);
  assert.equal(api.messagesFor(row).length,0);
  assert.deepEqual(jumps,[['c','100'],['c','200']]);
+});
+test('default mode limits historical DM matches to Discord unread count and Read does not navigate',async()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../plugins/JTP/js/plugin.js'),'utf8');
+ const start=source.indexOf('function messagesFor('),end=source.indexOf('\n  function rowSubtitle',start);
+ const remainingPings=new Map([['dm',[{id:'999'}]]]),visitedPings=new Map();
+ const fetchedMessages=new Map([['dm',Array.from({length:45},(_,i)=>({id:String(100+i)}))]]);
+ const captured=new Map(),resolved=new Map(),jumps=[],reads=[];
+ const api=vm.runInNewContext('(function(){'+source.slice(start,end)+';return {messagesFor,visitPing,readChat};})()',{
+  remainingPings,visitedPings,captured,fetchedMessages,resolved,MAX_CHANNELS:300,
+  cfg:()=>({keepUnvisitedPings:false}),gte:(a,b)=>BigInt(a)>=BigInt(b),schedule:()=>{},toast:()=>{},
+  markChannelRead:async id=>reads.push(id),jumpTo:(...args)=>jumps.push(args),
+ });
+ const row={c:'dm',count:2,oldest:null};
+ assert.deepEqual(Array.from(api.messagesFor(row),m=>m.id),['143','144']);
+ api.visitPing(row,api.messagesFor(row)[0]);
+ assert.equal(remainingPings.has('dm'),false);
+ assert.equal(visitedPings.size,0);
+ await api.readChat(row);
+ assert.deepEqual(reads,['dm']);assert.equal(jumps.length,1);
+ assert.equal(fetchedMessages.has('dm'),false);
 });
 test('message lookup fetches recent DM messages when no oldest unread ID exists',async()=>{
  const source=fs.readFileSync(path.join(__dirname,'../plugins/JTP/js/plugin.js'),'utf8');

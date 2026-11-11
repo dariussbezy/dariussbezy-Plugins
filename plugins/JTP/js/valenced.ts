@@ -7,6 +7,7 @@ import {
 import { instead } from "@valenced/patcher";
 import { Stores, onFluxEventDispatched } from "@valenced/discord/flux";
 import { Design } from "@valenced/discord/design";
+import { Dispatcher } from "@valenced/discord/common/flux";
 import {
   ActionSheetActionCreators,
   ToastActionCreators,
@@ -20,6 +21,17 @@ export const findByStoreName = (name: string) =>
   (Stores as unknown as Module)[name];
 export function showToast(text: string) {
   ToastActionCreators.open(`dariuss.jump-to-ping.${++sequence}`, { text });
+}
+export async function markChannelRead(channelId: string) {
+  const readState = findByStoreName("ReadStateStore");
+  const channel = findByStoreName("ChannelStore")?.getChannel(channelId);
+  const messageId = readState?.lastMessageId?.(channelId)
+    ?? readState?.getLastMessageId?.(channelId) ?? channel?.lastMessageId;
+  if (!messageId) throw new Error("The latest message is unavailable");
+  await Dispatcher.dispatch({
+    type: "BULK_ACK", context: "APP",
+    channels: [{ channelId, messageId, readStateType: 0 }],
+  });
 }
 export function findByProps(...props: string[]): Module | undefined {
   if (props.includes("openLazy")) return ActionSheetActionCreators;

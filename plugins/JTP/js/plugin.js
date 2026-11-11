@@ -16,6 +16,7 @@ import * as RN from "react-native";
 import {
   findByProps,
   openChannel,
+  markChannelRead,
   findByStoreName,
   findAssetId,
   observeBell,
@@ -27,9 +28,10 @@ const pingStore = createPluginStore("jumptoping", {
   hideWhenEmpty: true,
   showBadge: true,
   includeDMs: false,
+  keepUnvisitedPings: false,
 });
 const implementation = (() => {
-  const BUILD = "1.0.4-beta";
+  const BUILD = "1.0.5-beta";
   const SHEET_KEY = "jump-to-ping";
   const MAX_CHANNELS = 300;
   const PER_CHANNEL = 25;
@@ -75,8 +77,14 @@ const implementation = (() => {
   let partsCache = null;
 
   const cfg = () => pingStore.useStore.getState();
-  const setSetting = (key, value) =>
+  const setSetting = (key, value) => {
     pingStore.useStore.getState().updateSettings({ [key]: value });
+    if (key === "keepUnvisitedPings" && !value) {
+      remainingPings.clear();
+      visitedPings.clear();
+      schedule();
+    }
+  };
   const toast = (t) => {
     try {
       showToast(t);
@@ -447,12 +455,12 @@ const implementation = (() => {
       ids = Array.from(captured.keys());
     }
     const rows = [];
-    for (const channelId of new Set([...ids.map(String), ...remainingPings.keys()])) {
+    for (const channelId of new Set([...ids.map(String), ...(cfg().keepUnvisitedPings ? remainingPings.keys() : [])])) {
       let count = 0;
       try {
         count = ReadStateStore.getMentionCount(channelId) || 0;
       } catch (_) {}
-      const remaining = remainingPings.get(String(channelId));
+      const remaining = cfg().keepUnvisitedPings ? remainingPings.get(String(channelId)) : undefined;
       if (remaining?.length) count = remaining.length;
       if (count <= 0) continue;
       const ch = getChannel(channelId);
@@ -489,6 +497,7 @@ const implementation = (() => {
         t: (hit && hit.t) || "",
         k: (hit && hit.k) || (dm ? "dm" : "mention"),
         dm,
+        queued: !!remaining?.length,
         at: (hit && hit.at) || (id ? snowflakeTime(id) : 0),
       });
     }
@@ -541,10 +550,11 @@ const implementation = (() => {
     });
   }
   function messagesFor(r) {
-    const values = remainingPings.get(r.c) || [
+    const queued = cfg().keepUnvisitedPings ? remainingPings.get(r.c) : undefined;
+    const values = queued || [
       ...(captured.get(r.c) || []), ...(fetchedMessages.get(r.c) || []),
     ];
-    const visited = visitedPings.get(r.c) || new Set();
+    const visited = cfg().keepUnvisitedPings ? visitedPings.get(r.c) || new Set() : new Set();
     const unique = new Map();
     for (const item of values) {
       if ((!r.oldest || gte(item.id, r.oldest)) && !visited.has(item.id)) unique.set(item.id, item);
@@ -552,9 +562,18 @@ const implementation = (() => {
     const exact = resolved.get(r.c)?.entry;
     if (!unique.size && exact && !visited.has(exact.id)) unique.set(exact.id, exact);
     if (!unique.size && r.id && !r.needs && !visited.has(r.id)) unique.set(r.id, r);
-    return [...unique.values()].sort((a, b) => a.id === b.id ? 0 : gte(a.id, b.id) ? 1 : -1);
+    const ordered = [...unique.values()].sort((a, b) => a.id === b.id ? 0 : gte(a.id, b.id) ? 1 : -1);
+    // A history search may return older mentions too. Never promote them to unread.
+    const count = Math.max(0, r.count || 0);
+    return queued ? ordered : count ? ordered.slice(-count) : [];
   }
   function visitPing(row, message) {
+    if (!cfg().keepUnvisitedPings) {
+      remainingPings.delete(row.c);
+      visitedPings.delete(row.c);
+      jumpTo(row.c, message.id);
+      return;
+    }
     let visited = visitedPings.get(row.c);
     if (!visited) visitedPings.set(row.c, visited = new Set());
     visited.add(message.id);
@@ -565,9 +584,20 @@ const implementation = (() => {
     schedule();
     jumpTo(row.c, message.id);
   }
+  async function readChat(row) {
+    try {
+      await markChannelRead(row.c);
+      remainingPings.delete(row.c);
+      visitedPings.delete(row.c);
+      captured.delete(row.c);
+      fetchedMessages.delete(row.c);
+      resolved.delete(row.c);
+      schedule();
+    } catch (_) { toast("Could not mark this chat as read"); }
+  }
 
   function rowSubtitle(r) {
-    const what = r.dm
+    const what = r.queued ? r.count === 1 ? "unvisited ping" : "unvisited pings" : r.dm
       ? r.count === 1
         ? "unread message"
         : "unread messages"
@@ -605,7 +635,7 @@ const implementation = (() => {
     const initialHeight = Math.min(maxHeight, 100 + Math.min(rows.length || 1, 3) * 96 + bottomPadding + 32);
     const subtitle = rows.length
       ? total +
-        (total === 1 ? " unread ping" : " unread pings") +
+        (total === 1 ? " ping" : " pings") +
         " in " +
         rows.length +
         (rows.length === 1 ? " chat" : " chats")
@@ -619,7 +649,7 @@ const implementation = (() => {
           await ensureResolved(row);
           if (!loadRequested) return;
           const messages = messagesFor(row);
-          if (messages.length) remainingPings.set(row.c, messages);
+          if (cfg().keepUnvisitedPings && messages.length) remainingPings.set(row.c, messages);
           schedule();
         } finally { if (loadRequested) setLoading(false); }
       } else {
@@ -637,6 +667,14 @@ const implementation = (() => {
     })) : rows.map(row => ({
       key: row.c, label: channelLabel(row.c, row.g),
       icon: rowIcon(row.dm ? "chat" : "at"), subLabel: rowSubtitle(row),
+      trailing: h(Design.Button, {
+        text: "Read", variant: "secondary", size: "sm",
+        onPress: event => {
+          event?.stopPropagation?.();
+          void readChat(row);
+          if (selected?.c === row.c) setSelected(null);
+        },
+      }),
       onPress: () => { void choose(row).catch(() => toast("Could not load pings")); },
     }));
     const body = h(BottomSheet.BottomSheetScrollView, {
@@ -824,8 +862,8 @@ const implementation = (() => {
           "Tap the row to open the chat and scroll to the first unread ping. Uncached pings are resolved from recent channel messages; if no exact match is found, the chat opens at its oldest unread message.",
         ],
         [
-        "Visit every ping",
-          "Tap a chat with several pings to choose a message. Found messages you have not visited stay in Pings for this session even when Discord marks the chat read. Reopen Pings to visit the next one. Restarting clears this local queue.",
+          "Visit every ping",
+          "Tap a chat with several pings to choose a message. Enable Keep unvisited pings to keep found targets after jumping. This optional queue resets when Discord restarts. Read marks a conversation as read without opening it.",
         ],
       ],
     });
@@ -861,8 +899,9 @@ const implementation = (() => {
           "Include DMs",
           "List unread direct messages as pings.",
           "chat",
-          true,
+          false,
         ),
+        toggle("keepUnvisitedPings", "Keep unvisited pings", "Keep found pings in a local queue after jumping, even when Discord marks the chat read. Resets when Discord restarts.", "at", true),
       ),
       h(
         CustomSection,
@@ -899,6 +938,7 @@ const implementation = (() => {
       hideWhenEmpty: true,
       showBadge: true,
       includeDMs: false,
+      keepUnvisitedPings: false,
     };
     const missing = {};
     for (const k of Object.keys(defaults))
