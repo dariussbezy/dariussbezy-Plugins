@@ -5,7 +5,7 @@
   "description": "Review edited and deleted messages received by Discord in a local journal.",
   "author": "dariuss",
   "icon": "ChatMarkUnreadIcon",
-  "version": "1.0.0-beta",
+  "version": "1.0.1-beta",
   "dependencies": {
     "valenced.api": {
       "version": ">=1 <2"

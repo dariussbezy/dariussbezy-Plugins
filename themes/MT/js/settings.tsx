@@ -1,4 +1,5 @@
 import * as React from "react";
+import manifest from "../manifest.json";
 import Page from "@valenced/components/Page";
 import { Design } from "@valenced/discord/design";
 import { ScrollView } from "react-native";
@@ -27,7 +28,7 @@ export default function Settings({ api: { jsonStorage, plugin: instance } }: any
         row("Automatic appearance", "The palette follows Discord's appearance. Select automatic appearance in Discord to follow your device."),
       ),
       h(TableRowGroup, { title: "About", children: null },
-        row("Midnight Mobile · 1.0.2-beta", "Desktop theme by refact0r. Mobile adaptation by dariuss. Desktop window controls and hover effects do not apply on mobile."),
+        row("Midnight Mobile · " + manifest.version, "Desktop theme by refact0r. Mobile adaptation by dariuss. Desktop window controls and hover effects do not apply on mobile."),
       ),
     ),
   ));

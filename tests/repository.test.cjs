@@ -6,6 +6,7 @@ const {createHash}=require('node:crypto');
 const {unzipSync,strFromU8}=require('fflate');
 const root=path.resolve(__dirname,'..');
 const read=file=>JSON.parse(fs.readFileSync(path.join(root,file),'utf8'));
+const repository=read('index.json').name.endsWith('(Test)')?'dariussbezy/dariussbezy-plugins-test':'dariussbezy/dariussbezy-Plugins';
 const expected=['dariuss.quick-translate','dariuss.jump-to-ping','dariuss.show-hidden-channels','dariuss.voice-messages-to-text','dariuss.midnight-theme','dariuss.advanced-message-logger','dariuss.ghost-ping-logger','dariuss.no-tap-mention'];
 function sources(){return ['plugins','themes'].flatMap(dir=>fs.readdirSync(path.join(root,dir)).map(name=>({dir:dir+'/'+name,manifest:read(dir+'/'+name+'/manifest.json')})))}
 test('one template repository contains every plugin and theme without examples',()=>{
@@ -22,11 +23,10 @@ test('single index serves all nine add-ons with valid artifact digests',()=>{
  for(const {dir,manifest}of sources()){
   const item=index.plugins[manifest.id];assert.deepEqual(item.channels,manifest.id==='dariuss.no-tap-mention'?{latest:manifest.version}:{beta:manifest.version});
   const entry=item.versions[manifest.version];const file=manifest.id+'@'+manifest.version+'.zip';const zip=fs.readFileSync(path.join(root,'pool',file));
-  if(['dariuss.advanced-message-logger','dariuss.ghost-ping-logger'].includes(manifest.id)){
-   const url=new URL(entry.url);assert.equal(url.origin,'https://raw.githubusercontent.com');
-   assert.match(url.pathname,/^\/dariussbezy\/dariussbezy-Plugins\/[0-9a-f]{40}\/pool\//);
-   assert.equal(url.pathname.split('/').at(-1),file);
-  }else assert.equal(entry.url,'https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/'+file);
+  const url=new URL(entry.url);assert.equal(url.origin,'https://raw.githubusercontent.com');
+  const prefix='/'+repository+'/';assert.ok(url.pathname.startsWith(prefix));
+  assert.match(url.pathname.slice(prefix.length),/^[0-9a-f]{40}\/pool\//);
+  assert.equal(url.pathname.split('/').at(-1),file);
   assert.equal(entry.size,zip.length);assert.equal(entry.sha256,createHash('sha256').update(zip).digest('hex'));
   const files=unzipSync(zip);assert.deepEqual(JSON.parse(strFromU8(files['manifest.json'])),manifest);
   assert.ok(files[manifest.dist.script]);
@@ -40,7 +40,8 @@ test('Spotify Controls uses the approved installable 1.0.0-beta artifact',()=>{
  assert.deepEqual(Object.keys(item.versions),['1.0.0-beta']);const entry=item.versions['1.0.0-beta'];
  const zip=fs.readFileSync(path.join(root,'pool','dariuss.spotify-controls@1.0.0-beta.zip'));
  assert.equal(createHash('sha256').update(zip).digest('hex'),'b99eaf9d5d2d7c8d66383beab04e6e8f07c6434591bea45a45ce20b8b73d0cb1');assert.equal(entry.sha256,createHash('sha256').update(zip).digest('hex'));assert.equal(entry.size,zip.length);
- assert.equal(entry.url,'https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.spotify-controls@1.0.0-beta.zip');
+ const spotifyUrl=new URL(entry.url);assert.ok(spotifyUrl.pathname.startsWith('/'+repository+'/'));
+ assert.match(spotifyUrl.pathname.slice(repository.length+2),/^[0-9a-f]{40}\/pool\/dariuss\.spotify-controls@1\.0\.0-beta\.zip$/);
  const files=unzipSync(zip),manifest=JSON.parse(strFromU8(files['manifest.json']));assert.equal(manifest.id,'dariuss.spotify-controls');assert.equal(manifest.version,'1.0.0-beta');assert.deepEqual(Object.keys(files).sort(),['index.js','manifest.json']);
  new (require('node:vm').Script)(strFromU8(files['index.js']));
  assert.deepEqual(read('repo.config.json').channels[manifest.id],{beta:manifest.version});

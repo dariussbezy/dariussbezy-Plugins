@@ -10,7 +10,7 @@ Add the following URL in **Valenced → Plugins → Advanced**, then install **G
 https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/main/index.json
 ```
 
-Version **1.0.0-beta** requires Valenced Plugin API **1**.
+Version **1.0.1-beta** requires Valenced Plugin API **1**.
 
 ## What this beta includes
 
