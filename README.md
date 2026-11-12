@@ -24,8 +24,8 @@ For an existing installation, open the plugin's options, set **Repository** to *
 | [Voice Messages To Text](plugins/VMTT/README.md) | Transcribe voice messages below the audio, with a free server or Groq. | [`plugins/VMTT`](plugins/VMTT) |
 | [Adv. Message Logger](plugins/AML/README.md) | Keep a local journal of edited and deleted messages, with in-chat history. | [`plugins/AML`](plugins/AML) |
 | [Ghost Ping Logger](plugins/GPL/README.md) | Keep a local journal of deleted mentions and replies, with ghost ping alerts. | [`plugins/GPL`](plugins/GPL) |
-| [No Tap Mention](plugins/NTM/README.md) | Disable tapping a message author's name to insert a mention. Stable **1.0.0**, channel **latest**. | [`plugins/NTM`](plugins/NTM) |
-| [Spotify Controls](https://github.com/dariussbezy/Spotify-Controls) | Control Spotify above the YOUBAR, search for songs and use a wave progress bar. **1.0.0-beta**. | [Spotify Controls repository](https://github.com/dariussbezy/Spotify-Controls) |
+| [No Tap Mention](plugins/NTM/README.md) | Disable tapping a message author's name to insert a mention. | [`plugins/NTM`](plugins/NTM) |
+| [Spotify Controls](https://github.com/dariussbezy/Spotify-Controls) | Control Spotify above the YOUBAR, search for songs and use a wave progress bar. | [Spotify Controls repository](https://github.com/dariussbezy/Spotify-Controls) |
 | [Midnight Mobile](themes/MT/README.md) | Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon. | [`themes/MT`](themes/MT) |
 
 Jump to Ping is **1.1.0-beta**. Adv. Message Logger and Ghost Ping Logger are **1.0.0-beta**. Quick Translate is **1.0.3-beta**. Midnight Mobile is **1.0.2-beta**. Show Hidden Channels and Voice Messages To Text are **1.0.1-beta**. No Tap Mention is **1.0.0** on the stable **latest** channel.
