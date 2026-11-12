@@ -25,6 +25,9 @@
     },
     "dariuss.no-tap-mention": {
       "latest": "1.0.0"
+    },
+    "dariuss.spotify-controls": {
+      "beta": "1.0.0-beta"
     }
   }
 }

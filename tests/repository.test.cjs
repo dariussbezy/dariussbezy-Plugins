@@ -17,8 +17,8 @@ test('one template repository contains every plugin and theme without examples',
   assert.ok(['index.ts','index.tsx'].some(file=>fs.existsSync(path.join(root,source.dir,'js',file))));
  }
 });
-test('single index serves all eight add-ons with valid artifact digests',()=>{
- const index=read('index.json');assert.deepEqual(Object.keys(index.plugins).sort(),[...expected].sort());
+test('single index serves all nine add-ons with valid artifact digests',()=>{
+ const index=read('index.json');assert.deepEqual(Object.keys(index.plugins).sort(),[...expected,'dariuss.spotify-controls'].sort());
  for(const {dir,manifest}of sources()){
   const item=index.plugins[manifest.id];assert.deepEqual(item.channels,manifest.id==='dariuss.no-tap-mention'?{latest:manifest.version}:{beta:manifest.version});
   const entry=item.versions[manifest.version];const file=manifest.id+'@'+manifest.version+'.zip';const zip=fs.readFileSync(path.join(root,'pool',file));
@@ -29,6 +29,17 @@ test('single index serves all eight add-ons with valid artifact digests',()=>{
   if(manifest.dist.android){const native=unzipSync(files[manifest.dist.android.path]);assert.ok(native['classes.dex']);assert.equal(Buffer.from(native['classes.dex']).subarray(0,4).toString(),'dex\n')}
   for(const dependency of Object.keys(manifest.dependencies))if(dependency.startsWith('dariuss.'))assert.ok(index.plugins[dependency],dependency);
  }
+});
+
+test('Spotify Controls uses the approved installable 1.0.0-beta artifact',()=>{
+ const item=read('index.json').plugins['dariuss.spotify-controls'];assert.deepEqual(item.channels,{beta:'1.0.0-beta'});
+ assert.deepEqual(Object.keys(item.versions),['1.0.0-beta']);const entry=item.versions['1.0.0-beta'];
+ const zip=fs.readFileSync(path.join(root,'pool','dariuss.spotify-controls@1.0.0-beta.zip'));
+ assert.equal(createHash('sha256').update(zip).digest('hex'),'b99eaf9d5d2d7c8d66383beab04e6e8f07c6434591bea45a45ce20b8b73d0cb1');assert.equal(entry.sha256,createHash('sha256').update(zip).digest('hex'));assert.equal(entry.size,zip.length);
+ assert.equal(entry.url,'https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.spotify-controls@1.0.0-beta.zip');
+ const files=unzipSync(zip),manifest=JSON.parse(strFromU8(files['manifest.json']));assert.equal(manifest.id,'dariuss.spotify-controls');assert.equal(manifest.version,'1.0.0-beta');assert.deepEqual(Object.keys(files).sort(),['index.js','manifest.json']);
+ new (require('node:vm').Script)(strFromU8(files['index.js']));
+ assert.deepEqual(read('repo.config.json').channels[manifest.id],{beta:manifest.version});
 });
 test('published JavaScript bytes match freshly compiled sources for every plugin',()=>{
  for(const {dir,manifest}of sources()){
