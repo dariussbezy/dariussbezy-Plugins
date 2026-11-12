@@ -13,9 +13,9 @@
       },
       "versions": {
         "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/4faf6311f37632d45e3ed1023c4626094a104299/pool/dariuss.advanced-message-logger@1.0.0-beta.zip",
-          "sha256": "cd74866c33f6c25c9ee4368ba97acbbd666ae8f5173777912fc6e4550c0e489d",
-          "size": 14947,
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/7a16f2e9b7fd70ee8da924608d15742e9ba185b2/pool/dariuss.advanced-message-logger@1.0.0-beta.zip",
+          "sha256": "9374da07cf3bc642dbe4835d39636bb18b1d7810c8bc4d9de0124afcdd019052",
+          "size": 14984,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
@@ -35,9 +35,9 @@
       },
       "versions": {
         "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.ghost-ping-logger@1.0.0-beta.zip",
-          "sha256": "72b3b3c697f058251f85e8c0df8ce386ce38a279f84376ac65542472a55a415e",
-          "size": 14940,
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/7a16f2e9b7fd70ee8da924608d15742e9ba185b2/pool/dariuss.ghost-ping-logger@1.0.0-beta.zip",
+          "sha256": "565e01ae0c5a458c40b2b78dc5aa80f5540849d3b8c55f473362bd3b6a6ce1ec",
+          "size": 14977,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
