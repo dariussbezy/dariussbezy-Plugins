@@ -40,4 +40,4 @@ Midnight's colors, Figtree font and moon icon are selected separately under **Va
 
 Plugin adaptations by dariuss with Codex. Midnight was originally created by [refact0r](https://github.com/refact0r/midnight-discord), with Figtree by Erik Kennedy and the Font Awesome moon icon. Required third-party notices are included with Midnight's assets.
 
-The individual repositories host test builds. [Liquid Glass YOUBAR](https://github.com/dariussbezy/Liquid-Glass-YOUBAR) is developed and tested in its own repository.
+The individual repositories host test builds.
