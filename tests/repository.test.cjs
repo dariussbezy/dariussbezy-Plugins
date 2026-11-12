@@ -22,7 +22,11 @@ test('single index serves all nine add-ons with valid artifact digests',()=>{
  for(const {dir,manifest}of sources()){
   const item=index.plugins[manifest.id];assert.deepEqual(item.channels,manifest.id==='dariuss.no-tap-mention'?{latest:manifest.version}:{beta:manifest.version});
   const entry=item.versions[manifest.version];const file=manifest.id+'@'+manifest.version+'.zip';const zip=fs.readFileSync(path.join(root,'pool',file));
-  assert.equal(entry.url,'https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/'+file);
+  if(manifest.id==='dariuss.advanced-message-logger'){
+   const url=new URL(entry.url);assert.equal(url.origin,'https://raw.githubusercontent.com');
+   assert.match(url.pathname,/^\/dariussbezy\/dariussbezy-Plugins\/[0-9a-f]{40}\/pool\//);
+   assert.equal(url.pathname.split('/').at(-1),file);
+  }else assert.equal(entry.url,'https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/'+file);
   assert.equal(entry.size,zip.length);assert.equal(entry.sha256,createHash('sha256').update(zip).digest('hex'));
   const files=unzipSync(zip);assert.deepEqual(JSON.parse(strFromU8(files['manifest.json'])),manifest);
   assert.ok(files[manifest.dist.script]);

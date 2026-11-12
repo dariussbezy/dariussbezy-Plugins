@@ -13,7 +13,7 @@
       },
       "versions": {
         "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.advanced-message-logger@1.0.0-beta.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/4faf6311f37632d45e3ed1023c4626094a104299/pool/dariuss.advanced-message-logger@1.0.0-beta.zip",
           "sha256": "cd74866c33f6c25c9ee4368ba97acbbd666ae8f5173777912fc6e4550c0e489d",
           "size": 14947,
           "dependencies": {
