@@ -1,18 +1,18 @@
 {
-  "format": 1,
-  "id": "dariuss.advanced-message-logger",
-  "name": "Adv. Message Logger",
-  "description": "Review edited and deleted messages received by Discord in a local journal.",
-  "author": "dariuss",
-  "icon": "ChatMarkUnreadIcon",
-  "version": "1.0.1-beta",
-  "dependencies": {
-    "valenced.api": {
-      "version": ">=1 <2"
-    },
-    "discord": {}
-  },
-  "dist": {
-    "script": "index.js"
-  }
+	"format": 1,
+	"id": "dariuss.advanced-message-logger",
+	"name": "Adv. Message Logger",
+	"description": "Review edited and deleted messages in a local journal, in chat and in settings. Other plugins can build on it.",
+	"author": "dariuss",
+	"icon": "ChatMarkUnreadIcon",
+	"version": "2.0.0",
+	"dependencies": {
+		"valenced.api": {
+			"version": ">=1 <2"
+		},
+		"discord": {}
+	},
+	"dist": {
+		"script": "index.js"
+	}
 }

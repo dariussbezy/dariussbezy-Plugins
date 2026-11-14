@@ -20,7 +20,6 @@ For an existing installation, open the plugin's options, set **Repository** to *
 | --- | --- | --- |
 | [Quick Translate](plugins/QT/README.md) | Translate messages and drafts with Google or DeepL. | [`plugins/QT`](plugins/QT) |
 | [Jump to Ping](plugins/JTP/README.md) | Find unread mentions, replies and DMs, then jump straight to the message from the YOUBAR. | [`plugins/JTP`](plugins/JTP) |
-| [Show Hidden Channels](plugins/SHC/README.md) | Show hidden channel metadata with lock indicators and an information card. | [`plugins/SHC`](plugins/SHC) |
 | [Voice Messages To Text](plugins/VMTT/README.md) | Transcribe voice messages below the audio, with a free server or Groq. | [`plugins/VMTT`](plugins/VMTT) |
 | [Adv. Message Logger](plugins/AML/README.md) | Keep a local journal of edited and deleted messages, with in-chat history. | [`plugins/AML`](plugins/AML) |
 | [Ghost Ping Logger](plugins/GPL/README.md) | Keep a local journal of deleted mentions and replies, with ghost ping alerts. | [`plugins/GPL`](plugins/GPL) |
@@ -28,7 +27,7 @@ For an existing installation, open the plugin's options, set **Repository** to *
 | [Spotify Controls](https://github.com/dariussbezy/Spotify-Controls) | Control Spotify above the YOUBAR, search for songs and use a wave progress bar. | [Spotify Controls repository](https://github.com/dariussbezy/Spotify-Controls) |
 | [Midnight Mobile](themes/MT/README.md) | Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon. | [`themes/MT`](themes/MT) |
 
-Jump to Ping is **1.1.0-beta**. Adv. Message Logger and Ghost Ping Logger are **1.0.1-beta**. Quick Translate is **1.0.3-beta**. Midnight Mobile is **1.0.2-beta**. Show Hidden Channels and Voice Messages To Text are **1.0.1-beta**. No Tap Mention is **1.0.0** on the stable **latest** channel.
+Jump to Ping is **1.1.0-beta**. Adv. Message Logger and Ghost Ping Logger are **1.0.1-beta**. Quick Translate is **1.0.3-beta**. Midnight Mobile is **1.0.2-beta**. Voice Messages To Text is **1.1.0-beta**. No Tap Mention is **1.0.0** on the stable **latest** channel.
 
 Spotify Controls is **1.0.0-beta** on **beta**, distributed here as the same approved installable ZIP from its individual repository.
 

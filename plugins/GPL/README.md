@@ -1,25 +1,15 @@
 # Ghost Ping Logger
 
-A Valenced beta that detects mentions or replies that are later deleted or edited to remove the ping.
+Finds mentions and replies that were deleted, or edited so they no longer ping you, and alerts you about them.
 
-## Install
+Requires **Adv. Message Logger** (2.x). Ghost Ping Logger keeps no journal of its own: it reads the one Adv. Message Logger keeps, so ignore lists, retention, cache size and the bot filter set there also apply here.
 
-Add the following URL in **Valenced → Plugins → Advanced**, then install **Ghost Ping Logger** from **beta**.
+## Features
 
-```text
-https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/main/index.json
-```
+- Detection for direct, role and everyone/here mentions and replies, each switchable.
+- A native alert with a jump action and a searchable ghost ping history with saved filters.
+- Optional in-chat retention of deleted ghost pings and colored usernames.
 
-Version **1.0.1-beta** requires Valenced Plugin API **1**.
-
-## What this beta includes
-
-- Detection for direct, role and everyone/here mentions and replies, with a setting for each type.
-- Native alerts with jump and dismiss actions, a test alert, and a searchable journal with saved filters and individual entry removal.
-- Optional in-chat retention of deleted ghost pings and red usernames. All or Loaded-only capture, a configurable recent cache, and separate save and clear controls for the journal and recent cache.
-- Optional cooperation with [Adv. Message Logger](https://github.com/dariussbezy/Adv.-Message-Logger). Ghost Ping Logger works on its own and can use AML's recent snapshots when both are active.
-
-Detection uses message and mention data received by this Discord client. Retaining a deleted row requires the original message in Discord's cache. Logs stay on this device.
 ## Development
 
-Run `bun install --frozen-lockfile` and then `npm run publish:local` to build the ZIP and regenerate the index. Run `npm run lint:types` and `npm test` to check the build.
+Run `bun install --frozen-lockfile`, then `bun run lint`, `bun run lint:types` and `bun run build`.

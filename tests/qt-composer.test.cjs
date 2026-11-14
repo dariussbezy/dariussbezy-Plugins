@@ -2,57 +2,60 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
+const ts = require('typescript');
 
-function draftButton(job, succeeds = true) {
- const source = fs.readFileSync(path.join(__dirname, '../plugins/QT/js/original.js'), 'utf8');
- const start = source.indexOf('  const onPress = () => {', source.indexOf('  const translateSendMode ='));
- const end = source.indexOf('\n  const openPanel =', start);
- const calls = [];
- const usual = { targetOut: 'en', sourceOut: 'auto' };
- const context = {
-  armed: job, props: { position: 'send' },
-  settings: { draftBeforeSend: true, keepArmed: true },
-  run: async (tl, sl) => { calls.push({ tl, sl }); return succeeds; },
-  notifyButton() {}, toast() {}, getChatLanguages: () => usual,
+const source = path.join(__dirname, '../plugins/QT/js');
+
+/** Compiles a QT source file to CommonJS and runs it with the given module stubs. */
+function load(file, stubs) {
+ const code = ts.transpileModule(fs.readFileSync(path.join(source, file), 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 },
+ }).outputText;
+ const module = { exports: {} };
+ const jsx = (type, props) => {
+  const { children, ...rest } = props;
+  return { type, props: rest, children: [].concat(children ?? []) };
  };
- const press = vm.runInNewContext(source.slice(start, end) + '\nonPress;', context);
- return { context, calls, usual, press };
+ const modules = { 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' }, 'react-native': { View: 'View' }, ...stubs };
+ new Function('exports', 'require', 'module', code)(module.exports, name => {
+  if (!(name in modules)) throw new Error('unexpected import ' + name);
+  return modules[name];
+ }, module);
+ return module.exports;
+}
+
+function draftSlot(job, succeeds = true) {
+ const draft = load('draft.ts', { react: { useSyncExternalStore() {} } });
+ draft.setArmed(job);
+ const calls = [];
+ const press = () => draft.pressTranslateSlot(async (tl, sl) => { calls.push({ tl, sl }); return succeeds; });
+ return { draft, calls, press };
 }
 
 test('a one-time draft language leaves the translated draft ready to send even when translation was already active', async () => {
- const button = draftButton({ tl: 'ro', sl: 'auto', oneShot: true, resume: { tl: 'en', sl: 'auto' } });
- button.press();
- await new Promise(setImmediate);
- assert.deepEqual(button.calls, [{ tl: 'ro', sl: 'auto' }]);
- assert.equal(button.context.armed, null, 'the send slot must return to native Send instead of translating again to English');
- assert.equal(button.usual.targetOut, 'en', 'the saved usual language must not change');
+ const slot = draftSlot({ tl: 'ro', sl: 'auto', oneShot: true, resume: { tl: 'en', sl: 'auto' } });
+ await slot.press();
+ assert.deepEqual(slot.calls, [{ tl: 'ro', sl: 'auto' }]);
+ assert.equal(slot.draft.getArmed(), null, 'the send slot must return to native Send instead of translating again to English');
 });
 
 test('a failed one-time draft translation remains active for retry', async () => {
  const job = { tl: 'ro', sl: 'auto', oneShot: true, resume: { tl: 'en', sl: 'auto' } };
- const button = draftButton(job, false);
- button.press();
- await new Promise(setImmediate);
- assert.equal(button.context.armed, job);
+ const slot = draftSlot(job, false);
+ await slot.press();
+ assert.equal(slot.draft.getArmed(), job);
 });
 
 test('translate/send stays on the bottom row of a multiline composer', async () => {
  const Yoga = (await import('yoga-layout')).default;
- const source = fs.readFileSync(path.join(__dirname, '../plugins/QT/js/original.js'), 'utf8');
- const start = source.indexOf('function ComposerSendSlot(');
- const end = source.indexOf('\nfunction ', start + 1);
  for (const height of [40, 200]) {
   for (const active of [false, true]) {
-   const render = vm.runInNewContext('(' + source.slice(start, end) + ')', {
-    React: {
-     createElement: (type, props, ...children) => ({ type, props, children }),
-     useState: () => [active, () => {}], useEffect: () => {},
-    },
-    RN: { View: 'View' }, useQuickTranslate: () => ({ anchor: 'send' }),
-    armed: active, buttonListeners: new Set(),
+   const { ComposerSendSlot } = load('send-slot.tsx', {
+    react: {},
+    './draft': { useArmed: () => (active ? { tl: 'en', sl: 'auto' } : null) },
+    './store': { useSettings: () => ({ showButton: true, draftBeforeSend: true, anchor: 'send' }) },
    });
-   const tree = render({ button: { type: 'button' }, children: { type: 'send' } });
+   const tree = ComposerSendSlot({ button: { type: 'button' }, children: { type: 'send' } });
    function build(element) {
     const node = Yoga.Node.create();
     if (element.type === 'button' || element.type === 'send') {

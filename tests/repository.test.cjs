@@ -7,7 +7,7 @@ const {unzipSync,strFromU8}=require('fflate');
 const root=path.resolve(__dirname,'..');
 const read=file=>JSON.parse(fs.readFileSync(path.join(root,file),'utf8'));
 const repository=read('index.json').name.endsWith('(Test)')?'dariussbezy/dariussbezy-plugins-test':'dariussbezy/dariussbezy-Plugins';
-const expected=['dariuss.quick-translate','dariuss.jump-to-ping','dariuss.show-hidden-channels','dariuss.voice-messages-to-text','dariuss.midnight-theme','dariuss.advanced-message-logger','dariuss.ghost-ping-logger','dariuss.no-tap-mention'];
+const expected=['dariuss.quick-translate','dariuss.jump-to-ping','dariuss.voice-messages-to-text','dariuss.midnight-theme','dariuss.advanced-message-logger','dariuss.ghost-ping-logger','dariuss.no-tap-mention','dariuss.spotify-controls'];
 function sources(){return ['plugins','themes'].flatMap(dir=>fs.readdirSync(path.join(root,dir)).map(name=>({dir:dir+'/'+name,manifest:read(dir+'/'+name+'/manifest.json')})))}
 test('one template repository contains every plugin and theme without examples',()=>{
  for(const file of ['build.gradle.kts','settings.gradle.kts','gradlew','gradle/wrapper/gradle-wrapper.jar','tsconfig.base.json','repo.config.json','package.json'])assert.ok(fs.existsSync(path.join(root,file)),file);
@@ -19,7 +19,7 @@ test('one template repository contains every plugin and theme without examples',
  }
 });
 test('single index serves all nine add-ons with valid artifact digests',()=>{
- const index=read('index.json');assert.deepEqual(Object.keys(index.plugins).sort(),[...expected,'dariuss.spotify-controls'].sort());
+ const index=read('index.json');assert.deepEqual(Object.keys(index.plugins).sort(),[...expected].sort());
  for(const {dir,manifest}of sources()){
   const item=index.plugins[manifest.id];assert.deepEqual(item.channels,manifest.id==='dariuss.no-tap-mention'?{latest:manifest.version}:{beta:manifest.version});
   const entry=item.versions[manifest.version];const file=manifest.id+'@'+manifest.version+'.zip';const zip=fs.readFileSync(path.join(root,'pool',file));

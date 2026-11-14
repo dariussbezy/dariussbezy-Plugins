@@ -1,26 +1,18 @@
 # Adv. Message Logger
 
-A Valenced beta that keeps a local, searchable journal of message edits and deletions observed by Discord on this device.
+Keeps a local, searchable journal of message edits and deletions observed by this Discord client, and shows them in chat.
 
-## Install
+It is also a library: plugins that declare it as a dependency (such as Ghost Ping Logger) receive its journal, alerts, history view and chat-row hooks as `api.aml`.
 
-Add the following URL in **Valenced → Plugins → Advanced**, then install **Adv. Message Logger** from **beta**.
+## Features
 
-```text
-https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/main/index.json
-```
+- Separate deleted and edited journals with search, date filters and saved filters.
+- Previous message versions and deleted messages shown in chat, with configurable colors and time labels.
+- Long-press and profile menu entries to view history or ignore a user, DM, channel or server.
+- Direct message alerts, bulk delete logging, All or Loaded-only capture and a configurable recent cache.
 
-Version **1.0.1-beta** requires Valenced Plugin API **1**.
-
-## What this beta includes
-
-- Native settings, separate edited and deleted journals, saved search and date filters, and individual entry removal.
-- In-chat previous message text and retained deleted rows, with configurable colors and timestamps. Discord message, channel, server and user menus provide access to history or ignore controls.
-- Direct message alerts, bulk deletion logging, and All or Loaded-only capture with a configurable recent cache. The journal and recent cache can be saved and cleared separately.
-- Optional cooperation with [Ghost Ping Logger](https://github.com/dariussbezy/Ghost-Ping-Logger). Each plugin keeps its own journal and the same event only triggers one alert when both would notify.
-
-Logging uses events received by this Discord client. Retaining a deleted row requires the original message in Discord's cache. Edit history uses plain text in the native message row. Logs stay on this device.
+Retaining a deleted message requires the original in Discord's cache. Logs stay on this device.
 
 ## Development
 
-Run `bun install --frozen-lockfile` and then `npm run publish:local` to build the ZIP and regenerate the index. Run `npm run lint:types` and `npm test` to check the build.
+Run `bun install --frozen-lockfile`, then `bun run lint`, `bun run lint:types` and `bun run build`.
