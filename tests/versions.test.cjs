@@ -17,12 +17,12 @@ test('settings BUILD labels read their version from the manifest',()=>{
  assert.ok(all(midnight,n=>ts.isPropertyAccessExpression(n)&&n.getText(midnight)==='manifest.version').length,'Midnight settings use the manifest');
 });
 
-test('AML and GPL beta channels publish 2.0.2-beta with matching manifests',()=>{
+test('AML and GPL latest channels publish 2.0.0 with matching manifests',()=>{
  const index=read('index.json'),config=read('repo.config.json');
  for(const [code,id]of [['AML','dariuss.advanced-message-logger'],['GPL','dariuss.ghost-ping-logger']]){
   const manifest=read(`plugins/${code}/manifest.json`);
-  assert.equal(manifest.version,'2.0.2-beta');
-  assert.equal(index.plugins[id].channels.beta,manifest.version);
-  assert.equal(config.channels[id].beta,manifest.version);
+  assert.equal(manifest.version,'2.0.0');
+  assert.equal(index.plugins[id].channels.latest,manifest.version);
+  assert.equal(config.channels[id].latest,manifest.version);
  }
 });
