@@ -5,11 +5,11 @@
   "plugins": {
     "dariuss.advanced-message-logger": {
       "name": "Adv. Message Logger",
-      "description": "Review edited and deleted messages received by Discord in a local journal.",
+      "description": "Review edited and deleted messages in a local journal, in chat and in settings. Other plugins can build on it.",
       "author": "dariuss",
       "icon": "ChatMarkUnreadIcon",
       "channels": {
-        "beta": "1.0.1-beta"
+        "latest": "2.0.0"
       },
       "versions": {
         "1.0.0-beta": {
@@ -33,16 +33,27 @@
             },
             "discord": {}
           }
+        },
+        "2.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/45043d378ba5398add43b4d4191fa8bd419ab2fc/pool/dariuss.advanced-message-logger@2.0.0.zip",
+          "sha256": "cab92d5686a1410f7914b43caaeb85133c6da1b08ff2277a5cf692d8361e34e0",
+          "size": 20284,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
         }
       }
     },
     "dariuss.ghost-ping-logger": {
       "name": "Ghost Ping Logger",
-      "description": "Detect deleted or edited mentions and replies and review them in a local journal.",
+      "description": "Find deleted or edited mentions and replies in the journal of Adv. Message Logger and get alerted about them.",
       "author": "dariuss",
       "icon": "AtIcon",
       "channels": {
-        "beta": "1.0.1-beta"
+        "latest": "2.0.0"
       },
       "versions": {
         "1.0.0-beta": {
@@ -66,6 +77,20 @@
             },
             "discord": {}
           }
+        },
+        "2.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/45043d378ba5398add43b4d4191fa8bd419ab2fc/pool/dariuss.ghost-ping-logger@2.0.0.zip",
+          "sha256": "cf3440c1ee54fdf88eb36fd314e5cba888296993057e26a8895736bdae0ee1a8",
+          "size": 2593,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {},
+            "dariuss.advanced-message-logger": {
+              "version": ">=2 <3"
+            }
+          }
         }
       }
     },
@@ -75,7 +100,7 @@
       "author": "dariuss",
       "icon": "AtIcon",
       "channels": {
-        "beta": "1.1.0-beta"
+        "latest": "2.0.0"
       },
       "versions": {
         "1.0.0-beta": {
@@ -154,6 +179,17 @@
             },
             "discord": {}
           }
+        },
+        "2.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/45043d378ba5398add43b4d4191fa8bd419ab2fc/pool/dariuss.jump-to-ping@2.0.0.zip",
+          "sha256": "d3f63e893f2f9169e541b27b2c2bf8ecdd4f2fde2840f0cbb70e0acc1df05bbd",
+          "size": 8118,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
         }
       }
     },
@@ -168,7 +204,7 @@
       ],
       "icon": "MoonIcon",
       "channels": {
-        "beta": "1.0.2-beta"
+        "latest": "2.0.0"
       },
       "versions": {
         "1.0.0-beta": {
@@ -215,6 +251,21 @@
             },
             "valenced.settings.themes": {}
           }
+        },
+        "2.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/45043d378ba5398add43b4d4191fa8bd419ab2fc/pool/dariuss.midnight-theme@2.0.0.zip",
+          "sha256": "ab00554bef37c333cccd2d943c4b4f07aea8ccf12b3a54f14c61f9f3c297b5aa",
+          "size": 1927315,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {},
+            "valenced.api.themes": {
+              "version": ">=1.0.1 <2"
+            },
+            "valenced.settings.themes": {}
+          }
         }
       }
     },
@@ -224,13 +275,24 @@
       "author": "dariussbezy",
       "icon": "PersonIcon",
       "channels": {
-        "latest": "1.0.0"
+        "latest": "2.0.0"
       },
       "versions": {
         "1.0.0": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/db3a30f3426d1045e526b949914da6df0b11e53c/pool/dariuss.no-tap-mention@1.0.0.zip",
           "sha256": "be60425c43853c1d0355e6cd6f6f92602f5ff4cc824a952da35f93c4de81f6a5",
           "size": 1035,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
+        },
+        "2.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/45043d378ba5398add43b4d4191fa8bd419ab2fc/pool/dariuss.no-tap-mention@2.0.0.zip",
+          "sha256": "4b14e0ddb7dd1693a0f37b09c1b8449566216927be3ed979c09cd1a9d4265b3e",
+          "size": 1047,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
@@ -246,7 +308,7 @@
       "author": "dariuss",
       "icon": "LanguageIcon",
       "channels": {
-        "beta": "1.0.3-beta"
+        "latest": "2.0.0"
       },
       "versions": {
         "1.0.0-beta": {
@@ -292,33 +354,11 @@
             },
             "discord": {}
           }
-        }
-      }
-    },
-    "dariuss.show-hidden-channels": {
-      "name": "Show Hidden Channels",
-      "description": "Show hidden channel metadata with lock indicators and an information card.",
-      "author": "dariuss",
-      "icon": "LockIcon",
-      "channels": {
-        "beta": "1.0.1-beta"
-      },
-      "versions": {
-        "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/db3a30f3426d1045e526b949914da6df0b11e53c/pool/dariuss.show-hidden-channels@1.0.0-beta.zip",
-          "sha256": "bb43fe7d0d321fad41a292ff69b0d1b2143ba78cd9b7a6b2944cd99647dd6cc0",
-          "size": 9173,
-          "dependencies": {
-            "valenced.api": {
-              "version": ">=1 <2"
-            },
-            "discord": {}
-          }
         },
-        "1.0.1-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/db3a30f3426d1045e526b949914da6df0b11e53c/pool/dariuss.show-hidden-channels@1.0.1-beta.zip",
-          "sha256": "84675c0d42633b7664127cf9f86f80b0848e31115013f8e488f26c198fa613a2",
-          "size": 9317,
+        "2.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/45043d378ba5398add43b4d4191fa8bd419ab2fc/pool/dariuss.quick-translate@2.0.0.zip",
+          "sha256": "f7ccbd60fe2952c8cd2d1aba4a7017e857e10915f7a281598c17bca5cf413175",
+          "size": 26843,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
@@ -334,7 +374,7 @@
       "author": "dariuss",
       "icon": "MicrophoneIcon",
       "channels": {
-        "beta": "1.0.1-beta"
+        "latest": "2.0.0"
       },
       "versions": {
         "1.0.0-beta": {
@@ -358,22 +398,44 @@
             },
             "discord": {}
           }
+        },
+        "2.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/45043d378ba5398add43b4d4191fa8bd419ab2fc/pool/dariuss.voice-messages-to-text@2.0.0.zip",
+          "sha256": "cacbc50bd9deed5a50819ade1f829406df46e91dfbc82bea63e82cad3cad5173",
+          "size": 8177,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
         }
       }
     },
     "dariuss.spotify-controls": {
       "name": "Spotify Controls",
-      "description": "Control Spotify above the YOUBAR with an animated wave progress bar.",
-      "author": "dariussbezy",
+      "description": "Control Spotify from a Quest-style player above the YouBar.",
+      "author": "dariuss",
       "icon": "MusicIcon",
       "channels": {
-        "beta": "1.0.0-beta"
+        "latest": "2.0.0"
       },
       "versions": {
         "1.0.0-beta": {
           "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/db3a30f3426d1045e526b949914da6df0b11e53c/pool/dariuss.spotify-controls@1.0.0-beta.zip",
           "sha256": "b99eaf9d5d2d7c8d66383beab04e6e8f07c6434591bea45a45ce20b8b73d0cb1",
           "size": 13035,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
+        },
+        "2.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/45043d378ba5398add43b4d4191fa8bd419ab2fc/pool/dariuss.spotify-controls@2.0.0.zip",
+          "sha256": "6a96b123d5e41cd16d09f15b635cbdab415b38540bd4177ae48e6ec520c31d08",
+          "size": 15106,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
