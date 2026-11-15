@@ -31,6 +31,9 @@
     },
     "dariuss.message-actions": {
       "latest": "1.0.0"
+    },
+    "dariuss.custom-quick-reactions": {
+      "latest": "1.0.0"
     }
   }
 }
