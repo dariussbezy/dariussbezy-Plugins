@@ -19,6 +19,7 @@ test('native message callback is blocked while avatar and long press stay intact
   '@valenced/modules/finders/filters':{withName:x=>x,withProps:x=>x},
   '@valenced/patcher':{after:(owner,key,callback)=>{const old=owner[key];owner[key]=function(...args){return callback(old.apply(this,args),args)??old.apply(this,args);};return()=>{owner[key]=old;};},instead:()=>()=>{}},
   react:React,
+  './settings':{default:()=>null},
  };
  const source=fs.readFileSync('plugins/NTM/js/index.ts','utf8');
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
