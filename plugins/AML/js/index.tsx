@@ -6,6 +6,7 @@ import {
 	jump,
 	notify,
 	showDetails,
+	showDiff,
 } from './alerts'
 import {
 	describeTarget,
@@ -246,6 +247,7 @@ export default plugin<{ jsonStorage: Data }>({
 								entry.before.id === messageId,
 						),
 				inspect: entries => showDetails(entries[0], entries),
+				compare: entries => showDiff(entries),
 				remove: entries => journal.remove(entries),
 				report,
 			}),

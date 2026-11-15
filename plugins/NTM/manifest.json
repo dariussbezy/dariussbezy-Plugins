@@ -3,9 +3,9 @@
 	"id": "dariuss.no-tap-mention",
 	"name": "No Tap Mention",
 	"description": "Disable tapping a message author's name to insert a mention.",
-	"author": "dariussbezy",
+	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
 	"icon": "PersonIcon",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"dependencies": {
 		"valenced.api": {
 			"version": ">=1 <2"

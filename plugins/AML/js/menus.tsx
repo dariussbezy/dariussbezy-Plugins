@@ -23,6 +23,7 @@ export interface MenuHost {
 	toggleIgnored(id: string, scope?: IgnoreScope): void
 	entriesFor(channelId: string, messageId: string): readonly Entry[]
 	inspect(entries: readonly Entry[]): void
+	compare(entries: readonly Entry[]): void
 	remove(entries: readonly Entry[]): void
 	report(error: unknown): void
 }
@@ -157,6 +158,15 @@ export function installMenus(host: MenuHost) {
 						icon: 'ClockIcon',
 						action: () => host.inspect(entries),
 					},
+					...(edited
+						? [
+								{
+									label: 'Compare edits',
+									icon: 'PencilIcon',
+									action: () => host.compare(entries),
+								},
+							]
+						: []),
 					{
 						label: deleted ? 'Remove logged message' : 'Remove edit history',
 						icon: 'TrashIcon',

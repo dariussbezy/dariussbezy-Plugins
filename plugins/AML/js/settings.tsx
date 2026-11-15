@@ -358,7 +358,7 @@ function Screens({
 						<Design.TableRow
 							icon={icon('CircleInformationIcon')}
 							label="In chat"
-							subLabel="Deleted messages stay visible when you reopen their chat. Long-press a message to view or remove its history."
+							subLabel="Deleted messages stay visible when you reopen their chat. Long-press a message to view or remove its history. On an edited message, Compare edits shows what changed between versions."
 						/>
 						<Design.TableRow
 							icon={icon('CircleInformationIcon')}
@@ -370,17 +370,14 @@ function Screens({
 							label="Privacy"
 							subLabel="Only messages this device received are logged. Nothing is uploaded, and messages never received cannot be recovered."
 						/>
-						<Design.TableRow
-							label="Version"
-							subLabel={manifest.version}
-							icon={icon('CircleInformationIcon')}
-						/>
-						<Design.TableRow
-							icon={icon('CircleInformationIcon')}
-							label="Other plugins"
-							subLabel="Plugins such as Ghost Ping Logger read this journal, so what is ignored or switched off here applies to them too."
-						/>
 					</Design.TableRowGroup>
+					<Design.Text
+						variant="text-xs/normal"
+						color="text-muted"
+						style={{ textAlign: 'center' }}
+					>
+						{`Adv. Message Logger ${manifest.version}`}
+					</Design.Text>
 				</Design.Stack>
 			</Page>
 		</ScrollView>

@@ -1,7 +1,13 @@
 import { Tokens } from '@valenced/discord/common/tokens'
 import type { WordRule } from './word-rules'
 
-export type Provider = 'google' | 'deepl'
+export type Provider = 'google' | 'microsoft' | 'deepl'
+
+export const ProviderLabels: Record<Provider, string> = {
+	google: 'Google',
+	microsoft: 'Microsoft',
+	deepl: 'DeepL',
+}
 export type Anchor = 'actions' | 'send'
 
 export interface ChatLanguages {

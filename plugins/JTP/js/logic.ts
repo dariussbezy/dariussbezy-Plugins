@@ -4,6 +4,8 @@ export interface Ping {
 	id: string
 	author: string
 	text: string
+	/** A reply to you that does not mention you. */
+	reply?: boolean
 }
 
 interface MessageLike {
@@ -13,6 +15,7 @@ interface MessageLike {
 	mention_roles?: string[] | null
 	mention_everyone?: boolean
 	mentioned?: boolean
+	referenced_message?: { author?: { id?: unknown } | null } | null
 }
 
 export interface PingContext {
@@ -21,7 +24,15 @@ export interface PingContext {
 	roleIds: readonly string[]
 	suppressEveryone: boolean
 	suppressRoles: boolean
+	/** Count replies to your messages even when they do not mention you. */
+	includeReplies?: boolean
+	excludeEveryone?: boolean
+	/** All role pings count, all except the listed roles, or only the listed roles. */
+	roleMode?: RoleMode
+	roleList?: readonly string[]
 }
+
+export type RoleMode = 'all' | 'except' | 'only'
 
 const DISCORD_EPOCH = 1420070400000n
 
@@ -56,17 +67,40 @@ export function formatTime(ms: number, now = new Date()): string {
 export function isPing(message: MessageLike, ctx: PingContext): boolean {
 	if (!isSnowflake(message.id) || message.author?.id === ctx.me) return false
 	if (ctx.dm) return true
-	if (message.mentioned === true) return true
 	const mentioned = (message.mentions ?? []).some(
 		user => (typeof user === 'string' ? user : user?.id) === ctx.me,
 	)
 	if (mentioned) return true
-	if (message.mention_everyone && !ctx.suppressEveryone) return true
+	// Discord's own flag also covers @everyone and roles, so it is not trusted while those are excluded.
+	if (
+		message.mentioned === true &&
+		!ctx.excludeEveryone &&
+		(ctx.roleMode ?? 'all') === 'all'
+	)
+		return true
+	if (message.mention_everyone && !ctx.suppressEveryone && !ctx.excludeEveryone)
+		return true
 	return (
 		!ctx.suppressRoles &&
-		(message.mention_roles ?? []).some(role => ctx.roleIds.includes(role))
+		(message.mention_roles ?? []).some(
+			role =>
+				ctx.roleIds.includes(role) &&
+				(ctx.roleMode === 'except'
+					? !ctx.roleList?.includes(role)
+					: ctx.roleMode === 'only'
+						? !!ctx.roleList?.includes(role)
+						: true),
+		)
 	)
 }
+
+/** A reply to one of your messages that was sent without pinging you. */
+export const isQuietReply = (message: MessageLike, ctx: PingContext) =>
+	ctx.includeReplies === true &&
+	!ctx.dm &&
+	isSnowflake(message.id) &&
+	message.author?.id !== ctx.me &&
+	message.referenced_message?.author?.id === ctx.me
 
 /**
  * Pings that Discord still counts as unread: dedupe, drop everything older than

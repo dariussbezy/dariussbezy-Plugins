@@ -2,10 +2,10 @@
 	"format": 1,
 	"id": "dariuss.ghost-ping-logger",
 	"name": "Ghost Ping Logger",
-	"description": "Find deleted or edited mentions and replies in the journal of Adv. Message Logger and get alerted about them.",
-	"author": "dariuss",
+	"description": "Find mentions and replies that were deleted or edited away and get alerted. Requires Adv. Message Logger.",
+	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
 	"icon": "AtIcon",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"dependencies": {
 		"valenced.api": { "version": ">=1 <2" },
 		"discord": {},

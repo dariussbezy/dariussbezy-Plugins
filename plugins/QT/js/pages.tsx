@@ -31,6 +31,7 @@ import {
 	languageLabel,
 	MAX_FAVORITES,
 	MAX_RULES,
+	ProviderLabels,
 	resolveColor,
 	SOURCE_LANGUAGES,
 } from './shared'
@@ -39,6 +40,14 @@ import { translateWith } from './translate'
 import type { ComponentType } from 'react'
 import type { Ctx } from './patching'
 import type { HistoryEntry, Provider } from './shared'
+
+/** The service used for the comparison: DeepL when it is set up, otherwise Microsoft; Google for the rest. */
+const otherProvider = (provider: Provider): Provider =>
+	provider !== 'google'
+		? 'google'
+		: getSettings().deeplApiKey.trim()
+			? 'deepl'
+			: 'microsoft'
 
 const ROUTE = 'DariussQuickTranslatePage'
 const MAX_PROTECTED = 100
@@ -408,7 +417,7 @@ function HistoryPage() {
 
 	const tryOther = async (entry: HistoryEntry) => {
 		if (retrying) return
-		const provider: Provider = entry.provider === 'deepl' ? 'google' : 'deepl'
+		const provider = otherProvider(entry.provider)
 		setRetrying(entry.id)
 		try {
 			const alternativeTranslated = await translateWith(
@@ -427,7 +436,7 @@ function HistoryPage() {
 		} catch (error) {
 			toast(
 				(error as Error)?.message ||
-					`Could not retranslate with ${provider === 'deepl' ? 'DeepL' : 'Google'}`,
+					`Could not retranslate with ${ProviderLabels[provider]}`,
 			)
 		} finally {
 			setRetrying(null)
@@ -456,7 +465,7 @@ function HistoryPage() {
 				</Design.Text>
 			)}
 			{shown.map(entry => {
-				const other = entry.provider === 'deepl' ? 'Google' : 'DeepL'
+				const other = ProviderLabels[otherProvider(entry.provider)]
 				return (
 					<Design.TableRowGroup
 						key={entry.id}
@@ -465,14 +474,14 @@ function HistoryPage() {
 						<Design.TableRow
 							icon={<TableRowAssetIcon name="LanguageIcon" />}
 							label={entry.translated}
-							subLabel={`${entry.original}\n${entry.channelName || channelLabel(entry.channelId)}${entry.messageId ? '' : ' · Draft'} · ${entry.provider === 'deepl' ? 'DeepL' : 'Google'} · ${new Date(entry.at).toLocaleString()}`}
+							subLabel={`${entry.original}\n${entry.channelName || channelLabel(entry.channelId)}${entry.messageId ? '' : ' · Draft'} · ${ProviderLabels[entry.provider]} · ${new Date(entry.at).toLocaleString()}`}
 							subLabelLineClamp={5}
 						/>
 						{entry.alternativeTranslated && (
 							<Design.TableRow
 								icon={<TableRowAssetIcon name="RetryIcon" />}
 								label={entry.alternativeTranslated}
-								subLabel={`Alternative · ${entry.alternativeProvider === 'deepl' ? 'DeepL' : 'Google'}`}
+								subLabel={`Alternative · ${ProviderLabels[entry.alternativeProvider ?? entry.provider]}`}
 							/>
 						)}
 						<Design.TableRow

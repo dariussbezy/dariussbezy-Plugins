@@ -6,6 +6,7 @@ import {
 	compareIds,
 	isExact,
 	isPing,
+	isQuietReply,
 	isSnowflake,
 	nextId,
 	previousId,
@@ -18,8 +19,10 @@ import type { Ping, PingContext } from './logic'
 export interface Row {
 	channelId: string
 	dm: boolean
-	/** Pings (or unread DM messages) Discord counts, or the unvisited queue size. */
+	/** Pings (or unread DM messages) shown for the chat. */
 	count: number
+	/** What Discord's own counter says; it also counts @everyone and roles. */
+	mentions: number
 	/** First unread message, when it can be determined. */
 	oldest: string | null
 	/** True when the pings come from the "keep unvisited pings" queue. */
@@ -46,6 +49,7 @@ interface RawMessage {
 	mention_roles?: string[]
 	mention_everyone?: boolean
 	mentioned?: boolean
+	referenced_message?: { author?: { id?: string } | null } | null
 }
 
 interface Channel {
@@ -98,6 +102,8 @@ const queue = new Map<string, Map<string, Ping>>()
 const visited = new Map<string, Set<string>>()
 const resolved = new Map<string, { key: string; value: RowPings }>()
 const inflight = new Map<string, Promise<RowPings>>()
+/** Lookups that failed, so a missing network does not retry on every refresh. */
+const failed = new Set<string>()
 let generation = 0
 
 const isDM = (channel: Channel | undefined) =>
@@ -109,7 +115,8 @@ function trim<K, V>(map: Map<K, V>) {
 
 export function resetPings() {
 	generation++
-	for (const map of [captured, queue, visited, resolved, inflight]) map.clear()
+	for (const map of [captured, queue, visited, resolved, inflight, failed])
+		map.clear()
 }
 
 /* ---- message to ping ---- */
@@ -127,7 +134,12 @@ function pingContext(channel: Channel | undefined): PingContext | null {
 				'GuildMemberStore',
 			)?.getSelfMember?.(guildId)
 		: undefined
+	const { includeReplies, excludeEveryone, roleMode, roleIds } = getSettings()
 	return {
+		includeReplies,
+		excludeEveryone,
+		roleMode,
+		roleList: roleIds.split(/[\s,]+/).filter(isSnowflake),
 		me,
 		dm: isDM(channel),
 		roleIds: member?.roles ?? [],
@@ -156,11 +168,18 @@ function preview(message: RawMessage): string {
 	return message.embeds?.length ? '(embed)' : ''
 }
 
-const toPing = (message: RawMessage): Ping => ({
-	id: String(message.id),
-	author: message.author?.global_name || message.author?.username || 'Unknown',
-	text: preview(message),
-})
+/** The message as a ping when it counts as one (or as a reply to you), else null. */
+function toPing(message: RawMessage, ctx: PingContext): Ping | null {
+	const ping = isPing(message, ctx)
+	if (!ping && !isQuietReply(message, ctx)) return null
+	return {
+		id: String(message.id),
+		author:
+			message.author?.global_name || message.author?.username || 'Unknown',
+		text: preview(message),
+		...(ping ? {} : { reply: true }),
+	}
+}
 
 export function capture(
 	channelId: string | undefined,
@@ -169,12 +188,14 @@ export function capture(
 	const id = channelId ?? message?.channel_id
 	if (!id || !message || !isSnowflake(message.id)) return
 	const ctx = pingContext(channels()?.getChannel(id))
-	if (!ctx || !isPing(message, ctx)) return
-	const list = (captured.get(id) ?? []).filter(ping => ping.id !== message.id)
-	list.push(toPing(message))
+	const ping = ctx ? toPing(message, ctx) : null
+	if (!ping) return
+	const list = (captured.get(id) ?? []).filter(item => item.id !== message.id)
+	list.push(ping)
 	captured.delete(id)
 	captured.set(id, list.slice(-PER_CHANNEL))
 	trim(captured)
+	resolved.delete(id)
 	notify()
 }
 
@@ -210,11 +231,20 @@ function unreadBound(channelId: string): string | null {
 export function getRows(): Row[] {
 	const state = readStates()
 	if (!state) return []
-	const { includeDMs, keepUnvisitedPings } = getSettings()
+	const {
+		includeDMs,
+		keepUnvisitedPings,
+		includeReplies,
+		excludeEveryone,
+		roleMode,
+	} = getSettings()
 	if (!keepUnvisitedPings) queue.clear()
+	const filtering = excludeEveryone || roleMode !== 'all'
 	const ids = new Set([
 		...(state.getMentionChannelIds?.() ?? captured.keys()),
 		...queue.keys(),
+		// Replies without a ping are not counted by Discord, so only the ones seen live can start a row.
+		...(includeReplies ? captured.keys() : []),
 	])
 	const rows: Row[] = []
 	for (const channelId of ids) {
@@ -223,17 +253,49 @@ export function getRows(): Row[] {
 		const dm = isDM(channel)
 		if (dm && !includeDMs) continue
 		const pending = dm ? [] : unvisited(channelId)
-		const count = pending.length || state.getMentionCount(channelId) || 0
-		if (count <= 0) continue
+		const oldest = unreadBound(channelId)
+		const mentions = state.getMentionCount(channelId) || 0
+		const quiet =
+			dm || !includeReplies || !oldest
+				? 0
+				: (captured.get(channelId) ?? []).filter(
+						ping => ping.reply && compareIds(ping.id, oldest) >= 0,
+					).length
+		// Pings already opened from the list no longer count while Discord still has them unread.
+		const opened =
+			dm || !oldest
+				? 0
+				: [...(visited.get(channelId) ?? [])].filter(
+						id => compareIds(id, oldest) >= 0,
+					).length
+		let count = pending.length || Math.max(0, mentions + quiet - opened)
 		const last = channel.lastMessageId
-		rows.push({
+		const row: Row = {
 			channelId,
 			dm,
 			count,
-			oldest: unreadBound(channelId),
+			mentions,
+			oldest,
 			queued: pending.length > 0,
 			lastMessageId: isSnowflake(last) ? last : null,
-		})
+		}
+		// Discord's counter includes @everyone and roles, so with those excluded the real ping count
+		// comes from the messages themselves, once they have been looked up.
+		if (filtering && !dm && !pending.length && mentions > 0) {
+			const key = `${oldest}:${mentions}`
+			const hit = resolved.get(channelId)
+			if (hit?.key === key)
+				count = hit.value.pings.filter(
+					ping => !visited.get(channelId)?.has(ping.id),
+				).length
+			else if (!failed.has(`${channelId}:${key}`))
+				void resolve(row).then(notify, () => {
+					failed.add(`${channelId}:${key}`)
+				})
+			row.count = count
+		}
+		if (count <= 0) continue
+		rows.push(row)
 	}
 	// Most recently active chat first. Independent of resolution state, so the list never reorders itself.
 	return rows.sort((a, b) =>
@@ -283,8 +345,10 @@ async function scan(row: Row, epoch: number): Promise<RowPings> {
 					: {},
 		)
 		if (epoch !== generation) throw new Cancelled()
-		for (const message of batch)
-			if (isPing(message, ctx)) found.push(toPing(message))
+		for (const message of batch) {
+			const ping = toPing(message, ctx)
+			if (ping) found.push(ping)
+		}
 		if (batch.length < PAGE_SIZE) {
 			complete = true
 			break
@@ -292,6 +356,32 @@ async function scan(row: Row, epoch: number): Promise<RowPings> {
 		cursor = String((row.oldest ? batch[batch.length - 1] : batch[0]).id)
 		if (!row.oldest && selectPings(found, null, row.count).length >= row.count)
 			break
+	}
+	// A busy chat can have its first ping further than the pages scanned. Then the newest messages are
+	// searched instead, so the jump lands on a real ping rather than on the oldest unread message.
+	if (
+		row.oldest &&
+		!complete &&
+		!selectPings(found, row.oldest, found.length).length
+	) {
+		let before: string | null = null
+		for (let page = 0; page < MAX_PAGES; page++) {
+			const batch = await fetchMessages(row.channelId, before ? { before } : {})
+			if (epoch !== generation) throw new Cancelled()
+			for (const message of batch) {
+				const ping = toPing(message, ctx)
+				if (ping) found.push(ping)
+			}
+			if (batch.length < PAGE_SIZE) break
+			before = String(batch[0].id)
+			if (selectPings(found, row.oldest, row.count).length >= row.count) break
+		}
+		const newest = selectPings(found, row.oldest, row.count)
+		return {
+			pings: newest,
+			exact: isExact(newest, row.count, false),
+			fallback: newest[0]?.id ?? fallback,
+		}
 	}
 	// Walking forward from the first unread message is contiguous, so the first ping found is the real first one.
 	const pings = selectPings(
@@ -319,7 +409,7 @@ async function firstDmMessage(row: Row, epoch: number): Promise<RowPings> {
 }
 
 function resolve(row: Row): Promise<RowPings> {
-	const key = `${row.oldest}:${row.count}`
+	const key = `${row.oldest}:${row.mentions}`
 	const hit = resolved.get(row.channelId)
 	if (hit?.key === key) return Promise.resolve(hit.value)
 	const requestKey = `${row.channelId}:${key}`
@@ -352,6 +442,11 @@ export async function loadRow(row: Row): Promise<RowPings> {
 		if (error instanceof Cancelled) return { pings: [], exact: false }
 		result = { pings: [], exact: false, fallback: row.oldest ?? undefined }
 	}
+	return queueAndFilter(row, result)
+}
+
+/** Queues the pings for "keep unvisited pings" and leaves out the ones already opened. */
+function queueAndFilter(row: Row, result: RowPings): RowPings {
 	if (!row.dm && getSettings().keepUnvisitedPings && result.pings.length) {
 		const seen = visited.get(row.channelId)
 		const pending = queue.get(row.channelId) ?? new Map<string, Ping>()
@@ -359,6 +454,12 @@ export async function loadRow(row: Row): Promise<RowPings> {
 			if (!seen?.has(ping.id)) pending.set(ping.id, ping)
 		queue.set(row.channelId, pending)
 		trim(queue)
+	}
+	// Pings already opened are not offered again, so the next one is always the first in line.
+	const seen = visited.get(row.channelId)
+	if (seen?.size) {
+		const pings = result.pings.filter(ping => !seen.has(ping.id))
+		return { ...result, pings, exact: result.exact && pings.length > 0 }
 	}
 	return result
 }
@@ -370,7 +471,7 @@ export function openMessage(
 	messageId: string | undefined,
 	onError: (error: unknown) => void,
 ) {
-	if (!row.dm && getSettings().keepUnvisitedPings && messageId) {
+	if (!row.dm && messageId) {
 		const seen = visited.get(row.channelId) ?? new Set<string>()
 		seen.add(messageId)
 		visited.set(row.channelId, seen)
@@ -384,7 +485,8 @@ export function openMessage(
 /** Opens the first unread ping of a row. */
 export async function openRow(row: Row, onError: (error: unknown) => void) {
 	const { pings, exact, fallback } = await loadRow(row)
-	openMessage(row, exact ? pings[0]?.id : fallback, onError)
+	// With no exact first ping, the nearest real ping is still better than the oldest unread message.
+	openMessage(row, pings[0]?.id ?? (exact ? undefined : fallback), onError)
 }
 
 /** Acknowledges the newest message, like Discord's own "mark as read". */

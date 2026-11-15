@@ -1,10 +1,16 @@
 import type { JsonStorage } from '@valenced/json-storage'
+import type { RoleMode } from './logic'
 
 export interface Settings {
 	hideWhenEmpty: boolean
 	showBadge: boolean
 	includeDMs: boolean
 	keepUnvisitedPings: boolean
+	includeReplies: boolean
+	excludeEveryone: boolean
+	roleMode: RoleMode
+	/** Role IDs separated by commas or spaces. */
+	roleIds: string
 }
 
 export const DefaultSettings: Settings = {
@@ -12,6 +18,10 @@ export const DefaultSettings: Settings = {
 	showBadge: true,
 	includeDMs: false,
 	keepUnvisitedPings: false,
+	includeReplies: true,
+	excludeEveryone: false,
+	roleMode: 'all',
+	roleIds: '',
 }
 
 /** Re-render callbacks of the profile bar button and the open ping sheet. */

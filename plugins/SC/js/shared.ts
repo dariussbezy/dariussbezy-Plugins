@@ -5,7 +5,6 @@ export interface Settings {
 	closed: boolean
 	alwaysShow: boolean
 	animatedWave: boolean
-	expandedMinimize: boolean
 	expandedShuffle: boolean
 	expandedPrevious: boolean
 	expandedPlay: boolean
@@ -25,7 +24,6 @@ export const DefaultSettings: Settings = {
 	closed: false,
 	alwaysShow: false,
 	animatedWave: true,
-	expandedMinimize: true,
 	expandedShuffle: true,
 	expandedPrevious: true,
 	expandedPlay: true,

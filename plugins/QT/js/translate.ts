@@ -6,7 +6,12 @@ import {
 	enqueue,
 	fetchWithTimeout,
 } from './runtime'
-import { isLanguage, languageName, normalizeLanguage } from './shared'
+import {
+	isLanguage,
+	languageName,
+	normalizeLanguage,
+	ProviderLabels,
+} from './shared'
 import { getSettings, updateSettings } from './store'
 import { findWord, prepareWordRules } from './word-rules'
 import type { Provider } from './shared'
@@ -111,6 +116,48 @@ async function google(
 	return { text: out, src }
 }
 
+// The keyless endpoint Microsoft Edge uses for its built-in page translator.
+const MICROSOFT_ENDPOINT = 'https://edge.microsoft.com/translate/translatetext'
+const MICROSOFT_CODES: Record<string, string> = {
+	'zh-CN': 'zh-Hans',
+	'zh-TW': 'zh-Hant',
+	no: 'nb',
+	iw: 'he',
+	jw: 'jv',
+	tl: 'fil',
+}
+const microsoftCode = (code: string) => MICROSOFT_CODES[code] ?? code
+
+async function microsoft(
+	text: string,
+	tl: string,
+	sl: string,
+): Promise<ProviderResult> {
+	const url = `${MICROSOFT_ENDPOINT}?to=${encodeURIComponent(microsoftCode(tl))}${
+		sl !== 'auto' ? `&from=${encodeURIComponent(microsoftCode(sl))}` : ''
+	}`
+	const response = await fetchWithTimeout(url, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify([text]),
+	})
+	const json = await response.json().catch(() => null)
+	if (!response.ok)
+		throw httpError(
+			'Microsoft Translator request failed',
+			response,
+			json?.error,
+		)
+	const first = Array.isArray(json) ? json[0] : null
+	const out = first?.translations?.[0]?.text
+	if (typeof out !== 'string' || (!out && text.trim()))
+		throw new Error('Empty response')
+	return {
+		text: out,
+		src: String(first?.detectedLanguage?.language || sl),
+	}
+}
+
 const DEEPL_SOURCE: Record<string, string> = {
 	'zh-CN': 'ZH',
 	'zh-TW': 'ZH',
@@ -160,8 +207,14 @@ async function deepl(
 	}
 }
 
+const providers: Record<Provider, typeof google> = { google, microsoft, deepl }
+
 const providerName = (provider: Provider) =>
-	provider === 'deepl' ? 'DeepL' : 'Google Translate'
+	provider === 'google'
+		? 'Google Translate'
+		: provider === 'microsoft'
+			? 'Microsoft Translator'
+			: ProviderLabels[provider]
 
 /** One queued provider request; a provider that answered HTTP 429 is paused for a while. */
 async function callProvider(
@@ -183,7 +236,7 @@ async function callProvider(
 	return enqueue(async () => {
 		checkCooldown()
 		try {
-			return await (provider === 'deepl' ? deepl : google)(text, tl, sl)
+			return await providers[provider](text, tl, sl)
 		} catch (error) {
 			if (error instanceof HttpError && error.status === 429)
 				cooldowns.set(
@@ -235,9 +288,7 @@ export async function translateWith(
 	sl: string,
 ) {
 	const { out, tokens } = protect(text)
-	const result = await enqueue(() =>
-		(provider === 'deepl' ? deepl : google)(out, tl, sl),
-	)
+	const result = await enqueue(() => providers[provider](out, tl, sl))
 	return restore(result.text, tokens, false)
 }
 
@@ -404,16 +455,16 @@ export function translate(
 	}
 
 	const attempt =
-		settings.provider === 'deepl'
-			? run('deepl').catch(deeplError => {
+		settings.provider !== 'google'
+			? run(settings.provider).catch(firstError => {
 					if (
 						since !== currentGeneration() ||
-						(deeplError as HttpError).status === 429
+						(firstError as HttpError).status === 429
 					)
-						throw deeplError
+						throw firstError
 					return run('google').catch(googleError => {
 						throw new Error(
-							`DeepL and Google failed: ${googleError?.message || deeplError?.message || 'request failed'}`,
+							`${ProviderLabels[settings.provider]} and Google failed: ${googleError?.message || firstError?.message || 'request failed'}`,
 						)
 					})
 				})
@@ -449,10 +500,11 @@ export function translate(
 /** Toast shown once a translation finished; names the service when a DeepL key is set. */
 export function notifyTranslated(result: TranslateResult) {
 	const settings = getSettings()
-	const named = !!settings.deeplApiKey.trim()
-	const fallback = settings.provider === 'deepl' && result.provider === 'google'
+	const named = settings.provider !== 'google'
+	const fallback =
+		settings.provider !== 'google' && result.provider === 'google'
 	let label = named
-		? `Translated with ${providerName(result.provider ?? 'google')}${fallback ? ' (DeepL fallback)' : ''}`
+		? `Translated with ${providerName(result.provider ?? 'google')}${fallback ? ` (${ProviderLabels[settings.provider]} fallback)` : ''}`
 		: 'Translated'
 	if (!settings.showSourceLanguage) {
 		const code = normalizeLanguage(result.src)

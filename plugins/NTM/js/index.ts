@@ -2,10 +2,14 @@ import { getModules } from '@valenced/modules/finders'
 import { withName, withProps } from '@valenced/modules/finders/filters'
 import { after } from '@valenced/patcher'
 import { cloneElement, isValidElement } from 'react'
+import SettingsComponent from './settings'
 import type { ReactElement, ReactNode } from 'react'
 
 type Callback = (this: unknown, ...args: unknown[]) => unknown
-type ElementProps = { onTapUsername?: unknown; children?: ReactNode }
+type ElementProps = {
+	onTapUsername?: unknown
+	children?: ReactNode
+}
 type Renderer = (...args: unknown[]) => ReactNode
 type RendererKey = 'default' | 'type' | 'render'
 type RendererHost = Record<RendererKey, Renderer>
@@ -18,6 +22,7 @@ function isRenderer(value: unknown): value is Renderer {
 }
 
 export default plugin({
+	SettingsComponent,
 	start({ cleanup, plugin: instance }) {
 		let active = true
 		const patched = new WeakSet<object>()

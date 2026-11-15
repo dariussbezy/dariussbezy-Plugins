@@ -2,10 +2,10 @@
 	"format": 1,
 	"id": "dariuss.jump-to-ping",
 	"name": "Jump to Ping",
-	"description": "Find unread mentions, replies and DMs, then jump straight to the message.",
-	"author": "dariuss",
+	"description": "Jump to unread mentions, replies and DMs from a button beside the notifications bell.",
+	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
 	"icon": "AtIcon",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"dependencies": {
 		"valenced.api": {
 			"version": ">=1 <2"

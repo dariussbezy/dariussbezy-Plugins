@@ -1,27 +1,27 @@
 {
-  "format": 1,
-  "id": "dariuss.midnight-theme",
-  "name": "Midnight Mobile",
-  "description": "Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon.",
-  "author": "dariuss",
-  "contributors": [
-    "refact0r (original Midnight theme)",
-    "Font Awesome (moon icon)",
-    "Erik Kennedy (Figtree)"
-  ],
-  "icon": "MoonIcon",
-  "version": "2.0.0",
-  "dependencies": {
-    "valenced.api": {
-      "version": ">=1 <2"
-    },
-    "discord": {},
-    "valenced.api.themes": {
-      "version": ">=1.0.1 <2"
-    },
-    "valenced.settings.themes": {}
-  },
-  "dist": {
-    "script": "index.js"
-  }
+	"format": 1,
+	"id": "dariuss.midnight-theme",
+	"name": "Midnight Mobile",
+	"description": "Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon.",
+	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
+	"contributors": [
+		"refact0r (original Midnight theme)",
+		"Font Awesome (moon icon)",
+		"Erik Kennedy (Figtree)"
+	],
+	"icon": "MoonIcon",
+	"version": "2.1.0",
+	"dependencies": {
+		"valenced.api": {
+			"version": ">=1 <2"
+		},
+		"discord": {},
+		"valenced.api.themes": {
+			"version": ">=1.0.1 <2"
+		},
+		"valenced.settings.themes": {}
+	},
+	"dist": {
+		"script": "index.js"
+	}
 }

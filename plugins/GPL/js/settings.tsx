@@ -142,18 +142,25 @@ export default function SettingsComponent({
 							onPress={() => setScreen('color')}
 						/>
 					</Design.TableRowGroup>
-					<Design.TableRowGroup title="About">
+					<Design.TableRowGroup title="Quick guide">
 						<Design.TableRow
 							icon={icon('CircleInformationIcon')}
 							label="Uses Adv. Message Logger"
 							subLabel="Ghost pings are found in the journal of Adv. Message Logger. Its ignore list, retention, cache and bot filter decide what can appear here, and its colors and clock style apply to retained messages."
 						/>
 						<Design.TableRow
-							label="Version"
-							subLabel={manifest.version}
 							icon={icon('CircleInformationIcon')}
+							label="What counts"
+							subLabel="A ghost ping is a message that mentioned you and was then deleted, or edited so it no longer does."
 						/>
 					</Design.TableRowGroup>
+					<Design.Text
+						variant="text-xs/normal"
+						color="text-muted"
+						style={{ textAlign: 'center' }}
+					>
+						{`Ghost Ping Logger ${manifest.version}`}
+					</Design.Text>
 				</Design.Stack>
 			</Page>
 		</ScrollView>

@@ -64,7 +64,7 @@ const GUIDE: readonly (readonly [string, string, string])[] = [
 	[
 		'Pick a service and languages',
 		'SettingsIcon',
-		'Choose Google Translate (no key needed) or DeepL (your own API key), then set separate languages for your outgoing and incoming messages.',
+		'Choose Google Translate or Microsoft Translator (no key needed), or DeepL (your own API key), then set separate languages for your outgoing and incoming messages.',
 	],
 	[
 		'Automatic translation',
@@ -74,7 +74,7 @@ const GUIDE: readonly (readonly [string, string, string])[] = [
 	[
 		'History and comparing',
 		'ClockIcon',
-		'Translation history keeps your translations. Try DeepL or Google to compare the other service, copy a translation, or jump to its message.',
+		'Translation history keeps your translations. Compare a translation with another service, copy it, or jump to its message.',
 	],
 	[
 		'Protect words',
@@ -126,6 +126,12 @@ export default function SettingsComponent() {
 									icon={<TableRowAssetIcon name="LanguageIcon" />}
 									label="Google Translate"
 									subLabel="No key required · selected by default"
+								/>
+								<Design.TableRadioRow
+									value="microsoft"
+									icon={<TableRowAssetIcon name="LanguageIcon" />}
+									label="Microsoft Translator"
+									subLabel="No key required · Google fallback"
 								/>
 								<Design.TableRadioRow
 									value="deepl"

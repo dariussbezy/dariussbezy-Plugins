@@ -18,13 +18,14 @@ export function CountBadge({
 		<View
 			pointerEvents="none"
 			style={{
+				// Inside the button's corner: the YouBar clips anything outside it.
 				...(floating
-					? { position: 'absolute', top: 4, right: 4, zIndex: 1 }
+					? { position: 'absolute', top: 3, right: 3, zIndex: 1 }
 					: {}),
-				minWidth: 16,
-				height: 16,
-				borderRadius: 8,
-				paddingHorizontal: 4,
+				minWidth: floating ? 14 : 16,
+				height: floating ? 14 : 16,
+				borderRadius: floating ? 7 : 8,
+				paddingHorizontal: floating ? 3 : 4,
 				alignItems: 'center',
 				justifyContent: 'center',
 				backgroundColor: background,
@@ -34,8 +35,8 @@ export function CountBadge({
 				variant="text-xs/bold"
 				style={{
 					color: '#FFFFFF',
-					fontSize: 11,
-					lineHeight: 14,
+					fontSize: floating ? 9 : 11,
+					lineHeight: floating ? 12 : 14,
 					includeFontPadding: false,
 				}}
 			>

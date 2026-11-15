@@ -2,13 +2,18 @@ import {
 	AlertActionCreators,
 	ToastActionCreators,
 } from '@valenced/discord/actions'
+import { Tokens } from '@valenced/discord/common/tokens'
 import { Design } from '@valenced/discord/design'
+import { Stores } from '@valenced/discord/flux'
+import { ScrollView } from 'react-native'
+import { diffWords } from './diff'
 import { getChannel, jumpToMessage, userName } from './discord'
 import type { Entry } from './types'
 
 const Keys = {
 	details: 'dariuss.advanced-message-logger.details',
 	notification: 'dariuss.advanced-message-logger.notification',
+	compare: 'dariuss.advanced-message-logger.compare',
 	confirm: 'dariuss.advanced-message-logger.confirm',
 }
 const DetailsLimit = 1200
@@ -90,6 +95,87 @@ export function showDetails(entry: Entry, related: readonly Entry[] = [entry]) {
 						text="Close"
 						variant="secondary"
 						onPress={() => close(Keys.details)}
+					/>
+				</>
+			}
+		/>,
+	)
+}
+
+/** A semantic color token as a plain color for the current theme. */
+const tint = (name: 'TEXT_FEEDBACK_CRITICAL' | 'TEXT_FEEDBACK_POSITIVE') =>
+	Tokens.default.internal.resolveSemanticColor(
+		(Stores.ThemeStore as unknown as { theme: string }).theme,
+		Tokens.default.colors[name],
+	)
+
+/** What changed between each version of an edited message, word by word. */
+export function showDiff(related: readonly Entry[]) {
+	const edits = related
+		.filter(entry => entry.kind === 'edited')
+		.sort((a, b) => a.at - b.at)
+	if (!edits.length) return
+	const removed = tint('TEXT_FEEDBACK_CRITICAL')
+	const added = tint('TEXT_FEEDBACK_POSITIVE')
+	AlertActionCreators.openAlert(
+		Keys.compare,
+		<Design.AlertModal
+			title={`${edits[0].before.author} · ${edits.length === 1 ? '1 edit' : `${edits.length} edits`}`}
+			content="Removed text is red and crossed out, added text is green."
+			extraContent={
+				// custom: the colored word differences are inline spans of one text
+				<ScrollView style={{ maxHeight: 360 }} nestedScrollEnabled>
+					{edits.map((entry, index) => {
+						const next = edits[index + 1]
+						const after = entry.after?.content ?? next?.before.content ?? ''
+						return (
+							<Design.Stack
+								key={`${entry.at}:${entry.before.content}`}
+								spacing={4}
+							>
+								<Design.Text variant="text-xs/semibold" color="text-muted">
+									{`Version ${index + 1} → ${index + 2}`}
+								</Design.Text>
+								<Design.Text variant="text-md/normal" color="text-default">
+									{diffWords(entry.before.content, after).map((piece, at) => (
+										<Design.Text
+											// biome-ignore lint/suspicious/noArrayIndexKey: a fixed list of text pieces that never reorders
+											key={at}
+											variant="text-md/normal"
+											color="text-default"
+											style={
+												piece.kind === 'removed'
+													? {
+															color: removed,
+															textDecorationLine: 'line-through',
+														}
+													: piece.kind === 'added'
+														? { color: added, fontWeight: '600' }
+														: undefined
+											}
+										>
+											{piece.text}
+										</Design.Text>
+									))}
+								</Design.Text>
+							</Design.Stack>
+						)
+					})}
+				</ScrollView>
+			}
+			actions={
+				<>
+					<Design.AlertActionButton
+						text="Jump to message"
+						onPress={() => {
+							close(Keys.compare)
+							jump(edits[0])
+						}}
+					/>
+					<Design.AlertActionButton
+						text="Close"
+						variant="secondary"
+						onPress={() => close(Keys.compare)}
 					/>
 				</>
 			}

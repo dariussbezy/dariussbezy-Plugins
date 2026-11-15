@@ -185,7 +185,11 @@ export async function translateMessages(
 	let translated = 0
 	let already = 0
 	let failed = 0
-	const services: Record<Provider, number> = { deepl: 0, google: 0 }
+	const services: Record<Provider, number> = {
+		deepl: 0,
+		google: 0,
+		microsoft: 0,
+	}
 	for (const message of messages) {
 		const id = String(message.id)
 		const previous = translations.get(id)
@@ -197,9 +201,10 @@ export async function translateMessages(
 			services[current.provider]++
 		} else already++
 	}
-	const named = getSettings().deeplApiKey.trim()
+	const named = getSettings().provider !== 'google'
 	const used = [
 		named && services.google && `${services.google} Google Translate`,
+		named && services.microsoft && `${services.microsoft} Microsoft`,
 		named && services.deepl && `${services.deepl} DeepL`,
 	].filter(Boolean)
 	toast(

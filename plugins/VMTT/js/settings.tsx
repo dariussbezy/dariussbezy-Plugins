@@ -201,7 +201,26 @@ export default function SettingsComponent({
 							onPress={() => runtime?.clear()}
 						/>
 					</Design.TableRowGroup>
-
+					<Design.TableRowGroup title="Quick guide">
+						<Design.TableRow
+							icon={<TableRowAssetIcon name="CircleInformationIcon" />}
+							label="Transcribe a voice message"
+							subLabel="Long-press a voice message and choose Transcribe. The text appears under the message."
+							subLabelLineClamp={4}
+						/>
+						<Design.TableRow
+							icon={<TableRowAssetIcon name="CircleInformationIcon" />}
+							label="Providers"
+							subLabel="Pick where the audio is sent. Providers that need your own key keep it on this device."
+							subLabelLineClamp={4}
+						/>
+						<Design.TableRow
+							icon={<TableRowAssetIcon name="CircleInformationIcon" />}
+							label="Saved transcripts"
+							subLabel="Turn on saving to keep transcripts after a restart. Clear them any time here."
+							subLabelLineClamp={4}
+						/>
+					</Design.TableRowGroup>
 					<Design.Text
 						variant="text-xs/normal"
 						color="text-muted"

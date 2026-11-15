@@ -53,6 +53,11 @@ const GUIDE: [string, string, string][] = [
 		'Swipe left or right to hide it for this music session, then tap the music button beside the YouBar buttons to restore it. Drag the card up or down, or tap its handle, to switch between closed, small and expanded. A new session shows the player again.',
 	],
 	[
+		'Nothing playing',
+		'MusicIcon',
+		'With Always show player on, a small bar stays when nothing plays. Drag it up or tap its handle to open Search and start a song.',
+	],
+	[
 		'Animated wave',
 		'WaveformIcon',
 		'Turn Animated waves on for a moving wave or off for the standard slider. Motion pauses with playback and respects Reduce Motion. The wave is decorative, not an audio visualizer.',
@@ -91,15 +96,6 @@ function ButtonGroup({ mode }: { mode: PlayerMode }) {
 					/>
 				)
 			})}
-			{mode === 'expanded' && (
-				<SwitchRow
-					icon="ChevronSmallDownIcon"
-					label="Minimize"
-					subLabel="Offer Minimize in the More menu of the player."
-					value={settings.expandedMinimize}
-					onValueChange={value => setSetting('expandedMinimize', value)}
-				/>
-			)}
 		</Design.TableRowGroup>
 	)
 }
