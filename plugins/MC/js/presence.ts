@@ -9,12 +9,38 @@ import type { Playback } from './music'
  */
 export const APPLICATION_ID = '1571565690366861392'
 
-/** The Discord status name for each app that gets a listening status. Spotify has its own. */
-const APPS: Record<string, string> = {
-	'com.google.android.apps.youtube.music': 'YouTube Music',
-	'com.soundcloud.android': 'SoundCloud',
+/** Third-party YouTube Music clients, whose package and name do not say YouTube Music. */
+const YOUTUBE_MUSIC_CLIENTS = new Set([
+	'com.zionhuang.music', // InnerTune
+	'com.metrolist.music', // Metrolist
+	'com.dd3boh.outertune', // OuterTune
+	'it.vfsfitvnm.vimusic', // ViMusic
+	'app.vitune.android', // ViTune
+	'com.maxrave.simpmusic', // SimpMusic
+])
+
+/**
+ * The Discord status name for an app that gets a listening status; Spotify has its own. Modded
+ * builds (ReVanced, RVX, Vanced and others) change the package or the name, so an app counts when
+ * its package or its name mentions the app, or it is a known YouTube Music client.
+ */
+export function listeningApp(
+	packageName: string | null | undefined,
+	label?: string | null,
+) {
+	const pkg = packageName?.toLowerCase() ?? ''
+	const name = label?.toLowerCase().replace(/\s+/g, ' ').trim() ?? ''
+	if (
+		pkg.includes('youtube.music') ||
+		pkg.includes('youtubemusic') ||
+		YOUTUBE_MUSIC_CLIENTS.has(pkg) ||
+		/\b(youtube|yt) ?music\b/.test(name)
+	)
+		return 'YouTube Music'
+	if (pkg.includes('soundcloud') || name.includes('soundcloud'))
+		return 'SoundCloud'
+	return undefined
 }
-const YOUTUBE_MUSIC = 'com.google.android.apps.youtube.music'
 const SOCKET_ID = 'dariuss.music-controls'
 /** A seek moves the start time; smaller drifts come from polling and are ignored. */
 const DRIFT_MS = 3000
@@ -46,6 +72,9 @@ let shown: {
 let lastSentAt = 0
 let pending: { activity: Activity | null } | null = null
 let timer: ReturnType<typeof setTimeout> | undefined
+/** Why the status is or is not shown right now, for Diagnostics. */
+let reason = 'Not checked yet'
+export const presenceReason = () => reason
 
 /** Status image per song id; null when there is none. */
 const covers = new Map<string, string | null>()
@@ -94,7 +123,8 @@ function send(activity: Activity | null, now = false) {
  */
 async function coverUrlOf(playback: Playback): Promise<string | null> {
 	if (playback.artworkUrl) return playback.artworkUrl
-	if (playback.packageName !== YOUTUBE_MUSIC) return null
+	if (listeningApp(playback.packageName, playback.app) !== 'YouTube Music')
+		return null
 	const artist = playback.artist.replace(/ - Topic$/, '')
 	const term = encodeURIComponent(`${artist} ${playback.title}`.trim())
 	const response = await fetch(
@@ -152,7 +182,20 @@ export function updatePresence(
 	// Background timers can be delayed, so a held-back change is also sent on the next update.
 	if (pending && Date.now() - lastSentAt >= MIN_GAP_MS) send(pending.activity)
 
-	const name = playback?.packageName ? APPS[playback.packageName] : undefined
+	const name = listeningApp(playback?.packageName, playback?.app)
+	reason = !presenceReady()
+		? 'Not available'
+		: !enabled
+			? 'Off. Turn on Listening status above.'
+			: !playback
+				? 'Waiting: nothing is playing.'
+				: playback.source !== 'bridge'
+					? 'Waiting: Spotify shows its own status.'
+					: !name
+						? `Not shown for ${playback.app ?? 'this app'} (${playback.packageName ?? 'unknown app'}). Only YouTube Music and SoundCloud get a listening status.`
+						: !playback.playing
+							? 'Waiting: playback is paused.'
+							: `Sent as Listening to ${name}. If friends do not see it, check Settings > Content & Social > Activity Status and that you are not Invisible.`
 	if (
 		!presenceReady() ||
 		!enabled ||

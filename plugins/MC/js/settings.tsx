@@ -9,7 +9,7 @@ import manifest from '../manifest.json'
 import { refresh, restorePlayer, useMusic } from './music'
 import { APP_URL, androidBridge, probe } from './native'
 import { Player } from './player'
-import { presenceReady } from './presence'
+import { presenceReady, presenceReason } from './presence'
 import { openSearch } from './search'
 import { ButtonIds, setSetting, useSettings } from './shared'
 import { reconnect } from './spotify'
@@ -70,7 +70,7 @@ const GUIDE: [string, string, string][] = [
 	[
 		'Listening status',
 		'MusicIcon',
-		'Android only, off by default. While YouTube Music or SoundCloud plays, your profile shows Listening to YouTube Music or SoundCloud with the song, the artist and the time. It updates every few seconds while Discord is in the background and clears when the music stops.',
+		'Android only, off by default. While YouTube Music or SoundCloud plays, your profile shows Listening to YouTube Music or SoundCloud with the song, the artist and the time. Modded builds such as ReVanced or RVX and YouTube Music clients like Metrolist or InnerTune count too. It updates every few seconds while Discord is in the background and clears when the music stops.',
 	],
 	[
 		'Swipe the player',
@@ -141,11 +141,16 @@ function Diagnostics() {
 		rows.push(
 			['Native part', native ? native.detail : 'Checking…', native?.ok ?? true],
 			['Music Controls app', music.bridgeStatus, music.bridgeConnected],
+			[
+				'Listening status',
+				presenceReason(),
+				!/^(Not shown|Not available)/.test(presenceReason()),
+			],
 		)
 	rows.push([
 		'Now playing',
 		playback
-			? `${playback.title}${playback.app ? ` (${playback.app})` : ''}, cover ${playback.artwork ? 'yes' : 'no'}, shuffle ${playback.canShuffle ? 'yes' : 'no'}, repeat ${playback.canRepeat ? 'yes' : 'no'}`
+			? `${playback.title}${playback.app ? ` (${playback.app})` : ''}${playback.packageName ? `, ${playback.packageName}` : ''}, cover ${playback.artwork ? 'yes' : 'no'}, shuffle ${playback.canShuffle ? 'yes' : 'no'}, repeat ${playback.canRepeat ? 'yes' : 'no'}`
 			: 'Nothing',
 		!!playback,
 	])
@@ -159,7 +164,7 @@ function Diagnostics() {
 			{rows.map(([label, value, ok]) => (
 				<Row
 					key={label}
-					icon={ok ? 'CircleCheckIcon' : 'CircleWarningIcon'}
+					icon={ok ? 'CircleCheckIcon' : 'WarningIcon'}
 					label={label}
 					subLabel={value}
 				/>
@@ -243,7 +248,7 @@ export default function SettingsComponent() {
 							</>
 						) : (
 							<Row
-								icon="CircleWarningIcon"
+								icon="WarningIcon"
 								label="Not available on iPhone"
 								subLabel="iOS does not let Discord read or control music from other apps, and the Music Controls app (APK) is Android only. Spotify works through Discord."
 							/>

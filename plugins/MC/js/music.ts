@@ -8,7 +8,7 @@ import {
 	isPlaying,
 	press,
 } from './native'
-import { clearPresence, updatePresence } from './presence'
+import { clearPresence, listeningApp, updatePresence } from './presence'
 import { getSettings } from './shared'
 import {
 	getState as getSpotify,
@@ -72,8 +72,6 @@ export interface MusicState {
 }
 
 const SPOTIFY_PACKAGE = 'com.spotify.music'
-/** SoundCloud keeps shuffle and repeat to itself, so their buttons are hidden for it. */
-const NO_MODES = new Set(['com.soundcloud.android'])
 const POLL_MS = 1000
 const BACKGROUND_POLL_MS = 5000
 const IDLE_HIDE_MS = 5 * 60 * 1000
@@ -264,7 +262,8 @@ async function pollBridge() {
 			(hold.repeat ?? reported.repeat) === reported.repeat
 		)
 			optimistic = null
-		const modes = !NO_MODES.has(bridge.package ?? '')
+		// SoundCloud keeps shuffle and repeat to itself, so their buttons are hidden for it.
+		const modes = listeningApp(bridge.package, bridge.app) !== 'SoundCloud'
 		playback = {
 			id: bridge.artKey ?? `${bridge.package}|${bridge.title}`,
 			title: bridge.title || 'Unknown song',
