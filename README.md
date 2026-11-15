@@ -25,6 +25,8 @@ Install from the **latest** channel and enable **Allow updates**.
 | [Voice Messages To Text](plugins/VMTT/README.md) | Transcribe voice messages below the audio, with a free server or Groq. |
 | [Midnight Mobile](themes/MT/README.md) | Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon. |
 
+Midnight's colors, Figtree font and moon icon are selected under **Settings → Themes**. Font and icon changes require a restart.
+
 ## Credits
 
 Plugin adaptations by dariussbezy with Claude & Codex. Spotify Controls with [coder.gg](https://github.com/il1ll). Midnight was originally created by [refact0r](https://github.com/refact0r/midnight-discord), with Figtree by Erik Kennedy and the Font Awesome moon icon.
