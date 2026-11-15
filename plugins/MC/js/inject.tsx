@@ -23,7 +23,6 @@ import {
 	Animated,
 	BackHandler,
 	PanResponder,
-	Platform,
 	Pressable,
 	StyleSheet,
 	useWindowDimensions,
@@ -448,14 +447,17 @@ function DockCard({ bar }: { bar: ReactNode }) {
 		[drag],
 	)
 
-	// iOS: Discord's root gesture handler takes over touches, so the drag must be a native gesture there.
+	// Discord's lists and panels use native gestures (react-native-gesture-handler), which win over a JS
+	// PanResponder: dragging the card used to scroll the channel list until it reached its end. The drag is
+	// a native gesture on both platforms, with the PanResponder only as a fallback.
 	const handler = useMemo(gestureHandler, [])
 	const gesture = useMemo(
 		() =>
-			handler && Platform.OS === 'ios'
+			handler
 				? handler.Gesture.Pan()
 						.runOnJS(true)
-						.activeOffsetY([-8, 8])
+						// Activates before the list under it starts scrolling.
+						.activeOffsetY([-4, 4])
 						.activeOffsetX([-14, 14])
 						.onStart(e => drag.start(e.translationX, e.translationY))
 						.onUpdate(e => drag.move(e.translationX, e.translationY))
