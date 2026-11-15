@@ -57,7 +57,7 @@
           }
         },
         "2.1.1": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/e5090a1c193d333053f73fe1e0078a939751757b/pool/dariuss.advanced-message-logger@2.1.1.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/0fce14e48f727d21f97e1381d45a660b7ff5f8d4/pool/dariuss.advanced-message-logger@2.1.1.zip",
           "sha256": "0b5174bebb193d08b2a434aabf706eb4f8b7ba4fe99b5644f6c62a84dc2e3baa",
           "size": 21265,
           "dependencies": {
@@ -115,7 +115,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/e5090a1c193d333053f73fe1e0078a939751757b/pool/dariuss.ghost-ping-logger@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/0fce14e48f727d21f97e1381d45a660b7ff5f8d4/pool/dariuss.ghost-ping-logger@2.1.0.zip",
           "sha256": "b806ee3756dda9d6e246a284c9becd6b6e48e29ddc9ba3814c3e2a56aca46d10",
           "size": 2817,
           "dependencies": {
@@ -228,7 +228,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/e5090a1c193d333053f73fe1e0078a939751757b/pool/dariuss.jump-to-ping@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/0fce14e48f727d21f97e1381d45a660b7ff5f8d4/pool/dariuss.jump-to-ping@2.1.0.zip",
           "sha256": "656c2fd50e554be2ff816992faaa5eee03c1900bc29537ca568ca503a60fd286",
           "size": 9505,
           "dependencies": {
@@ -315,7 +315,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/e5090a1c193d333053f73fe1e0078a939751757b/pool/dariuss.midnight-theme@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/0fce14e48f727d21f97e1381d45a660b7ff5f8d4/pool/dariuss.midnight-theme@2.1.0.zip",
           "sha256": "bb24e33544c95a677ff194f710f3984375f0783bb6065bd6c1e2201a063b5bd5",
           "size": 1927427,
           "dependencies": {
@@ -363,7 +363,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/e5090a1c193d333053f73fe1e0078a939751757b/pool/dariuss.no-tap-mention@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/0fce14e48f727d21f97e1381d45a660b7ff5f8d4/pool/dariuss.no-tap-mention@2.1.0.zip",
           "sha256": "c705a12f9870f03adbe1f1da9f1a0ba452a75ad5b9c6ca546dafa1d0e30dbe0b",
           "size": 1755,
           "dependencies": {
@@ -440,7 +440,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/e5090a1c193d333053f73fe1e0078a939751757b/pool/dariuss.quick-translate@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/0fce14e48f727d21f97e1381d45a660b7ff5f8d4/pool/dariuss.quick-translate@2.1.0.zip",
           "sha256": "f253e903e9ff61be085292ea26a7403f79b80ce7fabd1d25e1a481c7be340c27",
           "size": 27237,
           "dependencies": {
@@ -495,7 +495,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/e5090a1c193d333053f73fe1e0078a939751757b/pool/dariuss.voice-messages-to-text@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/0fce14e48f727d21f97e1381d45a660b7ff5f8d4/pool/dariuss.voice-messages-to-text@2.1.0.zip",
           "sha256": "885236e66994703a6d0984c68c1cdfb22eb79a645eb59b45b282c3087032498e",
           "size": 8465,
           "dependencies": {
@@ -510,7 +510,7 @@
     "dariuss.no-delete-confirmation": {
       "versions": {
         "1.0.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/e5090a1c193d333053f73fe1e0078a939751757b/pool/dariuss.no-delete-confirmation@1.0.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/0fce14e48f727d21f97e1381d45a660b7ff5f8d4/pool/dariuss.no-delete-confirmation@1.0.0.zip",
           "sha256": "177e5f79b34001e0ddbffa5598e698e78ac0ce5fae8a669e5a5b5bf106cede93",
           "size": 1822,
           "dependencies": {
@@ -532,7 +532,7 @@
     "dariuss.message-actions": {
       "versions": {
         "1.0.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/e5090a1c193d333053f73fe1e0078a939751757b/pool/dariuss.message-actions@1.0.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/0fce14e48f727d21f97e1381d45a660b7ff5f8d4/pool/dariuss.message-actions@1.0.0.zip",
           "sha256": "27570284fa08cec8515e97c11ea1208b1118f3edb44fca19b7f39e6876147dd7",
           "size": 3906,
           "dependencies": {
@@ -554,7 +554,7 @@
     "dariuss.custom-quick-reactions": {
       "versions": {
         "1.0.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/e5090a1c193d333053f73fe1e0078a939751757b/pool/dariuss.custom-quick-reactions@1.0.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/0fce14e48f727d21f97e1381d45a660b7ff5f8d4/pool/dariuss.custom-quick-reactions@1.0.0.zip",
           "sha256": "904db4c9828d911d85e5cbdec3ec2660ae0bc0466b4f80d5ef1757aa476a6860",
           "size": 3078,
           "dependencies": {
@@ -585,6 +585,17 @@
             },
             "discord": {}
           }
+        },
+        "1.0.1": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/0fce14e48f727d21f97e1381d45a660b7ff5f8d4/pool/dariuss.music-controls@1.0.1.zip",
+          "sha256": "0b183ace87619f15ce95d9e89b367ec0a194c3de7071229f7b2ac89ef9b00686",
+          "size": 24160,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
         }
       },
       "name": "Music Controls",
@@ -596,7 +607,7 @@
         "kmmiio99o.dev <879393496627306587>"
       ],
       "channels": {
-        "latest": "1.0.0"
+        "latest": "1.0.1"
       }
     }
   }
