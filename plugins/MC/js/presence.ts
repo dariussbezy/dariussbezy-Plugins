@@ -218,8 +218,31 @@ async function coverUrlsOf(playback: Playback): Promise<string[]> {
 	return urls
 }
 
-/** Asks Discord to turn the link into a status image, with Discord's own helper and login. */
+interface Http {
+	post(request: {
+		url: string
+		body: unknown
+	}): Promise<{ body?: { external_asset_path?: string }[] }>
+}
+
+/**
+ * Asks Discord to turn the link into a status image (`mp:external/…`), through Discord's own REST
+ * client and login. Discord's asset helper module is only loaded once Discord shows a status image
+ * itself, so it is not found on most phones; the request it makes is sent directly instead.
+ */
 async function assetOf(url: string): Promise<string | null> {
+	const [module] = lookupModule(withProps<{ HTTP: Http }>('HTTP'))
+	if (module?.HTTP)
+		try {
+			const response = await module.HTTP.post({
+				url: `/applications/${APPLICATION_ID}/external-assets`,
+				body: { urls: [url] },
+			})
+			const path = response.body?.[0]?.external_asset_path
+			if (typeof path === 'string' && path) return `mp:${path}`
+		} catch {
+			// Try Discord's helper below.
+		}
 	const [utils] = lookupModule(
 		withProps<AssetUtils>('fetchAssetIds', 'getAssetIds'),
 	)
