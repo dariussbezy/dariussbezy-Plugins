@@ -32,4 +32,4 @@ Midnight's colors, Figtree font and moon icon are selected under **Settings → 
 
 ## Credits
 
-Plugin adaptations by dariussbezy with Claude & Codex. Music Controls with [coder.gg](https://github.com/il1ll) and kmmiio99o. Midnight was originally created by [refact0r](https://github.com/refact0r/midnight-discord), with Figtree by Erik Kennedy and the Font Awesome moon icon.
+Plugin adaptations by dariussbezy with Claude & Codex. Music Controls with [coder.gg](https://github.com/il1ll) and kmmiio99o.dev. Midnight was originally created by [refact0r](https://github.com/refact0r/midnight-discord), with Figtree by Erik Kennedy and the Font Awesome moon icon.
