@@ -31,9 +31,9 @@ import {
 } from 'react-native'
 import { gestureHandler, scrub } from './gesture'
 import { iconId } from './icons'
+import { restorePlayer, useMusic } from './music'
 import { PlayerBody, usePlayerVisible } from './player'
 import { dockModeOf, setDockMode, useSettings } from './shared'
-import { restorePlayer, useSpotify } from './spotify'
 import type { Filter, FilterGenerator } from '@valenced/modules/finders/filters'
 import type { ComponentType, ReactElement, ReactNode } from 'react'
 import type { LayoutChangeEvent } from 'react-native'
@@ -83,7 +83,7 @@ const withComponentName = createFilterGenerator(
 			candidate => nameOf(candidate) === name,
 		)
 	},
-	([name]: [string]) => `dariuss.spotify.component(${name})`,
+	([name]: [string]) => `dariuss.music-controls.component(${name})`,
 	FilterScopes.Initialized,
 ) as unknown as FilterGenerator<
 	(
@@ -259,8 +259,8 @@ function DockCard({ bar }: { bar: ReactNode }) {
 	const [containerHeight, setContainerHeight] = useState(0)
 	const [content, setContent] = useState(GUESS)
 	const [mounted, setMounted] = useState(visible)
-	// With nothing playing the dock has two sizes only: the handle, and one pull up to the search row.
-	const { playback } = useSpotify()
+	// With nothing playing the dock has two sizes only: the handle, and one pull up to the idle row.
+	const { playback } = useMusic()
 	const idle = settings.alwaysShow && !playback
 	const [idleMode, setIdleMode] = useState<DockMode>('closed')
 	const mode = idle ? idleMode : dockModeOf(settings)
@@ -630,7 +630,7 @@ function findIconContainer(node: ReactNode, depth = 0): AnyElement | null {
 
 /** Shown next to the YouBar buttons after the player was swiped away. */
 function RestoreButton({ container }: { container: ReactNode }) {
-	const { dismissed, playback } = useSpotify()
+	const { dismissed, playback } = useMusic()
 	const target = findIconContainer(container)
 	const icon = iconId('MusicIcon', 'PlayIcon')
 	if (!dismissed || !playback || !target || !icon) return null
@@ -638,10 +638,10 @@ function RestoreButton({ container }: { container: ReactNode }) {
 	const original = target.props.children as AnyElement
 	return createElement(
 		target.type,
-		{ key: 'spotify-restore', style: target.props.style },
+		{ key: 'music-controls-restore', style: target.props.style },
 		<Design.IconButton
 			icon={icon}
-			accessibilityLabel="Restore Spotify Controls"
+			accessibilityLabel="Restore Music Controls"
 			variant={original.props.variant ?? 'tertiary'}
 			size={original.props.size ?? 'sm'}
 			onPress={restorePlayer}

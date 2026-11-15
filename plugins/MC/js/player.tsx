@@ -7,7 +7,6 @@ import {
 	AppState,
 	Easing,
 	Image,
-	Linking,
 	PanResponder,
 	Platform,
 	Pressable,
@@ -15,11 +14,11 @@ import {
 } from 'react-native'
 import { gestureHandler, scrub } from './gesture'
 import { Icons, iconId } from './icons'
+import { control, formatTime, openPlayer, positionOf, useMusic } from './music'
 import { openSearch } from './search'
 import { lazyStyles, setDockMode, useSettings } from './shared'
-import { control, formatTime, positionOf, useSpotify } from './spotify'
+import type { Playback } from './music'
 import type { ButtonId, PlayerMode, Settings } from './shared'
-import type { Playback } from './spotify'
 
 // Built once; the bundler rewrites a bare `Animated.View` member access.
 const AnimatedView = Animated.createAnimatedComponent(View)
@@ -34,7 +33,6 @@ const STEADY_LOOP_MS = 8000
 
 const SAMPLE: Playback = {
 	id: 'preview',
-	uri: 'spotify:track:preview',
 	title: 'Song title',
 	artist: 'Artist',
 	artwork: null,
@@ -44,12 +42,16 @@ const SAMPLE: Playback = {
 	playing: false,
 	shuffle: false,
 	repeat: 'off',
-	deviceId: null,
+	canShuffle: true,
+	canRepeat: true,
+	app: 'Music app',
+	packageName: null,
+	source: 'bridge',
 }
 
 /** Whether the player should currently be shown above the YouBar. */
 export function usePlayerVisible() {
-	const { playback, dismissed } = useSpotify()
+	const { playback, dismissed } = useMusic()
 	const { alwaysShow } = useSettings()
 	const [idle, setIdle] = useState(false)
 	const id = playback?.id
@@ -64,7 +66,7 @@ export function usePlayerVisible() {
 	}, [id, playing])
 
 	if (alwaysShow) return true
-	return !dismissed && !!playback?.deviceId && (!!playing || !idle)
+	return !dismissed && !!playback && (!!playing || !idle)
 }
 
 function useReduceMotion() {
@@ -314,40 +316,37 @@ function StraightBar({ progress, disabled, onPreview, onSeek }: SeekProps) {
 	)
 }
 
-function ControlButton({
-	id,
-	playback,
-	busy,
-}: {
-	id: ButtonId
-	playback: Playback
-	busy: boolean
-}) {
+function ControlButton({ id, playback }: { id: ButtonId; playback: Playback }) {
 	const styles = useControlStyles()
+	const { busy } = useMusic()
 	const mode = playback.repeat
 	const spec = {
 		Shuffle: {
 			names: Icons.Shuffle,
 			label: playback.shuffle ? 'Shuffle on' : 'Shuffle off',
 			active: playback.shuffle,
+			disabled: !playback.canShuffle,
 			press: () => control('shuffle'),
 		},
 		Previous: {
 			names: Icons.Previous,
 			label: 'Previous',
 			active: false,
+			disabled: false,
 			press: () => control('previous'),
 		},
 		Play: {
 			names: playback.playing ? Icons.Pause : Icons.Play,
 			label: playback.playing ? 'Pause' : 'Play',
 			active: true,
+			disabled: false,
 			press: () => control(playback.playing ? 'pause' : 'play'),
 		},
 		Next: {
 			names: Icons.Next,
 			label: 'Next',
 			active: false,
+			disabled: false,
 			press: () => control('next'),
 		},
 		Repeat: {
@@ -359,15 +358,18 @@ function ControlButton({
 						? 'Repeat all'
 						: 'Repeat off',
 			active: mode !== 'off',
+			disabled: !playback.canRepeat,
 			press: () => control('repeat'),
 		},
 		Search: {
 			names: Icons.Search,
-			label: 'Search songs',
+			label: 'Search Spotify',
 			active: false,
+			disabled: false,
 			press: openSearch,
 		},
 	}[id]
+	const disabled = spec.disabled || (busy && id !== 'Search')
 
 	const icon = iconId(...spec.names)
 	if (!icon)
@@ -376,7 +378,7 @@ function ControlButton({
 				text={spec.label}
 				size="sm"
 				variant="secondary"
-				disabled={busy && id !== 'Search'}
+				disabled={disabled}
 				onPress={spec.press}
 			/>
 		)
@@ -389,7 +391,7 @@ function ControlButton({
 				variant={spec.active ? 'primary' : 'tertiary'}
 				accessibilityLabel={spec.label}
 				accessibilityState={{ selected: spec.active }}
-				disabled={busy && id !== 'Search'}
+				disabled={disabled}
 				onPress={spec.press}
 			/>
 			{id === 'Repeat' && mode === 'track' && (
@@ -407,7 +409,7 @@ function ControlButton({
  * Player content (no surface): the dock supplies the card, handle and gestures.
  * Also used standalone, inside a Card, for the settings preview.
  */
-/** Opens the search sheet; the only control shown while nothing is playing. */
+/** Opens the Spotify search sheet; shown while nothing is playing. */
 function SearchButton() {
 	const icon = iconId(...Icons.Search)
 	return icon ? (
@@ -415,7 +417,7 @@ function SearchButton() {
 			icon={icon}
 			size="sm"
 			variant="secondary"
-			accessibilityLabel="Search songs"
+			accessibilityLabel="Search Spotify"
 			onPress={openSearch}
 		/>
 	) : (
@@ -435,12 +437,12 @@ export function PlayerBody({
 	mode: PlayerMode
 	preview?: boolean
 }) {
-	const spotify = useSpotify()
+	const music = useMusic()
 	const settings = useSettings()
 	const styles = usePlayerStyles()
 	const appActive = useAppActive()
 	const compact = mode === 'compact'
-	const playback = spotify.playback ?? (preview ? SAMPLE : null)
+	const playback = music.playback ?? (preview ? SAMPLE : null)
 	const [dragFraction, setDragFraction] = useState<number | null>(null)
 	const [, tick] = useState(0)
 	// Preview in settings: never animate or tick.
@@ -467,9 +469,11 @@ export function PlayerBody({
 							Nothing playing
 						</Design.Text>
 					</View>
-					<View style={styles.controls}>
-						<SearchButton />
-					</View>
+					{music.spotifyConnected && (
+						<View style={styles.controls}>
+							<SearchButton />
+						</View>
+					)}
 				</View>
 			</View>
 		)
@@ -478,7 +482,7 @@ export function PlayerBody({
 		return preview ? (
 			<Design.Stack spacing={0}>
 				<Design.Text variant="text-sm/medium" color="text-muted">
-					{spotify.status}
+					{music.status}
 				</Design.Text>
 			</Design.Stack>
 		) : null
@@ -488,20 +492,23 @@ export function PlayerBody({
 			? positionOf(playback)
 			: dragFraction * playback.duration
 	const progress = playback.duration ? position / playback.duration : 0
-	const openTrack = () =>
-		Linking.openURL(
-			`https://open.spotify.com/track/${encodeURIComponent(playback.id)}`,
-		).catch(() => {})
+	const openTrack = () => openPlayer(playback)
 	const buttons = (
 		['Shuffle', 'Previous', 'Play', 'Next', 'Repeat', 'Search'] as const
-	).filter(id => settings[`${mode}${id}` as keyof Settings])
+	)
+		.filter(id => settings[`${mode}${id}` as keyof Settings])
+		// Hidden where the player cannot do them (SoundCloud, media keys).
+		.filter(id => id !== 'Shuffle' || playback.canShuffle)
+		.filter(id => id !== 'Repeat' || playback.canRepeat)
+		// Search finds songs on Spotify, so it needs Discord's Spotify connection.
+		.filter(id => id !== 'Search' || music.spotifyConnected || preview)
 	const controls = buttons.map(id => (
-		<ControlButton key={id} id={id} playback={playback} busy={spotify.busy} />
+		<ControlButton key={id} id={id} playback={playback} />
 	))
 	const seekProps: SeekProps = {
 		progress,
 		duration: playback.duration,
-		disabled: spotify.busy || preview,
+		disabled: preview || music.busy || !playback.duration,
 		onPreview: setDragFraction,
 		onSeek: fraction => control('seek', fraction * playback.duration),
 	}
@@ -519,8 +526,8 @@ export function PlayerBody({
 						accessibilityRole={compact ? 'button' : 'link'}
 						accessibilityLabel={
 							compact
-								? 'Expand Spotify Controls'
-								: `Open ${playback.title} in Spotify`
+								? 'Expand Music Controls'
+								: `Open ${playback.app ?? 'the player'}`
 						}
 						onPress={compact ? () => setDockMode('expanded') : openTrack}
 						onLongPress={openTrack}

@@ -507,53 +507,6 @@
         }
       }
     },
-    "dariuss.spotify-controls": {
-      "name": "Spotify Controls",
-      "description": "Control Spotify from a player above the YouBar, with search, queue and animated waves.",
-      "author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
-      "icon": "MusicIcon",
-      "channels": {
-        "latest": "2.1.0"
-      },
-      "versions": {
-        "1.0.0-beta": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/db3a30f3426d1045e526b949914da6df0b11e53c/pool/dariuss.spotify-controls@1.0.0-beta.zip",
-          "sha256": "b99eaf9d5d2d7c8d66383beab04e6e8f07c6434591bea45a45ce20b8b73d0cb1",
-          "size": 13035,
-          "dependencies": {
-            "valenced.api": {
-              "version": ">=1 <2"
-            },
-            "discord": {}
-          }
-        },
-        "2.0.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/45043d378ba5398add43b4d4191fa8bd419ab2fc/pool/dariuss.spotify-controls@2.0.0.zip",
-          "sha256": "6a96b123d5e41cd16d09f15b635cbdab415b38540bd4177ae48e6ec520c31d08",
-          "size": 15106,
-          "dependencies": {
-            "valenced.api": {
-              "version": ">=1 <2"
-            },
-            "discord": {}
-          }
-        },
-        "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/e020175f5a4d4945c1f596c249fd7f8189edfdcd/pool/dariuss.spotify-controls@2.1.0.zip",
-          "sha256": "e8d0c8c887ffcbfeb8f66203588fde9168cedbdfed5fcaf30e5857c541c48b4f",
-          "size": 15358,
-          "dependencies": {
-            "valenced.api": {
-              "version": ">=1 <2"
-            },
-            "discord": {}
-          }
-        }
-      },
-      "contributors": [
-        "coder.gg <1099039269391171765> (https://il1ll.github.io \"Website\") (https://github.com/il1ll \"GitHub\")"
-      ]
-    },
     "dariuss.no-delete-confirmation": {
       "versions": {
         "1.0.0": {
@@ -619,6 +572,9 @@
       "channels": {
         "latest": "1.0.0"
       }
+    },
+    "dariuss.music-controls": {
+      "versions": {}
     }
   }
 }

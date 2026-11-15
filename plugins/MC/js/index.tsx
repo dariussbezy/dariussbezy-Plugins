@@ -1,8 +1,8 @@
 import { patchYouBar } from './inject'
+import { startMusic } from './music'
 import { closeSearch } from './search'
 import SettingsComponent from './settings'
 import { DefaultSettings, setStorage } from './shared'
-import { startSpotify } from './spotify'
 import type { Settings } from './shared'
 
 export default plugin<{ jsonStorage: Settings }>({
@@ -14,7 +14,8 @@ export default plugin<{ jsonStorage: Settings }>({
 		await jsonStorage.get()
 		setStorage(jsonStorage)
 
-		cleanup(() => setStorage(undefined), closeSearch, startSpotify())
+		// Spotify works everywhere; the Music Controls app (Android only) is started inside startMusic.
+		cleanup(() => setStorage(undefined), closeSearch, startMusic())
 		patchYouBar(cleanup, error => plugin.reportError(error))
 
 		// The YouBar is already rendered when the plugin starts late; it cannot be re-patched live.

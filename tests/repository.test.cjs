@@ -7,7 +7,7 @@ const {unzipSync,strFromU8}=require('fflate');
 const root=path.resolve(__dirname,'..');
 const read=file=>JSON.parse(fs.readFileSync(path.join(root,file),'utf8'));
 const repository=read('index.json').name.endsWith('(Test)')?'dariussbezy/dariussbezy-plugins-test':'dariussbezy/dariussbezy-Plugins';
-const expected=['dariuss.quick-translate','dariuss.jump-to-ping','dariuss.voice-messages-to-text','dariuss.midnight-theme','dariuss.advanced-message-logger','dariuss.ghost-ping-logger','dariuss.no-tap-mention','dariuss.spotify-controls','dariuss.no-delete-confirmation','dariuss.message-actions','dariuss.custom-quick-reactions'];
+const expected=['dariuss.quick-translate','dariuss.jump-to-ping','dariuss.voice-messages-to-text','dariuss.midnight-theme','dariuss.advanced-message-logger','dariuss.ghost-ping-logger','dariuss.no-tap-mention','dariuss.no-delete-confirmation','dariuss.message-actions','dariuss.custom-quick-reactions','dariuss.music-controls'];
 function sources(){return ['plugins','themes'].flatMap(dir=>fs.readdirSync(path.join(root,dir)).map(name=>({dir:dir+'/'+name,manifest:read(dir+'/'+name+'/manifest.json')})))}
 test('one template repository contains every plugin and theme without examples',()=>{
  for(const file of ['build.gradle.kts','settings.gradle.kts','gradlew','gradle/wrapper/gradle-wrapper.jar','tsconfig.base.json','repo.config.json','package.json'])assert.ok(fs.existsSync(path.join(root,file)),file);
@@ -35,17 +35,6 @@ test('single index serves all nine add-ons with valid artifact digests',()=>{
  }
 });
 
-test('Spotify Controls keeps the approved installable 1.0.0-beta artifact and publishes 2.1.0 on latest',()=>{
- const item=read('index.json').plugins['dariuss.spotify-controls'];assert.deepEqual(item.channels,{latest:'2.1.0'});
- assert.deepEqual(Object.keys(item.versions),['1.0.0-beta','2.0.0','2.1.0']);const entry=item.versions['1.0.0-beta'];
- const zip=fs.readFileSync(path.join(root,'pool','dariuss.spotify-controls@1.0.0-beta.zip'));
- assert.equal(createHash('sha256').update(zip).digest('hex'),'b99eaf9d5d2d7c8d66383beab04e6e8f07c6434591bea45a45ce20b8b73d0cb1');assert.equal(entry.sha256,createHash('sha256').update(zip).digest('hex'));assert.equal(entry.size,zip.length);
- const spotifyUrl=new URL(entry.url);assert.ok(spotifyUrl.pathname.startsWith('/'+repository+'/'));
- assert.match(spotifyUrl.pathname.slice(repository.length+2),/^[0-9a-f]{40}\/pool\/dariuss\.spotify-controls@1\.0\.0-beta\.zip$/);
- const files=unzipSync(zip),manifest=JSON.parse(strFromU8(files['manifest.json']));assert.equal(manifest.id,'dariuss.spotify-controls');assert.equal(manifest.version,'1.0.0-beta');assert.deepEqual(Object.keys(files).sort(),['index.js','manifest.json']);
- new (require('node:vm').Script)(strFromU8(files['index.js']));
- assert.deepEqual(read('repo.config.json').channels[manifest.id],{latest:'2.1.0'});
-});
 test('published JavaScript bytes match freshly compiled sources for every plugin',()=>{
  for(const {dir,manifest}of sources()){
   const files=unzipSync(fs.readFileSync(path.join(root,'pool',manifest.id+'@'+manifest.version+'.zip')));
