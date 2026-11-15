@@ -19,6 +19,7 @@ Install from the **latest** channel and enable **Allow updates**.
 | [Adv. Message Logger](plugins/AML/README.md) | Keep a local journal of edited and deleted messages, keep them visible in chat and compare edits. |
 | [Ghost Ping Logger](plugins/GPL/README.md) | Find mentions and replies that were deleted or edited away and get alerted. Requires Adv. Message Logger. |
 | [Jump to Ping](plugins/JTP/README.md) | Jump to unread mentions, replies and DMs from a button beside the notifications bell. |
+| [No Delete Confirmation](plugins/NDC/README.md) | Delete messages without the confirmation dialog. |
 | [No Tap Mention](plugins/NTM/README.md) | Disable tapping a message author's name to insert a mention. |
 | [Quick Translate](plugins/QT/README.md) | Translate messages and drafts with Google, Microsoft or DeepL. |
 | [Spotify Controls](plugins/SC/README.md) | Control Spotify from a player above the YouBar, with search, queue and animated waves. |
