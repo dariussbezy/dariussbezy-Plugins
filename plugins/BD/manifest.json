@@ -1,0 +1,18 @@
+{
+	"format": 1,
+	"id": "dariuss.bulk-downloads",
+	"name": "Bulk Downloads",
+	"description": "Save every attachment and GIF of a message at once from its long-press menu.",
+	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
+	"icon": "DownloadIcon",
+	"version": "1.0.0",
+	"dependencies": {
+		"valenced.api": {
+			"version": ">=1 <2"
+		},
+		"discord": {}
+	},
+	"dist": {
+		"script": "index.js"
+	}
+}
