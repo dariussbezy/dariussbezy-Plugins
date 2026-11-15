@@ -17,6 +17,7 @@ Install from the **latest** channel and enable **Allow updates**.
 | Name | Description |
 | --- | --- |
 | [Adv. Message Logger](plugins/AML/README.md) | Keep a local journal of edited and deleted messages, keep them visible in chat and compare edits. |
+| [Custom Quick Reactions](plugins/CQR/README.md) | Choose and reorder the quick reaction emojis shown when you long-press a message. |
 | [Ghost Ping Logger](plugins/GPL/README.md) | Find mentions and replies that were deleted or edited away and get alerted. Requires Adv. Message Logger. |
 | [Jump to Ping](plugins/JTP/README.md) | Jump to unread mentions, replies and DMs from a button beside the notifications bell. |
 | [Message Actions](plugins/MA/README.md) | Reorder, hide or remove the buttons shown when you long-press a message. |

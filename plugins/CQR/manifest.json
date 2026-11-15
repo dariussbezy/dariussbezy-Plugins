@@ -1,0 +1,18 @@
+{
+	"format": 1,
+	"id": "dariuss.custom-quick-reactions",
+	"name": "Custom Quick Reactions",
+	"description": "Choose and reorder the quick reaction emojis shown when you long-press a message.",
+	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
+	"icon": "ReactionIcon",
+	"version": "1.0.0",
+	"dependencies": {
+		"valenced.api": {
+			"version": ">=1 <2"
+		},
+		"discord": {}
+	},
+	"dist": {
+		"script": "index.js"
+	}
+}
