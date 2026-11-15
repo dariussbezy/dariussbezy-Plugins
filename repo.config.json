@@ -37,6 +37,9 @@
     },
     "dariuss.performance-monitor": {
       "latest": "1.0.0"
+    },
+    "dariuss.bulk-downloads": {
+      "latest": "1.0.0"
     }
   }
 }
