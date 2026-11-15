@@ -31,6 +31,9 @@
     },
     "dariuss.custom-quick-reactions": {
       "latest": "1.0.0"
+    },
+    "dariuss.music-controls": {
+      "latest": "1.0.0"
     }
   }
 }
