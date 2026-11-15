@@ -57,7 +57,7 @@
           }
         },
         "2.1.1": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/3ab4853081039c969b000b9232c0d63c5350b73c/pool/dariuss.advanced-message-logger@2.1.1.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/226face20c1d147baff8aac5af1c137fc24e8ebe/pool/dariuss.advanced-message-logger@2.1.1.zip",
           "sha256": "0b5174bebb193d08b2a434aabf706eb4f8b7ba4fe99b5644f6c62a84dc2e3baa",
           "size": 21265,
           "dependencies": {
@@ -115,7 +115,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/3ab4853081039c969b000b9232c0d63c5350b73c/pool/dariuss.ghost-ping-logger@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/226face20c1d147baff8aac5af1c137fc24e8ebe/pool/dariuss.ghost-ping-logger@2.1.0.zip",
           "sha256": "b806ee3756dda9d6e246a284c9becd6b6e48e29ddc9ba3814c3e2a56aca46d10",
           "size": 2817,
           "dependencies": {
@@ -228,7 +228,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/3ab4853081039c969b000b9232c0d63c5350b73c/pool/dariuss.jump-to-ping@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/226face20c1d147baff8aac5af1c137fc24e8ebe/pool/dariuss.jump-to-ping@2.1.0.zip",
           "sha256": "656c2fd50e554be2ff816992faaa5eee03c1900bc29537ca568ca503a60fd286",
           "size": 9505,
           "dependencies": {
@@ -315,7 +315,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/3ab4853081039c969b000b9232c0d63c5350b73c/pool/dariuss.midnight-theme@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/226face20c1d147baff8aac5af1c137fc24e8ebe/pool/dariuss.midnight-theme@2.1.0.zip",
           "sha256": "bb24e33544c95a677ff194f710f3984375f0783bb6065bd6c1e2201a063b5bd5",
           "size": 1927427,
           "dependencies": {
@@ -363,7 +363,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/3ab4853081039c969b000b9232c0d63c5350b73c/pool/dariuss.no-tap-mention@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/226face20c1d147baff8aac5af1c137fc24e8ebe/pool/dariuss.no-tap-mention@2.1.0.zip",
           "sha256": "c705a12f9870f03adbe1f1da9f1a0ba452a75ad5b9c6ca546dafa1d0e30dbe0b",
           "size": 1755,
           "dependencies": {
@@ -440,7 +440,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/3ab4853081039c969b000b9232c0d63c5350b73c/pool/dariuss.quick-translate@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/226face20c1d147baff8aac5af1c137fc24e8ebe/pool/dariuss.quick-translate@2.1.0.zip",
           "sha256": "f253e903e9ff61be085292ea26a7403f79b80ce7fabd1d25e1a481c7be340c27",
           "size": 27237,
           "dependencies": {
@@ -495,7 +495,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/3ab4853081039c969b000b9232c0d63c5350b73c/pool/dariuss.voice-messages-to-text@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/226face20c1d147baff8aac5af1c137fc24e8ebe/pool/dariuss.voice-messages-to-text@2.1.0.zip",
           "sha256": "885236e66994703a6d0984c68c1cdfb22eb79a645eb59b45b282c3087032498e",
           "size": 8465,
           "dependencies": {
@@ -539,7 +539,7 @@
           }
         },
         "2.1.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/3ab4853081039c969b000b9232c0d63c5350b73c/pool/dariuss.spotify-controls@2.1.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/226face20c1d147baff8aac5af1c137fc24e8ebe/pool/dariuss.spotify-controls@2.1.0.zip",
           "sha256": "e8d0c8c887ffcbfeb8f66203588fde9168cedbdfed5fcaf30e5857c541c48b4f",
           "size": 15358,
           "dependencies": {
@@ -557,7 +557,7 @@
     "dariuss.no-delete-confirmation": {
       "versions": {
         "1.0.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/3ab4853081039c969b000b9232c0d63c5350b73c/pool/dariuss.no-delete-confirmation@1.0.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/226face20c1d147baff8aac5af1c137fc24e8ebe/pool/dariuss.no-delete-confirmation@1.0.0.zip",
           "sha256": "177e5f79b34001e0ddbffa5598e698e78ac0ce5fae8a669e5a5b5bf106cede93",
           "size": 1822,
           "dependencies": {
@@ -572,6 +572,28 @@
       "description": "Delete messages without the confirmation dialog.",
       "author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
       "icon": "TrashIcon",
+      "channels": {
+        "latest": "1.0.0"
+      }
+    },
+    "dariuss.message-actions": {
+      "versions": {
+        "1.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/226face20c1d147baff8aac5af1c137fc24e8ebe/pool/dariuss.message-actions@1.0.0.zip",
+          "sha256": "27570284fa08cec8515e97c11ea1208b1118f3edb44fca19b7f39e6876147dd7",
+          "size": 3906,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
+        }
+      },
+      "name": "Message Actions",
+      "description": "Reorder, hide or remove the buttons shown when you long-press a message.",
+      "author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
+      "icon": "SettingsIcon",
       "channels": {
         "latest": "1.0.0"
       }

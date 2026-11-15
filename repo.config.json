@@ -28,6 +28,9 @@
     },
     "dariuss.no-delete-confirmation": {
       "latest": "1.0.0"
+    },
+    "dariuss.message-actions": {
+      "latest": "1.0.0"
     }
   }
 }
