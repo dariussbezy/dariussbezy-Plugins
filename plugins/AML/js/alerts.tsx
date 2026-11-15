@@ -164,20 +164,11 @@ export function showDiff(related: readonly Entry[]) {
 				</ScrollView>
 			}
 			actions={
-				<>
-					<Design.AlertActionButton
-						text="Jump to message"
-						onPress={() => {
-							close(Keys.compare)
-							jump(edits[0])
-						}}
-					/>
-					<Design.AlertActionButton
-						text="Close"
-						variant="secondary"
-						onPress={() => close(Keys.compare)}
-					/>
-				</>
+				<Design.AlertActionButton
+					text="Close"
+					variant="secondary"
+					onPress={() => close(Keys.compare)}
+				/>
 			}
 		/>,
 	)

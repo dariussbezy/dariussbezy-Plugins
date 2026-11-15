@@ -5,7 +5,7 @@
 	"description": "Keep a local journal of edited and deleted messages, keep them visible in chat and compare edits.",
 	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
 	"icon": "ChatMarkUnreadIcon",
-	"version": "2.1.0",
+	"version": "2.1.1",
 	"dependencies": {
 		"valenced.api": {
 			"version": ">=1 <2"
