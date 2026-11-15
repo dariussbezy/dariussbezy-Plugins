@@ -5,6 +5,8 @@ export interface Settings {
 	closed: boolean
 	alwaysShow: boolean
 	animatedWave: boolean
+	/** Show "Listening to YouTube Music / SoundCloud" on the Discord profile. */
+	listeningStatus: boolean
 	expandedShuffle: boolean
 	expandedPrevious: boolean
 	expandedPlay: boolean
@@ -24,6 +26,7 @@ export const DefaultSettings: Settings = {
 	closed: false,
 	alwaysShow: false,
 	animatedWave: true,
+	listeningStatus: false,
 	expandedShuffle: true,
 	expandedPrevious: true,
 	expandedPlay: true,
@@ -80,6 +83,10 @@ function normalize(raw: Record<string, unknown> | undefined): Settings {
 		settings.animatedWave = false
 	return settings
 }
+
+/** Current settings outside React. */
+export const getSettings = (): Settings =>
+	normalize(storage?.cache as Record<string, unknown> | undefined)
 
 /** React hook: current settings, re-renders when they change. */
 export function useSettings(): Settings {

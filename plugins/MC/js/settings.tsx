@@ -9,6 +9,7 @@ import manifest from '../manifest.json'
 import { refresh, restorePlayer, useMusic } from './music'
 import { APP_URL, androidBridge, probe } from './native'
 import { Player } from './player'
+import { presenceReady } from './presence'
 import { openSearch } from './search'
 import { ButtonIds, setSetting, useSettings } from './shared'
 import { reconnect } from './spotify'
@@ -65,6 +66,11 @@ const GUIDE: [string, string, string][] = [
 		'Search and queue',
 		'MagnifyingGlassIcon',
 		'Spotify only. Tap a result to play it now, or use the buttons on the row to play it next or add it to the queue.',
+	],
+	[
+		'Listening status',
+		'MusicIcon',
+		'Android only, off by default. While YouTube Music or SoundCloud plays, your profile shows Listening to YouTube Music or SoundCloud with the song, the artist and the time. It updates every few seconds while Discord is in the background and clears when the music stops.',
 	],
 	[
 		'Swipe the player',
@@ -221,6 +227,19 @@ export default function SettingsComponent() {
 									arrow
 									onPress={() => void Linking.openURL(APP_URL)}
 								/>
+								{presenceReady() && (
+									<SwitchRow
+										icon="MusicIcon"
+										label="Listening status"
+										subLabel="Show Listening to YouTube Music or SoundCloud with the song and its time on your profile. Spotify shows its own."
+										value={settings.listeningStatus}
+										onValueChange={value => {
+											setSetting('listeningStatus', value)
+											// Shows or clears the status right away.
+											setTimeout(() => void refresh(), 100)
+										}}
+									/>
+								)}
 							</>
 						) : (
 							<Row

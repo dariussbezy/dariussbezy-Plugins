@@ -8,6 +8,8 @@ import {
 	isPlaying,
 	press,
 } from './native'
+import { clearPresence, updatePresence } from './presence'
+import { getSettings } from './shared'
 import {
 	getState as getSpotify,
 	refresh as refreshSpotify,
@@ -36,7 +38,11 @@ export interface Playback {
 	id: string
 	title: string
 	artist: string
+	/** Album name, when the player gives one (shown under the artist in the listening status). */
+	album: string | null
 	artwork: string | null
+	/** A web address for the cover, when there is one (SoundCloud), for the listening status. */
+	artworkUrl: string | null
 	duration: number
 	position: number
 	updatedAt: number
@@ -69,6 +75,7 @@ const SPOTIFY_PACKAGE = 'com.spotify.music'
 /** SoundCloud keeps shuffle and repeat to itself, so their buttons are hidden for it. */
 const NO_MODES = new Set(['com.soundcloud.android'])
 const POLL_MS = 1000
+const BACKGROUND_POLL_MS = 5000
 const IDLE_HIDE_MS = 5 * 60 * 1000
 /** Keeps an optimistic change visible until the player reports it, or this long. */
 const OPTIMISTIC_MS = 2500
@@ -99,7 +106,7 @@ let state: MusicState = {
 /** Last song from the Music Controls app (Music Bridge), or media keys. */
 let bridgePlayback: Playback | null = null
 let pausedSince = 0
-let art: { version: number; uri: string | null } = { version: -1, uri: null }
+let art: { key: string; uri: string | null } = { key: '', uri: null }
 let optimistic: {
 	until: number
 	playing?: boolean
@@ -162,7 +169,9 @@ function fromSpotify(p: SpotifyPlayback): Playback {
 		id: `spotify:${p.id}`,
 		title: p.title,
 		artist: p.artist,
+		album: null,
 		artwork: p.artwork,
+		artworkUrl: p.artwork,
 		duration: p.duration,
 		position: p.position,
 		updatedAt: p.updatedAt,
@@ -202,6 +211,12 @@ function combine() {
 		spotifyStatus: spotify.status,
 		status: statuses.join('\n') || spotify.status,
 	})
+	const current = state.playback
+	updatePresence(
+		current,
+		getSettings().listeningStatus,
+		current ? positionOf(current) : 0,
+	)
 }
 
 function bridgeStatusOf(bridge: BridgeState | null, playing: boolean) {
@@ -216,10 +231,15 @@ function bridgeStatusOf(bridge: BridgeState | null, playing: boolean) {
 		: 'Connected. Nothing is playing.'
 }
 
+/**
+ * The cover for the current song. Keyed on the song and the cover version together, since the
+ * version starts over when the app restarts. A missing cover is asked for again on the next poll.
+ */
 async function artworkOf(bridge: BridgeState) {
-	if (bridge.artVersion === art.version) return art.uri
+	const key = `${bridge.artKey}|${bridge.artVersion}`
+	if (key === art.key && art.uri) return art.uri
 	const data = await bridgeArt()
-	art = { version: bridge.artVersion, uri: data ?? bridge.artUrl ?? null }
+	art = { key, uri: data ?? bridge.artUrl ?? null }
 	return art.uri
 }
 
@@ -249,7 +269,9 @@ async function pollBridge() {
 			id: bridge.artKey ?? `${bridge.package}|${bridge.title}`,
 			title: bridge.title || 'Unknown song',
 			artist: bridge.artist || bridge.app || '',
+			album: bridge.album || null,
 			artwork: await artworkOf(bridge),
+			artworkUrl: bridge.artUrl?.startsWith('https://') ? bridge.artUrl : null,
 			duration: bridge.duration,
 			position: bridge.position,
 			updatedAt: now,
@@ -268,7 +290,9 @@ async function pollBridge() {
 			id: 'media-keys',
 			title: 'Music playing',
 			artist: 'Install the Music Controls app to see the song',
+			album: null,
 			artwork: null,
+			artworkUrl: null,
 			duration: 0,
 			position: 0,
 			updatedAt: Date.now(),
@@ -360,20 +384,24 @@ export function startMusic(): () => void {
 	const stops = [startSpotify(), subscribeSpotify(combine)]
 	if (androidBridge) {
 		let timer: ReturnType<typeof setInterval> | null = null
-		const run = () => {
-			if (timer) return
-			void command('request')
-			void pollBridge()
-			timer = setInterval(() => void pollBridge(), POLL_MS)
-		}
 		const halt = () => {
 			if (timer) clearInterval(timer)
 			timer = null
 		}
-		if (AppState.currentState === 'active') run()
-		const sub = AppState.addEventListener('change', next =>
-			next === 'active' ? run() : halt(),
-		)
+		const run = (interval: number) => {
+			halt()
+			void command('request')
+			void pollBridge()
+			timer = setInterval(() => void pollBridge(), interval)
+		}
+		// In the background polling slows down, and only runs to keep the listening status current.
+		const follow = (next: string) => {
+			if (next === 'active') run(POLL_MS)
+			else if (getSettings().listeningStatus) run(BACKGROUND_POLL_MS)
+			else halt()
+		}
+		follow(AppState.currentState)
+		const sub = AppState.addEventListener('change', follow)
 		stops.push(() => {
 			halt()
 			sub.remove()
@@ -382,5 +410,6 @@ export function startMusic(): () => void {
 	return () => {
 		for (const stop of stops) stop()
 		bridgePlayback = null
+		clearPresence()
 	}
 }

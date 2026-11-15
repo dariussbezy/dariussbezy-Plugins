@@ -414,11 +414,36 @@ function DockCard({ bar }: { bar: ReactNode }) {
 				}
 				const up = dy < -15 || (Math.abs(vy) > 0.2 && vy < 0)
 				const down = dy > 15 || (Math.abs(vy) > 0.2 && vy > 0)
-				const { setMode: apply, idle: nothing } = live.current
+				const {
+					setMode: apply,
+					idle: nothing,
+					closedHeight,
+					collapsedHeight,
+					expandedHeight,
+				} = live.current
 				const modes = nothing ? MODES.slice(0, 2) : MODES
+				const heights: Record<DockMode, number> = {
+					closed: closedHeight,
+					collapsed: collapsedHeight,
+					expanded: expandedHeight,
+				}
 				const index = modes.indexOf(now)
-				if (up) apply(modes[Math.min(modes.length - 1, index + 1)])
-				else if (down) apply(modes[Math.max(0, index - 1)])
+				// Snap to the size closest to where the card was let go (moved on a little by the
+				// fling), so one long drag goes from closed straight to expanded and back.
+				const projected = current.current - vy * 120
+				let target = modes.reduce((best, mode) =>
+					Math.abs(heights[mode] - projected) <
+					Math.abs(heights[best] - projected)
+						? mode
+						: best,
+				)
+				const at = modes.indexOf(target)
+				// A short flick still moves one size in its direction.
+				if (up && at <= index)
+					target = modes[Math.min(modes.length - 1, index + 1)]
+				else if (down && at >= index) target = modes[Math.max(0, index - 1)]
+				else if (!up && !down) target = now
+				apply(target)
 				settle()
 			},
 			cancel() {
