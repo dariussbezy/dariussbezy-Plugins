@@ -117,25 +117,105 @@ function send(activity: Activity | null, now = false) {
 	}, wait)
 }
 
-/**
- * A web address for the cover. SoundCloud gives one; YouTube Music only hands over the image, so
- * its cover is looked up by title and artist in Apple's public iTunes search.
- */
-async function coverUrlOf(playback: Playback): Promise<string | null> {
-	if (playback.artworkUrl) return playback.artworkUrl
-	if (listeningApp(playback.packageName, playback.app) !== 'YouTube Music')
-		return null
-	const artist = playback.artist.replace(/ - Topic$/, '')
-	const term = encodeURIComponent(`${artist} ${playback.title}`.trim())
-	const response = await fetch(
-		`https://itunes.apple.com/search?term=${term}&entity=song&limit=1`,
+/** App logos, used when no cover is found so Discord does not show its question mark. */
+const LOGOS: Record<string, string> = {
+	'YouTube Music':
+		'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/YouTube_Music_2024.svg/1280px-YouTube_Music_2024.svg.png',
+	SoundCloud:
+		'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Antu_soundcloud.svg/1280px-Antu_soundcloud.svg.png',
+}
+/** Discord shows status images at up to 1024×1024, so covers are asked for in that size. */
+const COVER_SIZE = 1024
+
+const simplify = (text: string) =>
+	text
+		.toLowerCase()
+		.replace(/\(.*?\)|\[.*?\]/g, '')
+		.replace(/[^0-9a-zÀ-￿]+/g, ' ')
+		.trim()
+
+/** The player's own cover link, in the largest size its host offers. */
+function largerUrl(url: string) {
+	return (
+		url
+			// SoundCloud: -large (100 px) or -t300x300 → -t500x500, its largest fixed size.
+			.replace(/-(large|t\d+x\d+|crop|small|tiny)\.(jpg|png)/, '-t500x500.$2')
+			// Google images (YouTube Music): =w120-h120… → 1024 px.
+			.replace(/=w\d+-h\d+/, `=w${COVER_SIZE}-h${COVER_SIZE}`)
 	)
-	if (!response.ok) return null
-	const data = (await response.json()) as {
-		results?: { artworkUrl100?: string }[]
+}
+
+async function json<T>(url: string): Promise<T | null> {
+	const response = await fetch(url)
+	return response.ok ? ((await response.json()) as T) : null
+}
+
+/** Deezer's public search: covers up to 1000 px and many songs Apple does not have. */
+async function deezerCover(artist: string, title: string) {
+	type Result = {
+		data?: {
+			title?: string
+			artist?: { name?: string }
+			album?: { cover_xl?: string }
+		}[]
 	}
-	const small = data.results?.[0]?.artworkUrl100
-	return small ? small.replace(/\/\d+x\d+bb\./, '/512x512bb.') : null
+	const exact = await json<Result>(
+		`https://api.deezer.com/search?limit=5&q=${encodeURIComponent(`artist:"${artist}" track:"${title}"`)}`,
+	)
+	const loose = exact?.data?.length
+		? exact
+		: await json<Result>(
+				`https://api.deezer.com/search?limit=5&q=${encodeURIComponent(`${artist} ${title}`)}`,
+			)
+	const results = loose?.data ?? []
+	const wanted = simplify(artist)
+	const match =
+		results.find(r => {
+			const name = simplify(r.artist?.name ?? '')
+			return name && wanted && (name.includes(wanted) || wanted.includes(name))
+		}) ?? results[0]
+	const cover = match?.album?.cover_xl
+	return cover
+		? cover.replace(/\/\d+x\d+-/, `/${COVER_SIZE}x${COVER_SIZE}-`)
+		: null
+}
+
+async function itunesCover(artist: string, title: string) {
+	const data = await json<{ results?: { artworkUrl100?: string }[] }>(
+		`https://itunes.apple.com/search?entity=song&limit=1&term=${encodeURIComponent(`${artist} ${title}`.trim())}`,
+	)
+	const small = data?.results?.[0]?.artworkUrl100
+	return small
+		? small.replace(/\/\d+x\d+bb\./, `/${COVER_SIZE}x${COVER_SIZE}bb.`)
+		: null
+}
+
+/**
+ * Web addresses to try for the status image, best first: the player's own link (SoundCloud
+ * gives one; YouTube Music only hands over the image), then the song looked up by title and
+ * artist on Deezer and on Apple's iTunes, then the app's logo.
+ */
+async function coverUrlsOf(playback: Playback): Promise<string[]> {
+	const urls: string[] = []
+	if (playback.artworkUrl) urls.push(largerUrl(playback.artworkUrl))
+	const artist = playback.artist.replace(/ - Topic$/, '').trim()
+	const title = playback.title.trim()
+	if (!playback.artworkUrl && title) {
+		for (const find of [deezerCover, itunesCover]) {
+			try {
+				const url = await find(artist, title)
+				if (url) {
+					urls.push(url)
+					break
+				}
+			} catch {
+				// Try the next source.
+			}
+		}
+	}
+	const logo = LOGOS[listeningApp(playback.packageName, playback.app) ?? '']
+	if (logo) urls.push(logo)
+	return urls
 }
 
 /** Asks Discord to turn the link into a status image, with Discord's own helper and login. */
@@ -158,8 +238,10 @@ function lookUpCover(playback: Playback) {
 	void (async () => {
 		let cover: string | null = null
 		try {
-			const url = await coverUrlOf(playback)
-			if (url) cover = await assetOf(url)
+			for (const url of await coverUrlsOf(playback)) {
+				cover = await assetOf(url).catch(() => null)
+				if (cover) break
+			}
 		} catch {
 			// No cover then; the status is still shown.
 		}
