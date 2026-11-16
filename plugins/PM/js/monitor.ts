@@ -1,4 +1,11 @@
 import manifest from '../manifest.json'
+import {
+	isRecording,
+	pauseRecording,
+	record,
+	recordStall,
+	stopRecording,
+} from './recording'
 
 type Fn = (...args: any[]) => any
 type Api = Record<string, unknown>
@@ -46,20 +53,49 @@ const clock: () => number =
 		? () => performance.now()
 		: () => Date.now()
 
-export const stats = new Map<string, Stats>()
-export const names = new Map<string, string>()
-export const attribution = { stack: 0, context: 0, unknown: 0 }
-export const thread = {
-	stalls: [] as Stall[],
-	stalledMs: 0,
-	stallCount: 0,
+const KEY = Symbol.for('dariuss.performance-monitor.state')
+const ORIGINAL = Symbol.for('dariuss.performance-monitor.original')
+
+interface Shared {
+	stats: Map<string, Stats>
+	names: Map<string, string>
+	attribution: { stack: number; context: number; unknown: number }
+	thread: {
+		stalls: Stall[]
+		last: Stall | undefined
+		stalledMs: number
+		stallCount: number
+	}
+	state: {
+		since: number
+		/** Time the app spent suspended in the background, left out of the measured time. */
+		pausedMs: number
+		active: boolean
+		developerMode: boolean
+		startedLate: boolean
+	}
+	timer: ReturnType<typeof setInterval> | undefined
 }
-export const state = {
-	since: Date.now(),
-	active: false,
-	developerMode: false,
-	startedLate: false,
-}
+
+// Kept on the global object: when this script is evaluated again (the plugin restarts while the
+// app keeps running), hooks wrapped by the earlier run must still feed the numbers the page shows.
+const holder = globalThis as { [KEY]?: Shared }
+const shared: Shared = (holder[KEY] ??= {
+	stats: new Map(),
+	names: new Map(),
+	attribution: { stack: 0, context: 0, unknown: 0 },
+	thread: { stalls: [], last: undefined, stalledMs: 0, stallCount: 0 },
+	state: {
+		since: Date.now(),
+		pausedMs: 0,
+		active: false,
+		developerMode: false,
+		startedLate: false,
+	},
+	timer: undefined,
+})
+
+export const { stats, names, attribution, thread, state } = shared
 
 /** The plugin whose code runs right now, while it starts or inside one of its hooks. */
 let current: string | undefined
@@ -148,10 +184,12 @@ function timed(entry: Stats, site: Site, fn: Fn): Fn {
 			site.ms += ms
 			if (ms > entry.max) entry.max = ms
 			if (ms > site.max) site.max = ms
-			if (ms >= SLOW_MS) {
+			const slow = ms >= SLOW_MS
+			if (slow) {
 				entry.slow++
 				site.slow++
 			}
+			if (isRecording()) record(entry.id, site.label, ms, slow)
 		})
 	}
 }
@@ -251,8 +289,10 @@ function wrapRegister(
 	instead = false,
 ): unknown {
 	if (typeof original !== 'function') return original
-	const fn = original as Fn
-	return function (this: unknown, ...args: unknown[]) {
+	// A wrapper left by an earlier run of this script is unwrapped first, so hooks are not timed twice.
+	const fn = ((original as Fn & { [ORIGINAL]?: Fn })[ORIGINAL] ??
+		original) as Fn
+	const wrapper = function (this: unknown, ...args: unknown[]) {
 		let entry: Stats | undefined
 		try {
 			const tracked = track(kind, parts(args), args[hookIndex], instead)
@@ -263,6 +303,8 @@ function wrapRegister(
 		}
 		return counted(entry, fn.apply(this, args))
 	}
+	;(wrapper as Fn & { [ORIGINAL]?: Fn })[ORIGINAL] = fn
+	return wrapper
 }
 
 const patcherKeyParts = (args: unknown[]) => [args[0], args[1]]
@@ -366,20 +408,35 @@ function trackLifecycles(plugin: InternalPlugin): (() => void) | undefined {
 	}
 }
 
+/** A check this late means the app was suspended in the background, not that the thread was busy. */
+const SUSPENDED_MS = 5000
+
 function watchThread(): () => void {
+	if (shared.timer) clearInterval(shared.timer)
 	let expected = Date.now() + TICK_MS
 	const timer = setInterval(() => {
 		const now = Date.now()
 		const late = now - expected
 		expected = now + TICK_MS
 		if (!state.active || late < STALL_MS) return
+		if (late >= SUSPENDED_MS) {
+			state.pausedMs += late
+			pauseRecording(late)
+			return
+		}
 		thread.stallCount++
 		thread.stalledMs += late
-		thread.stalls.push({ at: now, ms: late })
+		thread.last = { at: now, ms: late }
+		thread.stalls.push(thread.last)
 		thread.stalls.sort((a, b) => b.ms - a.ms)
 		thread.stalls.length = Math.min(thread.stalls.length, STALL_LIMIT)
+		recordStall(late)
 	}, TICK_MS)
-	return () => clearInterval(timer)
+	shared.timer = timer
+	return () => {
+		clearInterval(timer)
+		if (shared.timer === timer) shared.timer = undefined
+	}
 }
 
 /**
@@ -490,29 +547,54 @@ export function install(unscoped: unknown): () => void {
 	}
 
 	keep(watchThread())
+	// A restart of this script keeps the numbers that hooks of the earlier run kept counting.
+	if (!state.active) {
+		state.since = Date.now()
+		state.pausedMs = 0
+	}
 	state.active = true
-	state.since = Date.now()
 
 	return () => {
 		state.active = false
+		stopRecording(false)
 		for (const fn of undo.reverse()) fn()
 	}
 }
 
-/** Clears the counts but keeps startup times and active hooks. */
+/**
+ * Clears the counts but keeps startup times and active hooks. Sites are zeroed in place: running
+ * hooks hold their own Site object, so removing it from the map would freeze its row.
+ */
 export function reset() {
 	for (const entry of stats.values()) {
 		entry.calls = 0
 		entry.ms = 0
 		entry.max = 0
 		entry.slow = 0
-		entry.sites.clear()
+		for (const site of entry.sites.values()) {
+			site.calls = 0
+			site.ms = 0
+			site.max = 0
+			site.slow = 0
+		}
 	}
 	thread.stalls.length = 0
+	thread.last = undefined
 	thread.stalledMs = 0
 	thread.stallCount = 0
 	state.since = Date.now()
+	state.pausedMs = 0
 }
+
+/** Measured time without the stretches the app was suspended. */
+export const elapsedMs = () =>
+	Math.max(1, Date.now() - state.since - state.pausedMs)
+
+/** Sites that have run since the last reset, busiest first. */
+export const activeSites = (entry: Stats) =>
+	[...entry.sites.values()]
+		.filter(site => site.calls > 0)
+		.sort((a, b) => b.ms - a.ms)
 
 export type SortKey = 'total' | 'longest' | 'startup'
 
@@ -539,8 +621,7 @@ export function formatMs(ms: number) {
 
 /** Share of the measured time this plugin kept the JS thread busy. */
 export function shareOf(entry: Stats) {
-	const elapsed = Math.max(1, Date.now() - state.since)
-	return entry.ms / elapsed
+	return entry.ms / elapsedMs()
 }
 
 /** Slow when a call drops a frame or the plugin uses more than 1% of the time. */

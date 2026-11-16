@@ -7,8 +7,10 @@ import { Component, useEffect, useReducer, useState } from 'react'
 import { ScrollView } from 'react-native'
 import manifest from '../manifest.json'
 import {
+	activeSites,
 	attribution,
 	displayName,
+	elapsedMs,
 	formatMs,
 	isSlow,
 	reset,
@@ -18,8 +20,11 @@ import {
 	state,
 	thread,
 } from './monitor'
+import { checkRecording, recordedMs, recording } from './recording'
+import ReviewScreen from './review'
 import type { ComponentProps, ReactNode } from 'react'
 import type { SortKey, Stats } from './monitor'
+import type { AiStorage } from './review'
 
 type RowProps = Omit<ComponentProps<typeof Design.TableRow>, 'icon'> & {
 	icon: string
@@ -96,14 +101,14 @@ function summary(entry: Stats) {
 function report(list: Stats[]) {
 	const lines = [
 		`${manifest.name} ${manifest.version}`,
-		`Measured for ${minutes(Date.now() - state.since)}`,
+		`Measured for ${minutes(elapsedMs())}`,
 		`JS thread stalls over 100 ms: ${thread.stallCount}, ${formatMs(thread.stalledMs)} in total`,
 		`Matched by stack ${attribution.stack}, by running plugin ${attribution.context}, not identified ${attribution.unknown}`,
 		'',
 	]
 	for (const entry of list) {
 		lines.push(`${displayName(entry.id)}: ${summary(entry)}`)
-		const sites = [...entry.sites.values()].sort((a, b) => b.ms - a.ms)
+		const sites = activeSites(entry)
 		for (const site of sites.slice(0, SITES_SHOWN))
 			lines.push(
 				`  ${site.label}: ${formatMs(site.ms)} in ${site.calls} calls, longest ${formatMs(site.max)}`,
@@ -124,9 +129,7 @@ function pluginRows(entry: Stats, open: boolean, toggle: (id: string) => void) {
 		/>,
 	]
 	if (!open) return rows
-	const sites = [...entry.sites.values()]
-		.sort((a, b) => b.ms - a.ms)
-		.slice(0, SITES_SHOWN)
+	const sites = activeSites(entry).slice(0, SITES_SHOWN)
 	for (const site of sites)
 		rows.push(
 			<Row
@@ -191,15 +194,20 @@ ${error.stack ?? ''}`
 	}
 }
 
-export default function SettingsComponent() {
+export default function SettingsComponent({
+	api,
+}: {
+	api?: { jsonStorage: AiStorage }
+}) {
 	return (
 		<Guard>
-			<SettingsPage />
+			<SettingsPage storage={api?.jsonStorage} />
 		</Guard>
 	)
 }
 
-function SettingsPage() {
+function SettingsPage({ storage }: { storage?: AiStorage }) {
+	const [screen, setScreen] = useState<'main' | 'review'>('main')
 	const [, rerender] = useReducer((value: number) => value + 1, 0)
 	const [sortBy, setSortBy] = useState<SortKey>('total')
 	const [open, setOpen] = useState<string | null>(null)
@@ -213,15 +221,42 @@ function SettingsPage() {
 
 	const list = sorted(sortBy)
 	const pluginMs = list.reduce((sum, entry) => sum + entry.ms, 0)
-	const elapsed = Math.max(1, Date.now() - state.since)
+	const elapsed = elapsedMs()
+	checkRecording()
+	const recordingNow = recording.status === 'recording'
 	const slowCount = list.filter(isSlow).length
 	const longest = thread.stalls[0]
+
+	if (screen === 'review' && storage)
+		return (
+			<ScrollView keyboardShouldPersistTaps="handled">
+				<Page>
+					<ReviewScreen storage={storage} onBack={() => setScreen('main')} />
+				</Page>
+			</ScrollView>
+		)
 
 	return (
 		<ScrollView>
 			<Page>
 				<Design.Stack spacing={24}>
 					<Design.TableRowGroup title="Overview">
+						{storage && (
+							<Row
+								icon={recordingNow ? 'ClockIcon' : 'RobotIcon'}
+								label={
+									recordingNow
+										? `Recording ${minutes(recordedMs())} of ${minutes(recording.targetMs)}`
+										: 'AI review'
+								}
+								subLabel={
+									recordingNow
+										? 'Tap to see the progress or stop it.'
+										: 'Record plugin activity for a while and let AI suggest which plugins to disable or report.'
+								}
+								onPress={() => setScreen('review')}
+							/>
+						)}
 						{state.startedLate && (
 							<Row
 								icon="WarningIcon"
@@ -239,7 +274,7 @@ function SettingsPage() {
 							label="JS thread stalls"
 							subLabel={
 								thread.stallCount
-									? `${thread.stallCount} times busy for over 100 ms, ${formatMs(thread.stalledMs)} in total. Longest ${formatMs(longest?.ms ?? 0)} at ${clockTime(longest?.at ?? 0)}. Includes Discord itself.`
+									? `${thread.stallCount} times busy for over 100 ms, ${formatMs(thread.stalledMs)} in total. Longest ${formatMs(longest?.ms ?? 0)} at ${clockTime(longest?.at ?? 0)}${thread.last ? `, latest ${formatMs(thread.last.ms)} at ${clockTime(thread.last.at)}` : ''}. Includes Discord itself.`
 									: 'No stalls over 100 ms. Includes Discord itself.'
 							}
 						/>
