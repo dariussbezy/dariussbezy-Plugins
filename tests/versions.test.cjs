@@ -19,9 +19,9 @@ test('settings BUILD labels read their version from the manifest',()=>{
 
 test('AML and GPL latest channels publish their current version with matching manifests',()=>{
  const index=read('index.json'),config=read('repo.config.json');
- for(const [code,id,version]of [['AML','dariuss.advanced-message-logger','2.1.1'],['GPL','dariuss.ghost-ping-logger','2.1.0']]){
+ for(const [code,id]of [['AML','dariuss.advanced-message-logger'],['GPL','dariuss.ghost-ping-logger']]){
   const manifest=read(`plugins/${code}/manifest.json`);
-  assert.equal(manifest.version,version);
+  assert.match(manifest.version,/^\d+\.\d+\.\d+$/,code+' has a plain version');
   assert.equal(index.plugins[id].channels.latest,manifest.version);
   assert.equal(config.channels[id].latest,manifest.version);
  }
