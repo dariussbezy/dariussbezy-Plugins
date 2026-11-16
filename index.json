@@ -714,6 +714,21 @@
               "optional": true
             }
           }
+        },
+        "1.1.2": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/279dcfc8c39bd11138d09cc6f0bdb25c1a543444/pool/dariuss.performance-monitor@1.1.2.zip",
+          "sha256": "72911486787ae0e5445f1a4dc3dd437c599dd3768be86e214edf2c2580234e37",
+          "size": 13070,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {},
+            "valenced.api.hidden": {
+              "version": "*",
+              "optional": true
+            }
+          }
         }
       },
       "name": "Performance Monitor",
@@ -721,7 +736,7 @@
       "author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
       "icon": "AnalyticsIcon",
       "channels": {
-        "latest": "1.0.0"
+        "latest": "1.1.2"
       }
     },
     "dariuss.bulk-downloads": {
