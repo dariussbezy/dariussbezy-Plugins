@@ -28,15 +28,18 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native'
+import { setBridge } from './bridge'
 import { gestureHandler, scrub } from './gesture'
 import { iconId } from './icons'
 import { restorePlayer, useMusic } from './music'
 import { PlayerBody, usePlayerVisible } from './player'
 import { dockModeOf, setDockMode, useSettings } from './shared'
+import { TransparentBlur, TransparentRim, useTransparent } from './transparent'
 import type { Filter, FilterGenerator } from '@valenced/modules/finders/filters'
 import type { ComponentType, ReactElement, ReactNode } from 'react'
 import type { LayoutChangeEvent } from 'react-native'
 import type { DockMode } from './shared'
+import type { Corners } from './transparent'
 
 // Built once; the bundler rewrites a bare `Animated.View` member access.
 const AnimatedView = Animated.createAnimatedComponent(View)
@@ -254,10 +257,15 @@ function DockCard({ bar }: { bar: ReactNode }) {
 	const settings = useSettings()
 	const visible = usePlayerVisible()
 	const look = useDockLook()
+	const skin = useTransparent()
 	const [layout, setLayout] = useState<BarLayout | null>(null)
 	const [containerHeight, setContainerHeight] = useState(0)
 	const [content, setContent] = useState(GUESS)
 	const [mounted, setMounted] = useState(visible)
+	// Tell the Transparent YOUBAR plugin whether the card is on screen and at which level.
+	const onScreen = mounted && visible
+	const transparency = settings.transparency
+	useEffect(() => setBridge(onScreen, transparency), [onScreen, transparency])
 	// With nothing playing the dock has two sizes only: the handle, and one pull up to the idle row.
 	const { playback } = useMusic()
 	const idle = settings.alwaysShow && !playback
@@ -412,6 +420,11 @@ function DockCard({ bar }: { bar: ReactNode }) {
 					springBack()
 					return
 				}
+				// A tap with a little finger jitter is not a flick: it must not change the size.
+				if (Math.abs(dy) < 10) {
+					settle()
+					return
+				}
 				const up = dy < -15 || (Math.abs(vy) > 0.2 && vy < 0)
 				const down = dy > 15 || (Math.abs(vy) > 0.2 && vy > 0)
 				const {
@@ -482,7 +495,7 @@ function DockCard({ bar }: { bar: ReactNode }) {
 				? handler.Gesture.Pan()
 						.runOnJS(true)
 						// Activates before the list under it starts scrolling.
-						.activeOffsetY([-4, 4])
+						.activeOffsetY([-8, 8])
 						.activeOffsetX([-14, 14])
 						.onStart(e => drag.start(e.translationX, e.translationY))
 						.onUpdate(e => drag.move(e.translationX, e.translationY))
@@ -534,27 +547,41 @@ function DockCard({ bar }: { bar: ReactNode }) {
 			)
 		}
 
-	const card = (
-		<AnimatedView
-			{...(gesture ? { collapsable: false } : pan.panHandlers)}
-			style={{
-				position: 'absolute',
-				left: frame.left,
-				width: frame.width,
-				bottom: frame.bottom,
-				height,
-				opacity: cardOpacity,
-				overflow: 'hidden',
-				transform: [{ translateX: offsetX }],
+	// Transparent: the card sits flush on the YouBar while collapsed (square bottom corners, no seam) and
+	// rounds its bottom as it grows, driven by the same animated height as the drag and the snap.
+	const grow = ease(
+		[collapsedHeight, Math.max(expandedHeight, collapsedHeight + 1)],
+		[0, 1],
+	)
+	const radii = skin
+		? {
+				borderTopLeftRadius: TOP_RADIUS,
+				borderTopRightRadius: TOP_RADIUS,
+				borderBottomLeftRadius: ease(
+					[collapsedHeight, Math.max(expandedHeight, collapsedHeight + 1)],
+					[0, BAR_RADIUS],
+				),
+				borderBottomRightRadius: ease(
+					[collapsedHeight, Math.max(expandedHeight, collapsedHeight + 1)],
+					[0, TOP_RADIUS],
+				),
+			}
+		: {
 				borderTopLeftRadius: TOP_RADIUS,
 				borderTopRightRadius: TOP_RADIUS,
 				borderBottomLeftRadius: BAR_RADIUS,
 				borderBottomRightRadius: TOP_RADIUS,
-				borderWidth: 1,
-				borderColor: look.border,
-				backgroundColor: look.background,
-			}}
-		>
+			}
+	const rimShape = (current: number): { corners: Corners; extra: number } => {
+		const span = Math.max(expandedHeight, collapsedHeight + 1) - collapsedHeight
+		const t = Math.min(1, Math.max(0, (current - collapsedHeight) / span))
+		return {
+			corners: [TOP_RADIUS, TOP_RADIUS, TOP_RADIUS * t, BAR_RADIUS * t],
+			extra: 12 * (1 - t),
+		}
+	}
+	const inner = (
+		<>
 			<Pressable
 				accessibilityRole="button"
 				accessibilityLabel={
@@ -574,7 +601,12 @@ function DockCard({ bar }: { bar: ReactNode }) {
 				}
 				style={dockStyles.handleRow}
 			>
-				<View style={[dockStyles.handle, { backgroundColor: look.handle }]} />
+				<View
+					style={[
+						dockStyles.handle,
+						{ backgroundColor: skin?.handle ?? look.handle },
+					]}
+				/>
 			</Pressable>
 			<AnimatedView
 				pointerEvents={mode === 'collapsed' ? 'auto' : 'none'}
@@ -590,6 +622,49 @@ function DockCard({ bar }: { bar: ReactNode }) {
 			>
 				<PlayerBody mode="expanded" />
 			</AnimatedView>
+		</>
+	)
+	const card = (
+		<AnimatedView
+			{...(gesture ? { collapsable: false } : pan.panHandlers)}
+			style={{
+				position: 'absolute',
+				left: frame.left,
+				width: frame.width,
+				bottom: frame.bottom,
+				height,
+				opacity: cardOpacity,
+				transform: [{ translateX: offsetX }],
+				...radii,
+				...(skin
+					? { ...skin.card, borderBottomWidth: grow }
+					: {
+							overflow: 'hidden',
+							borderWidth: 1,
+							borderColor: look.border,
+							backgroundColor: look.background,
+						}),
+			}}
+		>
+			{skin ? (
+				// custom: layered translucent fills fake the blur, the clip keeps them inside the corners
+				<AnimatedView
+					pointerEvents="box-none"
+					style={[StyleSheet.absoluteFill, skin.clip, radii]}
+				>
+					<TransparentBlur dark={skin.dark} />
+					<TransparentRim
+						look={skin}
+						id="mc-dock"
+						corners={[TOP_RADIUS, TOP_RADIUS, 0, 0]}
+						shape={rimShape}
+					/>
+					<View pointerEvents="none" style={skin.edge} />
+					{inner}
+				</AnimatedView>
+			) : (
+				inner
+			)}
 		</AnimatedView>
 	)
 

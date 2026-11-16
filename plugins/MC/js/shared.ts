@@ -1,10 +1,17 @@
 import type { JsonStorage } from '@valenced/json-storage'
 
+export type TransparencyLevel = 'low' | 'medium' | 'high'
+export const TransparencyLevels: TransparencyLevel[] = ['low', 'medium', 'high']
+
 export interface Settings {
 	compact: boolean
 	closed: boolean
 	alwaysShow: boolean
 	animatedWave: boolean
+	/** Transparent card, buttons and progress. */
+	transparent: boolean
+	/** How see-through the transparent look is. */
+	transparency: TransparencyLevel
 	/** Show "Listening to YouTube Music / SoundCloud" on the Discord profile. */
 	listeningStatus: boolean
 	expandedShuffle: boolean
@@ -26,6 +33,8 @@ export const DefaultSettings: Settings = {
 	closed: false,
 	alwaysShow: false,
 	animatedWave: true,
+	transparent: true,
+	transparency: 'medium',
 	listeningStatus: false,
 	expandedShuffle: true,
 	expandedPrevious: true,
@@ -76,8 +85,17 @@ function normalize(raw: Record<string, unknown> | undefined): Settings {
 	if (!raw) return settings
 	for (const key of Object.keys(DefaultSettings) as (keyof Settings)[]) {
 		const value = raw[key]
-		if (typeof value === 'boolean') settings[key] = value
+		if (typeof settings[key] === 'boolean' && typeof value === 'boolean')
+			(settings as Record<string, unknown>)[key] = value
 	}
+	// "Transparent" was called "Liquid glass" before 1.4.0: keep the choice users made.
+	if (
+		typeof raw.transparent !== 'boolean' &&
+		typeof raw.liquidGlass === 'boolean'
+	)
+		settings.transparent = raw.liquidGlass
+	if (TransparencyLevels.includes(raw.transparency as TransparencyLevel))
+		settings.transparency = raw.transparency as TransparencyLevel
 	// Migrate the beta flag that was replaced by `animatedWave`
 	if (raw.waveShape === false && typeof raw.animatedWave !== 'boolean')
 		settings.animatedWave = false

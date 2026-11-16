@@ -17,6 +17,13 @@ import { Icons, iconId } from './icons'
 import { control, formatTime, openPlayer, positionOf, useMusic } from './music'
 import { openSearch } from './search'
 import { lazyStyles, setDockMode, useSettings } from './shared'
+import {
+	TransparentBlur,
+	TransparentRadius,
+	TransparentRim,
+	useTransparent,
+	withAlpha,
+} from './transparent'
 import type { Playback } from './music'
 import type { ButtonId, PlayerMode, Settings } from './shared'
 
@@ -134,6 +141,7 @@ function WaveBar({
 	playing: boolean
 }) {
 	const styles = useWaveStyles()
+	const skin = useTransparent()
 	const [width, setWidth] = useState(1)
 	const [drag, setDrag] = useState<number | null>(null)
 	const reduceMotion = useReduceMotion()
@@ -266,7 +274,12 @@ function WaveBar({
 			style={styles.hit}
 		>
 			<View pointerEvents="none" style={styles.lane}>
-				<View style={styles.track} />
+				<View
+					style={[
+						styles.track,
+						skin?.track ? { backgroundColor: skin.track } : null,
+					]}
+				/>
 				<View
 					style={[
 						styles.clip,
@@ -289,6 +302,7 @@ function WaveBar({
 				pointerEvents="none"
 				style={[
 					styles.knob,
+					skin ? { borderWidth: 2, borderColor: skin.ring } : null,
 					{ left: Math.max(0, Math.min(width - 12, value * width - 6)) },
 				]}
 			/>
@@ -320,6 +334,7 @@ function StraightBar({ progress, disabled, onPreview, onSeek }: SeekProps) {
 
 function ControlButton({ id, playback }: { id: ButtonId; playback: Playback }) {
 	const styles = useControlStyles()
+	const skin = useTransparent()
 	const { busy } = useMusic()
 	const mode = playback.repeat
 	const spec = {
@@ -385,6 +400,43 @@ function ControlButton({ id, playback }: { id: ButtonId; playback: Playback }) {
 			/>
 		)
 
+	if (skin)
+		return (
+			// custom: Design.IconButton draws a square press outline, so the transparent buttons are round Pressables
+			<Pressable
+				accessibilityRole="button"
+				accessibilityLabel={spec.label}
+				accessibilityState={{ selected: spec.active, disabled }}
+				disabled={disabled}
+				onPress={spec.press}
+				style={({ pressed }) => [
+					styles.slot,
+					id === 'Play'
+						? skin.chipMain
+						: spec.active
+							? skin.chipActive
+							: skin.chip,
+					{
+						opacity: spec.disabled ? 0.4 : pressed ? 0.7 : 1,
+						transform: [{ scale: pressed ? 0.94 : 1 }],
+					},
+				]}
+			>
+				<Design.TableRow.Icon source={icon} />
+				{id === 'Repeat' && mode === 'track' && (
+					// custom: a small pill in the corner of the chip, so the 1 does not sit on the icon
+					<View
+						pointerEvents="none"
+						style={[styles.pill, { backgroundColor: skin.accent }]}
+					>
+						<Design.Text variant="text-xxs/semibold" color="text-strong">
+							1
+						</Design.Text>
+					</View>
+				)}
+			</Pressable>
+		)
+
 	return (
 		<View style={styles.slot}>
 			<Design.IconButton
@@ -441,6 +493,7 @@ export function PlayerBody({
 }) {
 	const music = useMusic()
 	const settings = useSettings()
+	const skin = useTransparent()
 	const styles = usePlayerStyles()
 	const appActive = useAppActive()
 	const compact = mode === 'compact'
@@ -546,6 +599,7 @@ export function PlayerBody({
 								variant="text-md/semibold"
 								color="text-strong"
 								numberOfLines={1}
+								style={skin?.text}
 							>
 								{playback.title}
 							</Design.Text>
@@ -554,6 +608,7 @@ export function PlayerBody({
 									variant="text-sm/medium"
 									color="text-muted"
 									numberOfLines={1}
+									style={skin?.text}
 								>
 									{playback.artist}
 								</Design.Text>
@@ -577,10 +632,18 @@ export function PlayerBody({
 								justify="space-between"
 								style={styles.times}
 							>
-								<Design.Text variant="text-xs/medium" color="text-muted">
+								<Design.Text
+									variant="text-xs/medium"
+									color="text-muted"
+									style={skin?.text}
+								>
 									{formatTime(position)}
 								</Design.Text>
-								<Design.Text variant="text-xs/medium" color="text-muted">
+								<Design.Text
+									variant="text-xs/medium"
+									color="text-muted"
+									style={skin?.text}
+								>
 									{formatTime(playback.duration)}
 								</Design.Text>
 							</Design.Stack>
@@ -601,8 +664,55 @@ export function PlayerBody({
 	)
 }
 
-/** Settings preview: the same content on a plain card. */
+/** Settings preview: the same content on a plain card, or the transparent card over a coloured backdrop. */
 export function Player({ previewMode }: { previewMode: PlayerMode }) {
+	const skin = useTransparent()
+	const styles = usePlayerStyles()
+	if (skin) {
+		const accent = skin.accent
+		return (
+			// custom: a coloured backdrop so the see-through card is visible in the preview
+			<View
+				style={[styles.backdrop, { backgroundColor: withAlpha(accent, 0.28) }]}
+			>
+				<View
+					style={[
+						styles.blob,
+						styles.blobA,
+						{ backgroundColor: withAlpha(accent, 0.7) },
+					]}
+				/>
+				<View
+					style={[
+						styles.blob,
+						styles.blobB,
+						{ backgroundColor: withAlpha(accent, 0.45) },
+					]}
+				/>
+				<View
+					style={[
+						skin.card,
+						skin.clip,
+						{ borderRadius: TransparentRadius.card },
+					]}
+				>
+					<TransparentBlur dark={skin.dark} />
+					<TransparentRim
+						look={skin}
+						id="mc-preview"
+						corners={[
+							TransparentRadius.card,
+							TransparentRadius.card,
+							TransparentRadius.card,
+							TransparentRadius.card,
+						]}
+					/>
+					<View pointerEvents="none" style={skin.edge} />
+					<PlayerBody mode={previewMode} preview />
+				</View>
+			</View>
+		)
+	}
 	return (
 		<Design.Card
 			variant="primary"
@@ -620,7 +730,7 @@ const usePlayerStyles = lazyStyles(() =>
 		body: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 8 },
 		// custom: the title must take the space the controls leave, which Stack does not do
 		row: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-		controls: { flexDirection: 'row', alignItems: 'center' },
+		controls: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 		info: {
 			flex: 1,
 			minWidth: 0,
@@ -632,6 +742,10 @@ const usePlayerStyles = lazyStyles(() =>
 		art: { width: 48, height: 48, borderRadius: 8 },
 		artCompact: { width: 32, height: 32, borderRadius: 16 },
 		times: { marginTop: -4 },
+		backdrop: { padding: 12, borderRadius: 24, overflow: 'hidden' },
+		blob: { position: 'absolute', width: 90, height: 90, borderRadius: 45 },
+		blobA: { top: -20, left: 20 },
+		blobB: { bottom: -30, right: 30 },
 	}),
 )
 
@@ -640,6 +754,16 @@ const useControlStyles = lazyStyles(() =>
 		slot: {
 			width: 44,
 			height: 44,
+			alignItems: 'center',
+			justifyContent: 'center',
+		},
+		pill: {
+			position: 'absolute',
+			top: 0,
+			right: 0,
+			minWidth: 16,
+			height: 16,
+			borderRadius: 8,
 			alignItems: 'center',
 			justifyContent: 'center',
 		},

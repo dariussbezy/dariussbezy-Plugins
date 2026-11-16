@@ -723,6 +723,9 @@
           }
         }
       }
+    },
+    "dariuss.transparent-youbar": {
+      "versions": {}
     }
   }
 }

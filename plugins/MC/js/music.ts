@@ -59,7 +59,7 @@ export interface Playback {
 
 export interface MusicState {
 	playback: Playback | null
-	/** Short summary for the preview and the diagnostics. */
+	/** Short summary for the preview. */
 	status: string
 	spotifyStatus: string
 	bridgeStatus: string

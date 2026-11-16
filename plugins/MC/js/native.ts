@@ -1,4 +1,4 @@
-import { callNativeMethod, getBridgeInfo } from '@valenced/modules/native'
+import { callNativeMethod } from '@valenced/modules/native'
 import { Platform } from 'react-native'
 
 declare module '@valenced/modules/native' {
@@ -87,21 +87,6 @@ export async function command(name: BridgeCommand, position = 0) {
 		return await callNativeMethod('musicControls.command', [name, position])
 	} catch {
 		return false
-	}
-}
-
-/** Checks the native part directly, keeping the error for the diagnostics. */
-export async function probe(): Promise<{ ok: boolean; detail: string }> {
-	const bridge = getBridgeInfo()
-	const loader = bridge ? `${bridge.name} v${bridge.version}` : 'no bridge'
-	try {
-		const playing = await callNativeMethod('musicControls.playing', [])
-		return { ok: true, detail: `${loader}, ${playing ? 'playing' : 'idle'}` }
-	} catch (error) {
-		return {
-			ok: false,
-			detail: `${loader}: ${error instanceof Error ? error.message : String(error)}`,
-		}
 	}
 }
 

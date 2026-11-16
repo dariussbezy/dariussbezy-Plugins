@@ -1,0 +1,18 @@
+{
+	"format": 1,
+	"id": "dariuss.transparent-youbar",
+	"name": "Transparent YOUBAR",
+	"description": "Turns the YouBar into transparent: a translucent, tinted bar with a thin light border, a soft top highlight and a soft shadow. Works on Android and iOS, in dark and light themes.",
+	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
+	"icon": "PaintPaletteIcon",
+	"version": "1.0.0",
+	"dependencies": {
+		"valenced.api": {
+			"version": ">=1 <2"
+		},
+		"discord": {}
+	},
+	"dist": {
+		"script": "index.js"
+	}
+}
