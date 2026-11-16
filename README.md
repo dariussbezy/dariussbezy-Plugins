@@ -26,6 +26,7 @@ Install from the **latest** channel and enable **Allow updates**.
 | [No Tap Mention](plugins/NTM/README.md) | Disable tapping a message author's name to insert a mention. |
 | [Performance Monitor](plugins/PM/README.md) | See how much time each plugin takes and find the ones that slow Discord down. |
 | [Quick Translate](plugins/QT/README.md) | Translate messages and drafts with Google, Microsoft or DeepL. |
+| [Show Blocked](plugins/SB/README.md) | Show messages from blocked and ignored users as normal messages, with options for pings, DMs and exclusions. |
 | [Voice Messages To Text](plugins/VMTT/README.md) | Transcribe voice messages below the audio, with a free server or Groq. |
 | [Midnight Mobile](themes/MT/README.md) | Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon. |
 

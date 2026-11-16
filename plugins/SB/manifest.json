@@ -1,0 +1,18 @@
+{
+	"format": 1,
+	"id": "dariuss.show-blocked",
+	"name": "Show Blocked",
+	"description": "Shows messages from blocked and ignored users in servers, threads and group chats as normal messages, without the collapsed group or the Show message tap. Optional in group chats and DMs.",
+	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
+	"icon": "EyeIcon",
+	"version": "1.0.0",
+	"dependencies": {
+		"valenced.api": {
+			"version": ">=1 <2"
+		},
+		"discord": {}
+	},
+	"dist": {
+		"script": "index.js"
+	}
+}

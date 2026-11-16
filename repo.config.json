@@ -40,6 +40,9 @@
     },
     "dariuss.bulk-downloads": {
       "latest": "1.0.0"
+    },
+    "dariuss.show-blocked": {
+      "latest": "1.0.0"
     }
   }
 }
