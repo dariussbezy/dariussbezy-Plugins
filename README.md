@@ -25,7 +25,7 @@ Install from the **latest** channel and enable **Allow updates**.
 | [No Delete Confirmation](plugins/NDC/README.md) | Delete messages without the confirmation dialog. |
 | [No Tap Mention](plugins/NTM/README.md) | Disable tapping a message author's name to insert a mention. |
 | [Performance Monitor](plugins/PM/README.md) | See how much time each plugin takes and find the ones that slow Discord down. |
-| [Quick Translate](plugins/QT/README.md) | Translate messages and drafts with Google, Microsoft or DeepL. |
+| [Quick Translate](plugins/QT/README.md) | Translate messages and drafts with Google, Microsoft, DeepL or Groq AI. |
 | [Show Blocked](plugins/SB/README.md) | Show messages from blocked and ignored users as normal messages, with options for pings, DMs and exclusions. |
 | [Transparent YOUBAR](plugins/TY/README.md) | Make the YouBar transparent, in the same style as the Music Controls player. |
 | [Voice Messages To Text](plugins/VMTT/README.md) | Transcribe voice messages below the audio, with a free server or Groq. |
