@@ -54,6 +54,10 @@ const COVER_WAIT_MS = 4000
 /** Discord's "Listening to" activity type. */
 const LISTENING = 2
 const CACHE_LIMIT = 100
+/** Every network step gives up after this long, so one blocked host cannot stall the status. */
+const STEP_TIMEOUT_MS = 8000
+/** A song whose cover lookup failed completely is looked up again after this long. */
+const RETRY_MS = 60_000
 
 type Activity = Record<string, unknown>
 
@@ -72,9 +76,6 @@ let shown: {
 let lastSentAt = 0
 let pending: { activity: Activity | null } | null = null
 let timer: ReturnType<typeof setTimeout> | undefined
-/** Why the status is or is not shown right now, for Diagnostics. */
-let reason = 'Not checked yet'
-export const presenceReason = () => reason
 
 /** Status image per song id; null when there is none. */
 const covers = new Map<string, string | null>()
@@ -84,6 +85,20 @@ const lookups = new Map<string, number>()
 let lastCall: [Playback | null, boolean, number] | null = null
 
 export const presenceReady = () => APPLICATION_ID.length > 0
+
+/** When the cover lookup of a song failed completely. */
+const failedAt = new Map<string, number>()
+
+/** Rejects after `ms`, so a request that never answers cannot block what waits for it. */
+function withTimeout<T>(promise: Promise<T>, ms = STEP_TIMEOUT_MS): Promise<T> {
+	let timeout: ReturnType<typeof setTimeout> | undefined
+	return Promise.race([
+		promise,
+		new Promise<never>((_, reject) => {
+			timeout = setTimeout(() => reject(new Error('timeout')), ms)
+		}),
+	]).finally(() => clearTimeout(timeout))
+}
 
 function remember(id: string, cover: string | null) {
 	if (covers.size >= CACHE_LIMIT) covers.clear()
@@ -146,8 +161,17 @@ function largerUrl(url: string) {
 }
 
 async function json<T>(url: string): Promise<T | null> {
-	const response = await fetch(url)
-	return response.ok ? ((await response.json()) as T) : null
+	const controller = new AbortController()
+	const timeout = setTimeout(() => controller.abort(), STEP_TIMEOUT_MS)
+	try {
+		const response = await withTimeout(
+			fetch(url, { signal: controller.signal }),
+		)
+		if (!response.ok) throw new Error(`HTTP ${response.status}`)
+		return await withTimeout(response.json() as Promise<T>)
+	} finally {
+		clearTimeout(timeout)
+	}
 }
 
 /** Deezer's public search: covers up to 1000 px and many songs Apple does not have. */
@@ -234,20 +258,22 @@ async function assetOf(url: string): Promise<string | null> {
 	const [module] = lookupModule(withProps<{ HTTP: Http }>('HTTP'))
 	if (module?.HTTP)
 		try {
-			const response = await module.HTTP.post({
-				url: `/applications/${APPLICATION_ID}/external-assets`,
-				body: { urls: [url] },
-			})
+			const response = await withTimeout(
+				module.HTTP.post({
+					url: `/applications/${APPLICATION_ID}/external-assets`,
+					body: { urls: [url] },
+				}),
+			)
 			const path = response.body?.[0]?.external_asset_path
 			if (typeof path === 'string' && path) return `mp:${path}`
 		} catch {
-			// Try Discord's helper below.
+			// Try Discord's own helper below.
 		}
 	const [utils] = lookupModule(
 		withProps<AssetUtils>('fetchAssetIds', 'getAssetIds'),
 	)
 	if (!utils) return null
-	const result = await utils.fetchAssetIds(APPLICATION_ID, [url])
+	const result = await withTimeout(utils.fetchAssetIds(APPLICATION_ID, [url]))
 	const ids = Array.isArray(result)
 		? (result as (string | null)[])
 		: utils.getAssetIds(APPLICATION_ID, [url])
@@ -269,6 +295,8 @@ function lookUpCover(playback: Playback) {
 			// No cover then; the status is still shown.
 		}
 		remember(playback.id, cover)
+		if (cover) failedAt.delete(playback.id)
+		else failedAt.set(playback.id, Date.now())
 		lookups.delete(playback.id)
 		if (lastCall) updatePresence(...lastCall)
 	})()
@@ -288,19 +316,6 @@ export function updatePresence(
 	if (pending && Date.now() - lastSentAt >= MIN_GAP_MS) send(pending.activity)
 
 	const name = listeningApp(playback?.packageName, playback?.app)
-	reason = !presenceReady()
-		? 'Not available'
-		: !enabled
-			? 'Off. Turn on Listening status above.'
-			: !playback
-				? 'Waiting: nothing is playing.'
-				: playback.source !== 'bridge'
-					? 'Waiting: Spotify shows its own status.'
-					: !name
-						? `Not shown for ${playback.app ?? 'this app'} (${playback.packageName ?? 'unknown app'}). Only YouTube Music and SoundCloud get a listening status.`
-						: !playback.playing
-							? 'Waiting: playback is paused.'
-							: `Sent as Listening to ${name}. If friends do not see it, check Settings > Content & Social > Activity Status and that you are not Invisible.`
 	if (
 		!presenceReady() ||
 		!enabled ||
@@ -316,6 +331,9 @@ export function updatePresence(
 		return
 	}
 
+	// A song whose cover lookup failed completely is tried again after a while (not in a loop).
+	const failed = failedAt.get(playback.id)
+	if (failed && Date.now() - failed >= RETRY_MS) lookUpCover(playback)
 	if (!covers.has(playback.id)) {
 		lookUpCover(playback)
 		// Give a new song a moment to get its cover, so it is not sent twice.

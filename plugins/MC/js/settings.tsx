@@ -1,20 +1,23 @@
 import Page from '@valenced/components/Page'
 import TableRowAssetIcon from '@valenced/components/TableRowAssetIcon'
-import { ToastActionCreators } from '@valenced/discord/actions'
 import { Design } from '@valenced/discord/design'
-import { Clipboard } from '@valenced/externals/react-native-clipboard'
-import { useCallback, useEffect, useState } from 'react'
 import { Linking, Platform, ScrollView } from 'react-native'
 import manifest from '../manifest.json'
 import { refresh, restorePlayer, useMusic } from './music'
-import { APP_URL, androidBridge, probe } from './native'
+import { APP_URL, androidBridge } from './native'
 import { Player } from './player'
-import { presenceReady, presenceReason } from './presence'
+import { presenceReady } from './presence'
 import { openSearch } from './search'
 import { ButtonIds, setSetting, useSettings } from './shared'
 import { reconnect } from './spotify'
+import { blurStatus, svgStatus } from './transparent'
 import type { ComponentProps } from 'react'
-import type { ButtonId, PlayerMode, Settings } from './shared'
+import type {
+	ButtonId,
+	PlayerMode,
+	Settings,
+	TransparencyLevel,
+} from './shared'
 
 type RowProps = Omit<ComponentProps<typeof Design.TableRow>, 'icon'> & {
 	icon: string
@@ -105,81 +108,18 @@ function ButtonGroup({ mode }: { mode: PlayerMode }) {
 			}
 		>
 			{ButtonIds.map(id => {
-				const key = `${mode}${id}` as keyof Settings
+				const key = `${mode}${id}` as keyof Settings &
+					`${PlayerMode}${ButtonId}`
 				return (
 					<SwitchRow
 						key={key}
 						icon={BUTTON_LABELS[id].icon}
 						label={BUTTON_LABELS[id].label}
-						value={settings[key]}
+						value={settings[key] as boolean}
 						onValueChange={value => setSetting(key, value)}
 					/>
 				)
 			})}
-		</Design.TableRowGroup>
-	)
-}
-
-function Diagnostics() {
-	const music = useMusic()
-	const [native, setNative] = useState<{ ok: boolean; detail: string } | null>(
-		null,
-	)
-	const check = useCallback(() => {
-		setNative(null)
-		if (androidBridge) void probe().then(setNative)
-		void refresh()
-	}, [])
-	useEffect(check, [check])
-
-	const playback = music.playback
-	const rows: [string, string, boolean][] = [
-		['Platform', `${Platform.OS} ${Platform.Version}`, true],
-		['Spotify', music.spotifyStatus, music.spotifyConnected],
-	]
-	if (androidBridge)
-		rows.push(
-			['Native part', native ? native.detail : 'Checking…', native?.ok ?? true],
-			['Music Controls app', music.bridgeStatus, music.bridgeConnected],
-			[
-				'Listening status',
-				presenceReason(),
-				!/^(Not shown|Not available)/.test(presenceReason()),
-			],
-		)
-	rows.push([
-		'Now playing',
-		playback
-			? `${playback.title}${playback.app ? ` (${playback.app})` : ''}${playback.packageName ? `, ${playback.packageName}` : ''}, cover ${playback.artwork ? 'yes' : 'no'}, shuffle ${playback.canShuffle ? 'yes' : 'no'}, repeat ${playback.canRepeat ? 'yes' : 'no'}`
-			: 'Nothing',
-		!!playback,
-	])
-	const report = [
-		`Music Controls ${manifest.version}`,
-		...rows.map(([label, value]) => `${label}: ${value}`),
-	].join('\n')
-
-	return (
-		<Design.TableRowGroup title="Diagnostics">
-			{rows.map(([label, value, ok]) => (
-				<Row
-					key={label}
-					icon={ok ? 'CircleCheckIcon' : 'WarningIcon'}
-					label={label}
-					subLabel={value}
-				/>
-			))}
-			<Row icon="RefreshIcon" label="Check again" onPress={check} />
-			<Row
-				icon="CopyIcon"
-				label="Copy diagnostics"
-				onPress={() => {
-					void Clipboard.setString(report)
-					ToastActionCreators.open('dariuss.music-controls.copied', {
-						text: 'Diagnostics copied',
-					})
-				}}
-			/>
 		</Design.TableRowGroup>
 	)
 }
@@ -282,6 +222,13 @@ export default function SettingsComponent() {
 							value={settings.animatedWave}
 							onValueChange={value => setSetting('animatedWave', value)}
 						/>
+						<SwitchRow
+							icon="SparklesIcon"
+							label="Transparent"
+							subLabel={`A see-through player that shows the chat behind it. Blur: ${Platform.OS === 'ios' ? (blurStatus() ?? 'not found, plain translucent fill') : 'translucent fill'}. Gradients: ${svgStatus() ?? 'not found, plain borders'}.`}
+							value={settings.transparent}
+							onValueChange={value => setSetting('transparent', value)}
+						/>
 						{music.dismissed && (
 							<Row
 								icon="MusicIcon"
@@ -292,6 +239,21 @@ export default function SettingsComponent() {
 							/>
 						)}
 					</Design.TableRowGroup>
+					{settings.transparent && (
+						<Design.TableRadioGroup<TransparencyLevel>
+							title="Transparency"
+							value={settings.transparency}
+							onChange={value => setSetting('transparency', value)}
+						>
+							<Design.TableRadioRow label="Low" value="low" />
+							<Design.TableRadioRow label="Medium" value="medium" />
+							<Design.TableRadioRow
+								label="High"
+								value="high"
+								subLabel="Most see-through."
+							/>
+						</Design.TableRadioGroup>
+					)}
 					<ButtonGroup mode="expanded" />
 					<ButtonGroup mode="compact" />
 					<Design.TableRowGroup title="Expanded player preview">
@@ -300,7 +262,6 @@ export default function SettingsComponent() {
 					<Design.TableRowGroup title="Compact player preview">
 						<Player previewMode="compact" />
 					</Design.TableRowGroup>
-					<Diagnostics />
 					<Design.TableRowGroup title="Quick guide">
 						{GUIDE.map(([label, icon, subLabel]) => (
 							<Row key={label} icon={icon} label={label} subLabel={subLabel} />
