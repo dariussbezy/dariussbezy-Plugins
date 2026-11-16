@@ -712,7 +712,7 @@
       },
       "versions": {
         "1.0.0": {
-          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/refs/heads/main/pool/dariuss.show-blocked@1.0.0.zip",
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/b7ebee0f0a19252148be3d59ba9548e398574eac/pool/dariuss.show-blocked@1.0.0.zip",
           "sha256": "56b46e25fe5c1161d8f1a67fc3f3039b3d6c00868730bb9a7d07b7e132ed5416",
           "size": 2674,
           "dependencies": {
