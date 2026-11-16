@@ -1,4 +1,4 @@
-import { JournalLimit, MaxCacheSize } from './engine'
+import { JournalLimit, MaxCacheSize, MinCacheSize } from './engine'
 import { DefaultSettings } from './types'
 import type { Data, Entry, Settings, Snapshot } from './types'
 
@@ -19,12 +19,22 @@ export function normalizeSettings(
 		settings.retentionDays = 7
 	if (settings.captureMode !== 'loaded') settings.captureMode = 'all'
 	if (
-		!Number.isInteger(settings.cacheLimit) ||
-		settings.cacheLimit < 25 ||
-		settings.cacheLimit > MaxCacheSize
+		typeof settings.cacheLimit !== 'number' ||
+		!Number.isFinite(settings.cacheLimit)
 	) {
 		settings.cacheLimit = DefaultSettings.cacheLimit
+	} else {
+		// Values saved by older versions (25-50000) are kept, raised to the new minimum.
+		settings.cacheLimit = Math.min(
+			MaxCacheSize,
+			Math.max(MinCacheSize, Math.round(settings.cacheLimit)),
+		)
 	}
+	settings.serverIds = Array.isArray(settings.serverIds)
+		? settings.serverIds.filter(id => typeof id === 'string')
+		: []
+	settings.onlySelectedServers = settings.onlySelectedServers === true
+	settings.keepDMs = settings.keepDMs !== false
 	if (!Array.isArray(settings.savedFilters)) settings.savedFilters = []
 	if (!settings.ignoredTargets || typeof settings.ignoredTargets !== 'object')
 		settings.ignoredTargets = {}

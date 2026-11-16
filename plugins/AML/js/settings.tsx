@@ -4,8 +4,9 @@ import { Design } from '@valenced/discord/design'
 import { useState, useSyncExternalStore } from 'react'
 import { ScrollView } from 'react-native'
 import manifest from '../manifest.json'
-import { MaxCacheSize } from './engine'
+import { MaxCacheSize, MinCacheSize } from './engine'
 import { ColorRows, Swatch } from './history'
+import ServerPicker from './servers'
 import { DefaultSettings } from './types'
 import type { ComponentType } from 'react'
 import type { Journal } from './journal'
@@ -38,6 +39,7 @@ type Screen =
 	| { name: 'main' }
 	| { name: 'history'; kind: 'all' | EntryKind }
 	| { name: 'ignored' }
+	| { name: 'servers' }
 	| { name: 'color'; key: ColorKey }
 
 const Colors = {
@@ -156,6 +158,16 @@ function Screens({
 					</Design.Stack>
 				</Page>
 			</ScrollView>
+		)
+	}
+
+	if (screen.name === 'servers') {
+		return (
+			<ServerPicker
+				back={back}
+				selected={settings.serverIds}
+				onChange={serverIds => set({ serverIds })}
+			/>
 		)
 	}
 
@@ -286,6 +298,27 @@ function Screens({
 						))}
 					</Design.TableRowGroup>
 					<Design.TableRowGroup title="Filters">
+						{toggle(
+							'onlySelectedServers',
+							'Ignore all servers except…',
+							'ShieldIcon',
+							'Log messages only from the servers you pick. Keeps the cache from filling up with servers you rarely open.',
+						)}
+						{settings.onlySelectedServers ? (
+							<Design.TableRow
+								label="Choose servers to log"
+								subLabel={`${settings.serverIds.length} selected`}
+								icon={icon('HomeIcon')}
+								arrow
+								onPress={() => setScreen({ name: 'servers' })}
+							/>
+						) : null}
+						{toggle(
+							'keepDMs',
+							'Log DMs and group DMs',
+							'ChatMarkUnreadIcon',
+							'Direct messages are not affected by the server selection.',
+						)}
 						<Design.TableRow
 							label="Ignored users, DMs and channels"
 							subLabel={`${ignored().length} exclusions`}
@@ -395,12 +428,16 @@ function CacheLimitInput({
 	return (
 		<Design.TextInput
 			label="Maximum cached messages"
-			description={`25–${MaxCacheSize} messages. Default: ${DefaultSettings.cacheLimit}.`}
+			description={`${MinCacheSize}–${MaxCacheSize} messages. Default: ${DefaultSettings.cacheLimit}.`}
 			value={draft}
 			onChange={setDraft}
 			onBlur={() => {
 				const count = Number(draft.trim())
-				if (Number.isInteger(count) && count >= 25 && count <= MaxCacheSize)
+				if (
+					Number.isInteger(count) &&
+					count >= MinCacheSize &&
+					count <= MaxCacheSize
+				)
 					onAccept(count)
 				else setDraft(String(value))
 			}}

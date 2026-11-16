@@ -227,6 +227,14 @@ export default plugin<{ jsonStorage: Data }>({
 				)
 				if (restyled || current.entries.length < previous.entries.length)
 					inline.refresh()
+				const before = previous.settings
+				const now = current.settings
+				if (
+					now.onlySelectedServers !== before.onlySelectedServers ||
+					now.serverIds !== before.serverIds ||
+					now.keepDMs !== before.keepDMs
+				)
+					engine.prune()
 				previous = current
 			}),
 		)

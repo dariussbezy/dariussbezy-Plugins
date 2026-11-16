@@ -10,7 +10,8 @@ export type FluxMessageEvent = {
 	guildId?: string
 }
 
-export const MaxCacheSize = 50000
+export const MaxCacheSize = 200000
+export const MinCacheSize = 100
 export const JournalLimit = 200
 const TextLimit = 1600
 const SnapshotAge = 24 * 60 * 60 * 1000
@@ -153,8 +154,22 @@ export function createEngine(env: Env) {
 		}
 	}
 
+	let allowedSource: string[] | undefined
+	let allowed = new Set<string>()
+
 	function skipped(message: Snapshot) {
 		const settings = env.settings()
+		if (message.guildId) {
+			if (settings.onlySelectedServers) {
+				if (settings.serverIds !== allowedSource) {
+					allowedSource = settings.serverIds
+					allowed = new Set(allowedSource)
+				}
+				if (!allowed.has(message.guildId)) return true
+			}
+		} else if (!settings.keepDMs) {
+			return true
+		}
 		return (
 			(settings.skipBots && message.bot) ||
 			(settings.skipSelf && message.authorId === env.currentUserId()) ||
@@ -166,7 +181,7 @@ export function createEngine(env: Env) {
 
 	function trim() {
 		const limit = Math.max(
-			25,
+			MinCacheSize,
 			Math.min(MaxCacheSize, env.settings().cacheLimit),
 		)
 		while (recent.size > limit) recent.delete(recent.keys().next().value!)
@@ -248,6 +263,12 @@ export function createEngine(env: Env) {
 	return {
 		observe,
 		trim,
+		/** Drops cached messages that the current filters would no longer keep. */
+		prune() {
+			for (const [key, message] of recent) {
+				if (skipped(message)) recent.delete(key)
+			}
+		},
 		clear: () => recent.clear(),
 		size: () => recent.size,
 		snapshot: () => [...recent.values()].filter(fresh),

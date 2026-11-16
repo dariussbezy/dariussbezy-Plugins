@@ -141,3 +141,38 @@ export function jumpToMessage(channelId: string, messageId: string) {
 	router.transitionToGuild(guildId, channelId, messageId, { openChannel: true })
 	return true
 }
+
+export type GuildInfo = { id: string; name: string; icon?: { uri: string } }
+
+type RawGuild = {
+	id?: string
+	name?: string
+	icon?: string | null
+	getIconURL?(size?: number): string | number | undefined
+}
+
+/** Every server the user is in, sorted by name, with its icon when it has one. */
+export function listGuilds(size = 64): GuildInfo[] {
+	const store = stores().GuildStore as unknown as
+		| { getGuilds?(): Record<string, RawGuild> }
+		| undefined
+	const guilds: GuildInfo[] = []
+	for (const guild of Object.values(store?.getGuilds?.() ?? {})) {
+		if (!guild?.id) continue
+		let uri: string | undefined
+		try {
+			const url = guild.getIconURL?.(size)
+			if (typeof url === 'string') uri = url
+		} catch {
+			// Fall back to the CDN address below.
+		}
+		if (!uri && guild.icon)
+			uri = `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=${size}`
+		guilds.push({
+			id: guild.id,
+			name: guild.name ?? guild.id,
+			icon: uri ? { uri } : undefined,
+		})
+	}
+	return guilds.sort((a, b) => a.name.localeCompare(b.name))
+}
