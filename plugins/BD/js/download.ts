@@ -16,6 +16,8 @@ interface EmbedMedia {
 	url?: string
 	proxyURL?: string
 	proxy_url?: string
+	contentType?: string
+	content_type?: string
 }
 
 interface Embed {
@@ -24,6 +26,7 @@ interface Embed {
 	video?: EmbedMedia
 	thumbnail?: EmbedMedia
 	image?: EmbedMedia
+	images?: EmbedMedia[]
 }
 
 export interface Message {
@@ -115,15 +118,77 @@ function gifOf(embed: Embed): Attachment | undefined {
 	if (video) return { url: video, content_type: 'video/mp4' }
 }
 
-export const downloadable = (message: Message | undefined): Attachment[] => [
-	...(message?.attachments ?? []).filter(
-		attachment => typeof (attachment.url ?? attachment.proxy_url) === 'string',
-	),
-	...(message?.embeds ?? []).flatMap(embed => {
-		const gif = gifOf(embed)
-		return gif ? [gif] : []
-	}),
-]
+/** The same picture can come as an attachment and in an embed, or twice in an X post. */
+const keyOf = (url: string) => url.split('?')[0]
+
+const isUrl = (value: unknown): value is string =>
+	typeof value === 'string' && /^https?:\/\//.test(value)
+
+/**
+ * A photo or video shown in an embed (X posts, link previews...). Discord's proxy copy is preferred,
+ * since it is what the client shows and it stays reachable; a video is kept only when it is a file,
+ * not a player page like YouTube's.
+ */
+function mediaOf(
+	media: EmbedMedia | undefined,
+	kind: 'image' | 'video',
+): Attachment | undefined {
+	if (!media) return
+	const original = isUrl(media.url) ? media.url : undefined
+	const proxy = [media.proxyURL, media.proxy_url].find(isUrl)
+	const url = proxy ?? original
+	if (!url) return
+	const type = media.contentType ?? media.content_type
+	if (
+		kind === 'video' &&
+		!type?.startsWith('video/') &&
+		!proxy &&
+		!VideoFile.test(url)
+	)
+		return
+	// Without a known type the extension decides; links like X's "?format=jpg" have none, so the kind does.
+	const named = /\.(png|jpe?g|webp|gif|heic|avif|mp4|mov|webm|m4v)$/i.test(
+		keyOf(url),
+	)
+	return {
+		url,
+		content_type:
+			type ??
+			(named ? undefined : kind === 'video' ? 'video/mp4' : 'image/jpeg'),
+	}
+}
+
+/** Every photo and video of an embed; the thumbnail only counts when the embed shows nothing bigger. */
+function embedMedia(embed: Embed): Attachment[] {
+	if (!embed || typeof embed !== 'object') return []
+	const gif = gifOf(embed)
+	if (gif) return [gif]
+	const found = [
+		mediaOf(embed.video, 'video'),
+		mediaOf(embed.image, 'image'),
+		...(Array.isArray(embed.images)
+			? embed.images.map(image => mediaOf(image, 'image'))
+			: []),
+	].filter((item): item is Attachment => !!item)
+	if (found.length) return found
+	const thumbnail = mediaOf(embed.thumbnail, 'image')
+	return thumbnail ? [thumbnail] : []
+}
+
+export function downloadable(message: Message | undefined): Attachment[] {
+	const seen = new Set<string>()
+	return [
+		...(message?.attachments ?? []).filter(attachment =>
+			isUrl(attachment.url ?? attachment.proxy_url),
+		),
+		...(message?.embeds ?? []).flatMap(embedMedia),
+	].filter(item => {
+		const key = keyOf(urlOf(item))
+		if (seen.has(key)) return false
+		seen.add(key)
+		return true
+	})
+}
 
 let toastCount = 0
 const toast = (text: string, variant?: 'success' | 'critical') =>

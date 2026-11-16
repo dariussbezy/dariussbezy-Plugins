@@ -2,10 +2,10 @@
 	"format": 1,
 	"id": "dariuss.bulk-downloads",
 	"name": "Bulk Downloads",
-	"description": "Save every attachment and GIF of a message at once from its long-press menu.",
+	"description": "Save every attachment, GIF and embedded photo or video of a message at once from its long-press menu.",
 	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
 	"icon": "DownloadIcon",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"dependencies": {
 		"valenced.api": {
 			"version": ">=1 <2"
