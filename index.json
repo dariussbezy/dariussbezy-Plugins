@@ -640,6 +640,17 @@
             },
             "discord": {}
           }
+        },
+        "2.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/b52e466247f718c2dc04f98856fe54e6c3ea7bc2/pool/dariuss.music-controls@2.0.0.zip",
+          "sha256": "9a14bcf17f7fe79a2dd343ce1f208750ca96d186fae7ec0aeb2ae18e3af1486c",
+          "size": 29284,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
         }
       },
       "name": "Music Controls",
@@ -651,7 +662,7 @@
         "kmmiio99o.dev <879393496627306587>"
       ],
       "channels": {
-        "latest": "1.1.3"
+        "latest": "2.0.0"
       }
     },
     "dariuss.performance-monitor": {
@@ -725,7 +736,26 @@
       }
     },
     "dariuss.transparent-youbar": {
-      "versions": {}
+      "versions": {
+        "1.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/b52e466247f718c2dc04f98856fe54e6c3ea7bc2/pool/dariuss.transparent-youbar@1.0.0.zip",
+          "sha256": "d8f2e8a9d7c6767975e69bb780a4551886711430bc8bf14dc6862122de49e34f",
+          "size": 4262,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
+        }
+      },
+      "name": "Transparent YOUBAR",
+      "description": "Turns the YouBar into transparent: a translucent, tinted bar with a thin light border, a soft top highlight and a soft shadow. Works on Android and iOS, in dark and light themes.",
+      "author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
+      "icon": "PaintPaletteIcon",
+      "channels": {
+        "latest": "1.0.0"
+      }
     }
   }
 }

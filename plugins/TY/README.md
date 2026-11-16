@@ -4,6 +4,6 @@ Makes Discord's YouBar transparent: a see-through, tinted bar with a thin light 
 
 - **Transparency**: Low, Medium or High (High is the most see-through). Music Controls has the same three levels.
 - **Music Controls**: while its player is shown above the YouBar, the bar follows the player's level and joins it (square top corners, no seam), so both read as one piece of glass.
-- **Preview** and **Diagnostics** in the settings page.
+- **Preview** in the settings page.
 
 It restyles the existing YouBar in place, so tab navigation, badges and other YouBar plugins keep working. Restart Discord after installing or enabling it.
