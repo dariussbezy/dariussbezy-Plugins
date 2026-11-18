@@ -97,6 +97,22 @@ export default function SettingsComponent() {
 							value={settings.enabled}
 							onValueChange={value => setSetting('enabled', value)}
 						/>
+						<Design.TableSwitchRow
+							label="Hide the nameplate"
+							subLabel="Removes the nameplate Discord draws in the YouBar (its local nameplate setting), so the bar is fully transparent. Applies after Discord restarts."
+							subLabelLineClamp={4}
+							icon={icon('EyeSlashIcon')}
+							value={settings.hideNameplate}
+							onValueChange={value => setSetting('hideNameplate', value)}
+						/>
+						<Design.TableSwitchRow
+							label="Remove the dark bar under it"
+							subLabel="Removes the dark shade Discord adds under the YouBar, for better transparency. Applies after Discord restarts."
+							subLabelLineClamp={4}
+							icon={icon('ImageIcon')}
+							value={settings.hideShade}
+							onValueChange={value => setSetting('hideShade', value)}
+						/>
 						{mc ? (
 							<Design.TableRow
 								label="Following Music Controls"

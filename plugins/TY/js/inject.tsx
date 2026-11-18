@@ -1,3 +1,4 @@
+import { getModuleWithImportedPath } from '@valenced/discord/utils/modules/finders'
 import { getModules } from '@valenced/modules/finders'
 import {
 	createFilterGenerator,
@@ -200,6 +201,19 @@ function useGlass(rendered: ReactNode, where: string): ReactNode {
 	)
 }
 
+/**
+ * Discord draws two things that keep the bar from being see-through: the user's nameplate behind it
+ * and a dark shade under it. Each is removed by rendering nothing in its place, when the matching
+ * setting is on (both are on by default).
+ */
+function useHidden(
+	rendered: ReactNode,
+	setting: 'hideNameplate' | 'hideShade',
+) {
+	const settings = useSettings()
+	return settings.enabled && settings[setting] ? null : rendered
+}
+
 /** Position and size of a style (no colours, no animated values), absolute-fill when unreadable. */
 function positionOf(style: unknown) {
 	const keys = [
@@ -240,47 +254,39 @@ function patchByName(
 	cleanup: (...undo: (() => void)[]) => void,
 	onError: (error: unknown) => void,
 	transform: (rendered: ReactNode) => ReactNode,
+	/** Also look the module up by its source path, when the component's name may not match. */
+	path?: string,
 ) {
 	const patched = new WeakSet<object>()
-	cleanup(
-		getModules(
-			withComponentName(name),
-			namespace => {
-				try {
-					const ns = namespace as Record<string, unknown> | undefined
-					const inner = (ns?.default ?? ns) as
-						| Record<string, unknown>
-						| undefined
-					const hasType = typeof inner?.type === 'function'
-					const hasRender = typeof inner?.render === 'function'
-					const target = (hasType || hasRender ? inner : ns) as
-						| Record<string, AnyFn>
-						| undefined
-					const key = hasType ? 'type' : hasRender ? 'render' : 'default'
-					if (
-						!target ||
-						typeof target[key] !== 'function' ||
-						patched.has(target)
-					)
-						return
-					patched.add(target)
-					if (name === 'YouBarBackground') backgroundPatched = true
-					cleanup(
-						after(target, key, rendered => {
-							try {
-								return transform(rendered as ReactNode)
-							} catch {
-								return rendered
-							}
-						}),
-					)
-				} catch (error) {
-					onError(error)
-				}
-			},
-			{ returnNamespace: true },
-		),
-	)
+	const apply = (namespace: unknown) => {
+		try {
+			const ns = namespace as Record<string, unknown> | undefined
+			const inner = (ns?.default ?? ns) as Record<string, unknown> | undefined
+			const hasType = typeof inner?.type === 'function'
+			const hasRender = typeof inner?.render === 'function'
+			const target = (hasType || hasRender ? inner : ns) as
+				| Record<string, AnyFn>
+				| undefined
+			const key = hasType ? 'type' : hasRender ? 'render' : 'default'
+			if (!target || typeof target[key] !== 'function' || patched.has(target))
+				return
+			patched.add(target)
+			if (name === 'YouBarBackground') backgroundPatched = true
+			cleanup(
+				after(target, key, rendered => {
+					try {
+						return transform(rendered as ReactNode)
+					} catch {
+						return rendered
+					}
+				}),
+			)
+		} catch (error) {
+			onError(error)
+		}
+	}
+	cleanup(getModules(withComponentName(name), apply, { returnNamespace: true }))
+	if (path) cleanup(getModuleWithImportedPath(path, apply))
 }
 
 /**
@@ -300,5 +306,19 @@ export function patchYouBar(
 	)
 	patchByName('YouBar', cleanup, onError, rendered =>
 		useGlass(rendered, 'YouBar'),
+	)
+	patchByName(
+		'YouBarNameplate',
+		cleanup,
+		onError,
+		rendered => useHidden(rendered, 'hideNameplate'),
+		'modules/main_tabs_v2/native/you_bar/YouBarNameplate.tsx',
+	)
+	patchByName(
+		'YouBarFloatingShade',
+		cleanup,
+		onError,
+		rendered => useHidden(rendered, 'hideShade'),
+		'modules/main_tabs_v2/native/you_bar/YouBarFloatingShade.tsx',
 	)
 }
