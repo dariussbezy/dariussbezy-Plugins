@@ -105,7 +105,7 @@ export default plugin<{ jsonStorage: Settings }>({
 					if (!YouBarNotificationsButton?.type) return
 					cleanup(
 						instead(YouBarNotificationsButton, 'type', (args, orig) =>
-							useYouBarButton(args, orig, error =>
+							renderYouBarButton(args, orig, error =>
 								logger.error('Jump to Ping failed:', error),
 							),
 						),
@@ -120,11 +120,41 @@ export default plugin<{ jsonStorage: Settings }>({
 	SettingsComponent,
 })
 
-function useYouBarButton(
+/**
+ * Wraps the bell button. The patched render function itself uses no hooks and never throws: another
+ * plugin that wraps the same bar (Better Devices does) must never lose the whole bar because of us.
+ * Our own state lives in a child component, so hooks never depend on how the host renders us.
+ */
+function renderYouBarButton(
 	args: Parameters<FC>,
 	orig: FC,
 	onError: (error: unknown) => void,
 ) {
+	const res = orig(...args) as YouBarButtonElement
+	try {
+		if (!res?.props?.children) return res
+		const Container = res.type
+		return (
+			<>
+				<Container key="jump-to-ping">
+					<PingButton bell={res.props.children} onError={onError} />
+				</Container>
+				{res}
+			</>
+		)
+	} catch (error) {
+		onError(error)
+		return res
+	}
+}
+
+function PingButton({
+	bell,
+	onError,
+}: {
+	bell: ReactElement<IconButtonProps>
+	onError: (error: unknown) => void
+}) {
 	const rerender = useReRender()
 
 	useEffect(() => {
@@ -134,45 +164,36 @@ function useYouBarButton(
 		}
 	}, [rerender])
 
-	const res = orig(...args) as YouBarButtonElement
-	if (!res?.props?.children) return res
-
 	const rows = getRows()
 	const { hideWhenEmpty, showBadge } = getSettings()
-	if (!rows.length && hideWhenEmpty) return res
+	if (!rows.length && hideWhenEmpty) return null
 
 	const icon = ICON_NAMES.map(name => getAssetIdByName(name)).find(
 		id => id != null,
 	)
-	if (icon == null) return res
+	if (icon == null) return null
 
-	const Container = res.type
 	const total = totalOf(rows)
 
 	return (
-		<>
-			<Container key="jump-to-ping">
-				{/* custom: Discord has no native badge component to overlay on an icon button */}
-				<View>
-					{/* The bell's own button, so the icon is colored exactly like it in every theme. */}
-					{cloneElement(res.props.children, {
-						accessibilityLabel: 'Pings',
-						accessibilityHint: 'Long press to jump to the newest ping',
-						icon,
-						onPress: openPingSheet,
-						onLongPress: () => {
-							const newest = getRows()[0]
-							if (!newest) return toast('No unread pings')
-							openRow(newest, onError).catch(() =>
-								toast('Could not open this ping'),
-							)
-						},
-					})}
-					{showBadge && total > 0 && <CountBadge count={total} floating />}
-				</View>
-			</Container>
-			{res}
-		</>
+		// custom: Discord has no native badge component to overlay on an icon button
+		<View>
+			{/* The bell's own button, so the icon is colored exactly like it in every theme. */}
+			{cloneElement(bell, {
+				accessibilityLabel: 'Pings',
+				accessibilityHint: 'Long press to jump to the newest ping',
+				icon,
+				onPress: openPingSheet,
+				onLongPress: () => {
+					const newest = getRows()[0]
+					if (!newest) return toast('No unread pings')
+					openRow(newest, onError).catch(() =>
+						toast('Could not open this ping'),
+					)
+				},
+			})}
+			{showBadge && total > 0 && <CountBadge count={total} floating />}
+		</View>
 	)
 }
 
