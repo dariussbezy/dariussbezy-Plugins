@@ -1,0 +1,18 @@
+{
+	"format": 1,
+	"id": "dariuss.no-onboarding-delay",
+	"name": "No Onboarding Delay",
+	"description": "Skips the slow waits in server onboarding.",
+	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
+	"icon": "TimerIcon",
+	"version": "1.0.0",
+	"dependencies": {
+		"valenced.api": {
+			"version": ">=1 <2"
+		},
+		"discord": {}
+	},
+	"dist": {
+		"script": "index.js"
+	}
+}

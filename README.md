@@ -23,6 +23,7 @@ Install from the **latest** channel and enable **Allow updates**.
 | [Message Actions](plugins/MA/README.md) | Reorder, hide or remove the buttons shown when you long-press a message. |
 | [Music Controls](plugins/MC/README.md) | Control Spotify, YouTube Music and SoundCloud from a player above the YouBar. YouTube Music and SoundCloud need the Android app. |
 | [No Delete Confirmation](plugins/NDC/README.md) | Delete messages without the confirmation dialog. |
+| [No Onboarding Delay](plugins/NOD/README.md) | Skips the slow waits in server onboarding. |
 | [No Tap Mention](plugins/NTM/README.md) | Disable tapping a message author's name to insert a mention. |
 | [Performance Monitor](plugins/PM/README.md) | See how much time each plugin takes and find the ones that slow Discord down. |
 | [Quick Translate](plugins/QT/README.md) | Translate messages and drafts with Google, Microsoft, DeepL or Groq AI. |
