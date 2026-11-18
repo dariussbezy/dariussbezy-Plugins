@@ -16,7 +16,9 @@ export default plugin<{ jsonStorage: AiSettings }>({
 	// lifecycle that happens at once during boot, before its settings screen listens, so the page
 	// would not open. An empty start lets the status change arrive a tick later, like other plugins.
 	async start({ jsonStorage }) {
-		await jsonStorage.get()
+		const saved = await jsonStorage.get()
+		// Light mode is a saved choice: apply it as soon as the settings are read.
+		state.sampleEvery = saved?.lightMode ? 10 : 1
 	},
 	SettingsComponent,
 })

@@ -6,8 +6,11 @@ It times every patch, JSX hook, Flux event handler and module callback a plugin 
 
 Keep it enabled and reload Discord so it starts before the other plugins. With Developer Mode on, startup times and plugin names are shown as well. Only JavaScript time is measured, not native rendering or network.
 
-## AI review
+## Finding what causes stalls
 
-Open **AI review** at the top of the settings to record plugin activity for 1 to 20 minutes while you use Discord. When it ends (or when you stop it), tap **Analyse with AI** to get recommendations: plugins worth disabling, plugins to report to their developer with a ready-to-copy report text, and plugins that look fine.
-
-The analysis uses your own free Groq API key (console.groq.com, API Keys, Create API Key), pasted in the plugin settings and stored only in the plugin's own storage. Only anonymous numbers are sent to Groq: plugin ids and names, hook labels, call counts and timings. No messages, usernames, servers, tokens or other Discord data leave your phone. The model is configurable.
+- **Stall analysis**: when the JS thread is busy for over 100 ms, the time is split into plugin hooks, Discord's own Flux handling and the rest (React rendering, timers, native events, garbage collection). It names the plugins whose hooks took most of it, and the slowest single call. The split is an estimate.
+- **Hooked functions**: time per hooked function and per kind (JSX hooks, patches, Flux handlers), all plugins together, so a pile-up of many plugins on one function is visible.
+- **Percentiles and call type**: 95% and 99% of a plugin's calls stay under a given time; hooks are flagged as heavy per call, or cheap but called very often.
+- **The monitor's own cost** is estimated, and **light mode** times only one call in ten to lower it (totals become estimates).
+- **JS frames** that came late are counted while the settings page is open. Only the JS side is visible: the UI thread, Reanimated and per-gesture timing cannot be seen by a plugin.
+- **Saved runs**: save a run with an activity label, and compare two runs, for example with all other plugins off (a baseline) against with them on.

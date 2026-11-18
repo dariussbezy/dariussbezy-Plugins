@@ -3,21 +3,49 @@ import manifest from '../manifest.json'
 import {
 	displayName,
 	formatMs,
+	frames,
+	monitorCostMs,
 	names,
 	SLOW_MS,
+	state,
 	stats,
 	UNKNOWN,
 } from './monitor'
 import { BUCKET_MS, recordedMs, recording } from './recording'
 
+/** A measured run saved to compare with another one. */
+export interface SavedRun {
+	id: string
+	at: number
+	activity: string
+	seconds: number
+	/** Plugins other than this one that had hooks: 0 makes it a baseline. */
+	otherPlugins: number
+	lightMode: boolean
+	stalls: { count: number; ms: number; max: number }
+	/** Hook time as a share of the measured time, in percent. */
+	hookPercent: number
+	/** How stalled time splits, in percent: plugin hooks, Discord's Flux, the rest. */
+	split: { hooks: number; flux: number; other: number }
+	framesLate?: { dropped: number; total: number }
+	top: { id: string; name: string; percent: number }[]
+}
+
 export interface AiSettings {
 	groqKey: string
 	model: string
+	/** Time only one call in ten, which lowers the monitor's own cost; totals become estimates. */
+	lightMode: boolean
+	activity: string
+	runs: SavedRun[]
 }
 
 export const DefaultAiSettings: AiSettings = {
 	groqKey: '',
 	model: 'openai/gpt-oss-120b',
+	lightMode: false,
+	activity: 'other',
+	runs: [],
 }
 
 /** Models offered before the list is loaded from the user's account; any model id can be typed. */
@@ -87,6 +115,26 @@ export function buildPayload() {
 		.sort((a, b) => b.ms - a.ms)
 	const detailed = plugins.slice(0, PLUGIN_LIMIT)
 	const rest = plugins.slice(PLUGIN_LIMIT)
+	// The same hooked function (for example "afterJSX Text") summed over all plugins that hook it.
+	const byFunction = new Map<
+		string,
+		{ ms: number; calls: number; ids: Set<string> }
+	>()
+	for (const plugin of plugins)
+		for (const site of plugin.sites.values()) {
+			const group = byFunction.get(site.label) ?? {
+				ms: 0,
+				calls: 0,
+				ids: new Set<string>(),
+			}
+			group.ms += site.ms
+			group.calls += site.calls
+			group.ids.add(plugin.id)
+			byFunction.set(site.label, group)
+		}
+	const split = recording.breakdown
+	const percentOf = (value: number) =>
+		split.ms > 0 ? round((value / split.ms) * 100, 1) : 0
 	return {
 		tool: `${manifest.name} ${manifest.version}`,
 		platform: Platform.OS,
@@ -97,6 +145,41 @@ export function buildPayload() {
 			totalMs: Math.round(recording.stalls.ms),
 			longestMs: Math.round(recording.stalls.max),
 		},
+		stallAnalysis: split.count
+			? {
+					stalls: split.count,
+					splitPercentOfStalledTime: {
+						pluginHooks: percentOf(split.hookMs),
+						discordFluxHandling: percentOf(split.fluxMs),
+						notMeasured: percentOf(split.otherMs),
+					},
+					pluginsThatLedStalls: [...recording.culprits.entries()]
+						.sort((a, b) => b[1].stalls - a[1].stalls || b[1].ms - a[1].ms)
+						.slice(0, 8)
+						.map(([id, item]) => ({
+							id,
+							name: names.get(id) ?? displayName(id),
+							stallsLed: item.stalls,
+							hookMsInsideStalls: Math.round(item.ms),
+						})),
+				}
+			: undefined,
+		hookedFunctionsAllPlugins: [...byFunction.entries()]
+			.sort((a, b) => b[1].ms - a[1].ms)
+			.slice(0, 8)
+			.map(([hook, item]) => ({
+				hook,
+				ms: round(item.ms),
+				calls: item.calls,
+				plugins: item.ids.size,
+			})),
+		monitor: {
+			estimatedOwnCostMs: Math.round(monitorCostMs()),
+			timedCallsShare: state.sampleEvery > 1 ? 1 / state.sampleEvery : 1,
+		},
+		jsFramesLate: frames.total
+			? { late: frames.dropped, of: frames.total }
+			: undefined,
 		plugins: detailed.map(plugin => {
 			const buckets = Array.from(
 				{ length: Math.max(1, Math.ceil(totalMs / BUCKET_MS)) },
@@ -141,6 +224,8 @@ export function buildPayload() {
 }
 
 const SYSTEM = `You analyse performance measurements of plugins in a mobile Discord client mod (Valenced, React Native). Each plugin runs hooks (patches, JSX hooks, Flux handlers, module callbacks) on the single JavaScript thread. "hookMs" is the plugin's own time in those hooks; a call over slowCallThresholdMs drops a frame. The numbers come from one recording and only cover JS thread time, not rendering or network.
+
+"stallAnalysis" splits the time the JS thread was stalled (over 100 ms) into plugin hooks, Discord's own Flux handling and "notMeasured" (React rendering, timers, native events, garbage collection: not visible here); "pluginsThatLedStalls" names plugins whose hooks took at least a quarter of a stall. If most of the stalled time is "notMeasured", plugins are probably not the main cause. "hookedFunctionsAllPlugins" shows functions hooked by several plugins at once, where their costs pile up. "monitor.estimatedOwnCostMs" is the measuring tool's own cost; subtract it from any suspicion. Totals may be estimates when timedCallsShare is below 1.
 
 Judge only from the data given. Rules:
 - A plugin using under 0.3% of the recorded time with no slow calls is fine; do not invent problems.

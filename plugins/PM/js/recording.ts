@@ -8,6 +8,51 @@ export interface RecSite {
 	slow: number
 }
 
+/** A plugin is named as the cause of a stall when its hooks took this share of it, and at least MIN_CAUSE_MS. */
+export const CAUSE_SHARE = 0.25
+export const MIN_CAUSE_MS = 10
+
+export interface StallDetail {
+	ms: number
+	hookMs: number
+	fluxMs: number
+	otherMs: number
+	/** Every plugin that ran hooks in the stall, busiest first. */
+	top: { id: string; ms: number }[]
+}
+
+/** How much of the stalled time each source explains, summed over stalls. */
+export interface Breakdown {
+	count: number
+	ms: number
+	hookMs: number
+	fluxMs: number
+	otherMs: number
+}
+
+/** Adds a stall to a run's totals: the split by source, and how often each plugin led a stall. */
+export function tally(
+	breakdown: Breakdown,
+	culprits: Map<string, { stalls: number; ms: number }>,
+	stall: StallDetail,
+) {
+	breakdown.count++
+	breakdown.ms += stall.ms
+	breakdown.hookMs += stall.hookMs
+	breakdown.fluxMs += stall.fluxMs
+	breakdown.otherMs += stall.otherMs
+	for (const item of stall.top) {
+		const entry = culprits.get(item.id) ?? { stalls: 0, ms: 0 }
+		entry.ms += Math.min(item.ms, stall.ms)
+		culprits.set(item.id, entry)
+	}
+	const leader = stall.top[0]
+	if (leader && leader.ms >= Math.max(MIN_CAUSE_MS, stall.ms * CAUSE_SHARE)) {
+		const entry = culprits.get(leader.id)
+		if (entry) entry.stalls++
+	}
+}
+
 export interface RecPlugin {
 	id: string
 	calls: number
@@ -35,6 +80,8 @@ interface Shared {
 	pausedMs: number
 	plugins: Map<string, RecPlugin>
 	stalls: { count: number; ms: number; max: number }
+	breakdown: Breakdown
+	culprits: Map<string, { stalls: number; ms: number }>
 	/** Active hook counts when the recording began and ended. */
 	hooks: Record<string, number>
 	timer: ReturnType<typeof setTimeout> | undefined
@@ -49,9 +96,13 @@ const shared: Shared = (holder[KEY] ??= {
 	pausedMs: 0,
 	plugins: new Map(),
 	stalls: { count: 0, ms: 0, max: 0 },
+	breakdown: { count: 0, ms: 0, hookMs: 0, fluxMs: 0, otherMs: 0 },
+	culprits: new Map(),
 	hooks: {},
 	timer: undefined,
 })
+shared.breakdown ??= { count: 0, ms: 0, hookMs: 0, fluxMs: 0, otherMs: 0 }
+shared.culprits ??= new Map()
 
 export const recording = shared
 
@@ -72,6 +123,8 @@ export function startRecording(targetMs: number) {
 	shared.targetMs = Math.min(targetMs, MAX_RECORDING_MS)
 	shared.plugins = new Map()
 	shared.stalls = { count: 0, ms: 0, max: 0 }
+	shared.breakdown = { count: 0, ms: 0, hookMs: 0, fluxMs: 0, otherMs: 0 }
+	shared.culprits = new Map()
 	shared.hooks = {}
 	shared.timer = setTimeout(() => stopRecording(), shared.targetMs + 2000)
 }
@@ -96,7 +149,13 @@ export function checkRecording() {
 		stopRecording()
 }
 
-export function record(id: string, label: string, ms: number, slow: boolean) {
+export function record(
+	id: string,
+	label: string,
+	ms: number,
+	slow: boolean,
+	weight = 1,
+) {
 	let plugin = shared.plugins.get(id)
 	if (!plugin) {
 		plugin = {
@@ -110,26 +169,27 @@ export function record(id: string, label: string, ms: number, slow: boolean) {
 		}
 		shared.plugins.set(id, plugin)
 	}
-	plugin.calls++
-	plugin.ms += ms
+	plugin.calls += weight
+	plugin.ms += ms * weight
 	if (ms > plugin.max) plugin.max = ms
-	if (slow) plugin.slow++
+	if (slow) plugin.slow += weight
 	const bucket = Math.floor(recordedMs() / BUCKET_MS)
-	plugin.buckets[bucket] = (plugin.buckets[bucket] ?? 0) + ms
+	plugin.buckets[bucket] = (plugin.buckets[bucket] ?? 0) + ms * weight
 	let site = plugin.sites.get(label)
 	if (!site) {
 		site = { label, calls: 0, ms: 0, max: 0, slow: 0 }
 		plugin.sites.set(label, site)
 	}
-	site.calls++
-	site.ms += ms
+	site.calls += weight
+	site.ms += ms * weight
 	if (ms > site.max) site.max = ms
-	if (slow) site.slow++
+	if (slow) site.slow += weight
 }
 
-export function recordStall(ms: number) {
+export function recordStall(stall: StallDetail) {
 	if (shared.status !== 'recording') return
 	shared.stalls.count++
-	shared.stalls.ms += ms
-	if (ms > shared.stalls.max) shared.stalls.max = ms
+	shared.stalls.ms += stall.ms
+	if (stall.ms > shared.stalls.max) shared.stalls.max = stall.ms
+	tally(shared.breakdown, shared.culprits, stall)
 }

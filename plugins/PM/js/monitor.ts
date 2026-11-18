@@ -5,7 +5,9 @@ import {
 	record,
 	recordStall,
 	stopRecording,
+	tally,
 } from './recording'
+import type { Breakdown } from './recording'
 
 type Fn = (...args: any[]) => any
 type Api = Record<string, unknown>
@@ -17,6 +19,8 @@ export interface Site {
 	ms: number
 	max: number
 	slow: number
+	/** Calls per duration class (see bucketOf), for percentiles. */
+	hist: Float64Array
 }
 
 export interface Stats {
@@ -33,9 +37,22 @@ export interface Stats {
 	sites: Map<string, Site>
 }
 
+/** What a stall (the JS thread busy for over 100 ms) was made of, as far as it can be told. */
 export interface Stall {
 	at: number
 	ms: number
+	/** Time in plugin hooks during the stall. */
+	hookMs: number
+	/** Time Discord itself spent dispatching Flux events, without plugin hooks. */
+	fluxMs: number
+	/** Time not accounted for: React rendering, timers, native events, garbage collection. */
+	otherMs: number
+	/** The plugins that spent the most time in hooks, busiest first. */
+	top: { id: string; ms: number }[]
+	/** The single slowest hook call. */
+	slowest?: { id: string; label: string; ms: number }
+	/** The hook that used the most time in total. */
+	topHook?: { id: string; label: string; ms: number }
 }
 
 const SELF = manifest.id
@@ -46,6 +63,28 @@ export const SLOW_MS = 16
 const TICK_MS = 250
 const STALL_MS = 100
 const STALL_LIMIT = 5
+const HIST_BUCKETS = 22
+const HIST_BASE_MS = 0.02
+
+/** Duration classes: the first holds calls up to 0.02 ms, each next one doubles the limit. */
+const bucketOf = (ms: number) =>
+	ms <= HIST_BASE_MS
+		? 0
+		: Math.min(HIST_BUCKETS - 1, 1 + Math.floor(Math.log2(ms / HIST_BASE_MS)))
+
+/** The duration below which a share `q` of the calls fall, rounded up to a class limit and never above `max`. */
+export function percentile(hists: Float64Array[], q: number, max: number) {
+	let total = 0
+	for (const hist of hists) for (const count of hist) total += count
+	if (!total) return 0
+	const target = q * total
+	let seen = 0
+	for (let bucket = 0; bucket < HIST_BUCKETS; bucket++) {
+		for (const hist of hists) seen += hist[bucket]
+		if (seen >= target) return Math.min(max, HIST_BASE_MS * 2 ** bucket)
+	}
+	return max
+}
 const SOURCE = /Valenced:Plugin:([^\s:)]+)/g
 
 const clock: () => number =
@@ -66,6 +105,29 @@ interface Shared {
 		stalledMs: number
 		stallCount: number
 	}
+	/** What stalls were made of, and which plugins led how many of them. */
+	breakdown: Breakdown
+	culprits: Map<string, { stalls: number; ms: number }>
+	/** Flux dispatch time of Discord, with the hook time of plugins inside it. */
+	flux: {
+		totalMs: number
+		hookMs: number
+		calls: number
+		depth: number
+		start: number
+	}
+	/** JS frame pacing, only counted while something asks for it. */
+	frames: {
+		total: number
+		dropped: number
+		worstMs: number
+		users: number
+		/** Which frame loop is the current one; an older loop stops when it sees a newer number. */
+		loop: number
+		running: boolean
+	}
+	/** The monitor's own cost, measured once. */
+	overhead: { perCallMs: number; tickMs: number }
 	state: {
 		since: number
 		/** Time the app spent suspended in the background, left out of the measured time. */
@@ -73,6 +135,8 @@ interface Shared {
 		active: boolean
 		developerMode: boolean
 		startedLate: boolean
+		/** Only one call in this many is timed (light mode); the totals are scaled up. */
+		sampleEvery: number
 	}
 	timer: ReturnType<typeof setInterval> | undefined
 }
@@ -85,17 +149,58 @@ const shared: Shared = (holder[KEY] ??= {
 	names: new Map(),
 	attribution: { stack: 0, context: 0, unknown: 0 },
 	thread: { stalls: [], last: undefined, stalledMs: 0, stallCount: 0 },
+	breakdown: { count: 0, ms: 0, hookMs: 0, fluxMs: 0, otherMs: 0 },
+	culprits: new Map(),
+	flux: { totalMs: 0, hookMs: 0, calls: 0, depth: 0, start: 0 },
+	frames: {
+		total: 0,
+		dropped: 0,
+		worstMs: 0,
+		users: 0,
+		loop: 0,
+		running: false,
+	},
+	overhead: { perCallMs: 0, tickMs: 0 },
 	state: {
 		since: Date.now(),
 		pausedMs: 0,
 		active: false,
 		developerMode: false,
 		startedLate: false,
+		sampleEvery: 1,
 	},
 	timer: undefined,
 })
+// A restart from an older version of this script finds the object without the newer parts.
+shared.breakdown ??= { count: 0, ms: 0, hookMs: 0, fluxMs: 0, otherMs: 0 }
+shared.culprits ??= new Map()
+shared.flux ??= { totalMs: 0, hookMs: 0, calls: 0, depth: 0, start: 0 }
+shared.frames ??= {
+	total: 0,
+	dropped: 0,
+	worstMs: 0,
+	users: 0,
+	loop: 0,
+	running: false,
+}
+shared.frames.loop ??= 0
+shared.frames.running ??= false
+shared.overhead ??= { perCallMs: 0, tickMs: 0 }
+shared.overhead.tickMs ??= 0
+shared.state.sampleEvery ??= 1
 
-export const { stats, names, attribution, thread, state } = shared
+export const {
+	stats,
+	names,
+	attribution,
+	thread,
+	state,
+	breakdown,
+	culprits,
+	flux,
+	frames,
+	overhead,
+} = shared
 
 /** The plugin whose code runs right now, while it starts or inside one of its hooks. */
 let current: string | undefined
@@ -123,7 +228,14 @@ function statsOf(id: string): Stats {
 function siteOf(entry: Stats, label: string): Site {
 	let site = entry.sites.get(label)
 	if (!site) {
-		site = { label, calls: 0, ms: 0, max: 0, slow: 0 }
+		site = {
+			label,
+			calls: 0,
+			ms: 0,
+			max: 0,
+			slow: 0,
+			hist: new Float64Array(HIST_BUCKETS),
+		}
 		entry.sites.set(label, site)
 	}
 	return site
@@ -174,22 +286,37 @@ function run(
 	}
 }
 
+/** The slowest hook call since the last check of the thread, to name it when a stall is found. */
+let slowestMs = 0
+let slowestId = ''
+let slowestLabel = ''
+
 function timed(entry: Stats, site: Site, fn: Fn): Fn {
 	return function (this: unknown, ...args: unknown[]) {
 		if (!state.active) return fn.apply(this, args)
+		const every = state.sampleEvery
+		// Light mode: most calls run untimed, and the timed ones stand in for the others.
+		if (every > 1 && Math.random() * every >= 1) return fn.apply(this, args)
 		return run(entry.id, fn, this, args, ms => {
-			entry.calls++
-			entry.ms += ms
-			site.calls++
-			site.ms += ms
+			entry.calls += every
+			entry.ms += ms * every
+			site.calls += every
+			site.ms += ms * every
 			if (ms > entry.max) entry.max = ms
 			if (ms > site.max) site.max = ms
+			site.hist[bucketOf(ms)] += every
 			const slow = ms >= SLOW_MS
 			if (slow) {
-				entry.slow++
-				site.slow++
+				entry.slow += every
+				site.slow += every
 			}
-			if (isRecording()) record(entry.id, site.label, ms, slow)
+			if (ms > slowestMs) {
+				slowestMs = ms
+				slowestId = entry.id
+				slowestLabel = site.label
+			}
+			if (flux.depth > 0) flux.hookMs += ms * every
+			if (isRecording()) record(entry.id, site.label, ms, slow, every)
 		})
 	}
 }
@@ -411,31 +538,231 @@ function trackLifecycles(plugin: InternalPlugin): (() => void) | undefined {
 /** A check this late means the app was suspended in the background, not that the thread was busy. */
 const SUSPENDED_MS = 5000
 
+/** Counters as they were at the previous check, so a stall can be split by what ran since. */
+const previous = {
+	plugins: new Map<string, number>(),
+	sites: new Map<Site, number>(),
+	fluxMs: 0,
+	fluxHookMs: 0,
+}
+
+function snapshot() {
+	previous.plugins.clear()
+	previous.sites.clear()
+	for (const entry of stats.values()) {
+		previous.plugins.set(entry.id, entry.ms)
+		for (const site of entry.sites.values())
+			if (site.ms > 0) previous.sites.set(site, site.ms)
+	}
+	previous.fluxMs = flux.totalMs
+	previous.fluxHookMs = flux.hookMs
+	slowestMs = 0
+}
+
+/**
+ * Splits a stall by what ran since the previous check: plugin hooks (and which), Discord's own Flux
+ * handling, and the rest. The span also holds up to one check interval before the stall began, so
+ * the split is an estimate; each part is capped so they never add up to more than the stall.
+ */
+function explainStall(late: number, at: number) {
+	const top: { id: string; ms: number }[] = []
+	let hookTotal = 0
+	let topHook: Stall['topHook']
+	for (const entry of stats.values()) {
+		const spent = entry.ms - (previous.plugins.get(entry.id) ?? 0)
+		if (spent > 0.05) {
+			top.push({ id: entry.id, ms: spent })
+			hookTotal += spent
+		}
+		for (const site of entry.sites.values()) {
+			const used = site.ms - (previous.sites.get(site) ?? 0)
+			if (used > 0.05 && (!topHook || used > topHook.ms))
+				topHook = { id: entry.id, label: site.label, ms: used }
+		}
+	}
+	top.sort((x, y) => y.ms - x.ms)
+	const hookMs = Math.min(hookTotal, late)
+	const fluxAll = Math.max(
+		0,
+		flux.totalMs - previous.fluxMs - (flux.hookMs - previous.fluxHookMs),
+	)
+	const fluxMs = Math.min(fluxAll, late - hookMs)
+	const stall: Stall = {
+		at,
+		ms: late,
+		hookMs,
+		fluxMs,
+		otherMs: Math.max(0, late - hookMs - fluxMs),
+		top: top.slice(0, 3),
+		slowest: slowestMs
+			? { id: slowestId, label: slowestLabel, ms: slowestMs }
+			: undefined,
+		topHook,
+	}
+	thread.stallCount++
+	thread.stalledMs += late
+	thread.last = stall
+	thread.stalls.push(stall)
+	thread.stalls.sort((x, y) => y.ms - x.ms)
+	thread.stalls.length = Math.min(thread.stalls.length, STALL_LIMIT)
+	// The totals of the run keep every plugin that ran in the stall, not only the top three.
+	const detail = { ...stall, top }
+	tally(breakdown, culprits, detail)
+	recordStall(detail)
+}
+
+/** One check of the JS thread; `late` is how long after its due time it ran. */
+export function onTick(late: number, now: number) {
+	const began = clock()
+	if (state.active && late >= STALL_MS) {
+		// A check this late means the app was suspended in the background, not that the thread was busy.
+		if (late >= SUSPENDED_MS) {
+			state.pausedMs += late
+			pauseRecording(late)
+		} else explainStall(late, now)
+	}
+	snapshot()
+	overhead.tickMs += clock() - began
+}
+
 function watchThread(): () => void {
 	if (shared.timer) clearInterval(shared.timer)
 	let expected = Date.now() + TICK_MS
+	snapshot()
 	const timer = setInterval(() => {
 		const now = Date.now()
 		const late = now - expected
 		expected = now + TICK_MS
-		if (!state.active || late < STALL_MS) return
-		if (late >= SUSPENDED_MS) {
-			state.pausedMs += late
-			pauseRecording(late)
-			return
-		}
-		thread.stallCount++
-		thread.stalledMs += late
-		thread.last = { at: now, ms: late }
-		thread.stalls.push(thread.last)
-		thread.stalls.sort((a, b) => b.ms - a.ms)
-		thread.stalls.length = Math.min(thread.stalls.length, STALL_LIMIT)
-		recordStall(late)
+		onTick(late, now)
 	}, TICK_MS)
 	shared.timer = timer
 	return () => {
 		clearInterval(timer)
 		if (shared.timer === timer) shared.timer = undefined
+	}
+}
+
+/** Times Discord's Flux dispatches, so their share of a stall can be told apart from plugin hooks. */
+function wrapFlux(api: Api): (() => void) | undefined {
+	try {
+		const common = (api.discord as Api | undefined)?.common as Api | undefined
+		const dispatcher = (common?.flux as Api | undefined)?.Dispatcher as
+			| Api
+			| undefined
+		const original = dispatcher?.dispatch
+		if (typeof original !== 'function') return undefined
+		const fn = ((original as Fn & { [ORIGINAL]?: Fn })[ORIGINAL] ??
+			original) as Fn
+		const wrapper = function (this: unknown, ...args: unknown[]) {
+			if (!state.active) return fn.apply(this, args)
+			if (flux.depth++ === 0) flux.start = clock()
+			try {
+				return fn.apply(this, args)
+			} finally {
+				if (--flux.depth === 0) {
+					flux.totalMs += clock() - flux.start
+					flux.calls++
+				}
+			}
+		}
+		;(wrapper as Fn & { [ORIGINAL]?: Fn })[ORIGINAL] = fn
+		return swap(dispatcher, 'dispatch', wrapper)
+	} catch {
+		return undefined
+	}
+}
+
+/** What one timed call costs, measured on a call that does nothing; used to estimate the monitor's own cost. */
+export function calibrate(rounds = 4000) {
+	// A running recording would collect the calls of the test as if a plugin made them.
+	if (isRecording()) return
+	const entry: Stats = {
+		id: SELF,
+		calls: 0,
+		ms: 0,
+		max: 0,
+		slow: 0,
+		startup: 0,
+		hooks: 0,
+		sites: new Map(),
+	}
+	const site: Site = {
+		label: 'calibration',
+		calls: 0,
+		ms: 0,
+		max: 0,
+		slow: 0,
+		hist: new Float64Array(HIST_BUCKETS),
+	}
+	const empty = () => undefined
+	const wrapped = timed(entry, site, empty)
+	const every = state.sampleEvery
+	state.sampleEvery = 1
+	const start = clock()
+	for (let i = 0; i < rounds; i++) wrapped()
+	const bare = clock()
+	for (let i = 0; i < rounds; i++) empty()
+	const end = clock()
+	state.sampleEvery = every
+	overhead.perCallMs = Math.max(0, (bare - start - (end - bare)) / rounds)
+	slowestMs = 0
+}
+
+/**
+ * Estimated time the monitor itself used: every timed call costs about the measured amount, and an
+ * "instead" hook costs it twice (it also wraps the original function), plus the checks of the thread
+ * and the Flux dispatches it times. It does not include rendering the monitor's own page.
+ */
+export function monitorCostMs() {
+	let wraps = 0
+	for (const entry of stats.values())
+		for (const site of entry.sites.values()) {
+			const timedCalls = site.calls / Math.max(1, state.sampleEvery)
+			wraps += site.label.startsWith('instead') ? timedCalls * 2 : timedCalls
+		}
+	return (wraps + flux.calls) * overhead.perCallMs + overhead.tickMs
+}
+
+/* ------------------------------- JS frame pacing ------------------------------- */
+
+/**
+ * One frame loop at a time, shared through the global object: when the plugin restarts, a loop of the
+ * earlier run would otherwise keep counting beside the new one and multiply the numbers.
+ */
+function startFrameLoop() {
+	const id = ++frames.loop
+	frames.running = true
+	let last = 0
+	const step = (time: number) => {
+		if (id !== frames.loop) return
+		if (frames.users <= 0 || !state.active) {
+			frames.running = false
+			return
+		}
+		const now = time || clock()
+		const gap = now - last
+		// A long pause means the app was in the background, not slow.
+		if (last && gap < 1000) {
+			frames.total++
+			if (gap > 25) frames.dropped += Math.max(1, Math.round(gap / 16.7) - 1)
+			if (gap > frames.worstMs) frames.worstMs = gap
+		}
+		last = now
+		requestAnimationFrame(step)
+	}
+	requestAnimationFrame(step)
+}
+
+/** Counts JS frames that came late, while at least one user (the settings page, a recording) wants it. */
+export function countFrames() {
+	frames.users++
+	if (!frames.running && typeof requestAnimationFrame === 'function')
+		startFrameLoop()
+	let done = false
+	return () => {
+		if (done) return
+		done = true
+		frames.users = Math.max(0, frames.users - 1)
 	}
 }
 
@@ -546,6 +873,22 @@ export function install(unscoped: unknown): () => void {
 		}
 	}
 
+	const fluxUndo = wrapFlux(api)
+	keep(fluxUndo)
+	if (!fluxUndo) {
+		// Discord's modules may not be loaded yet at the very start; try again a few times.
+		let tries = 0
+		let retry: ReturnType<typeof setTimeout> | undefined
+		const again = () => {
+			retry = undefined
+			const undoFlux = wrapFlux(api)
+			if (undoFlux) keep(undoFlux)
+			else if (++tries < 10) retry = setTimeout(again, 2000)
+		}
+		retry = setTimeout(again, 2000)
+		keep(() => retry && clearTimeout(retry))
+	}
+	calibrate()
 	keep(watchThread())
 	// A restart of this script keeps the numbers that hooks of the earlier run kept counting.
 	if (!state.active) {
@@ -576,12 +919,27 @@ export function reset() {
 			site.ms = 0
 			site.max = 0
 			site.slow = 0
+			site.hist.fill(0)
 		}
 	}
 	thread.stalls.length = 0
 	thread.last = undefined
 	thread.stalledMs = 0
 	thread.stallCount = 0
+	breakdown.count = 0
+	breakdown.ms = 0
+	breakdown.hookMs = 0
+	breakdown.fluxMs = 0
+	breakdown.otherMs = 0
+	culprits.clear()
+	flux.totalMs = 0
+	flux.hookMs = 0
+	flux.calls = 0
+	overhead.tickMs = 0
+	frames.total = 0
+	frames.dropped = 0
+	frames.worstMs = 0
+	snapshot()
 	state.since = Date.now()
 	state.pausedMs = 0
 }
@@ -627,3 +985,86 @@ export function shareOf(entry: Stats) {
 /** Slow when a call drops a frame or the plugin uses more than 1% of the time. */
 export const isSlow = (entry: Stats) =>
 	entry.max >= SLOW_MS || shareOf(entry) >= 0.01
+
+/* --------------------------- hooks seen from the function side --------------------------- */
+
+const KINDS: [prefix: string, name: string][] = [
+	['beforeJSX', 'JSX hooks'],
+	['afterJSX', 'JSX hooks'],
+	['insteadJSX', 'JSX hooks'],
+	['before', 'Patches'],
+	['after', 'Patches'],
+	['instead', 'Patches'],
+	['flux', 'Flux handlers'],
+	['module found', 'Module callbacks'],
+]
+
+/** The kind of hook a site label starts with, for example "afterJSX Text" is a JSX hook. */
+export function kindOf(label: string) {
+	for (const [prefix, name] of KINDS)
+		if (label === prefix || label.startsWith(`${prefix} `)) return name
+	return 'Other'
+}
+
+export interface HookTotal {
+	label: string
+	ms: number
+	calls: number
+	max: number
+	plugins: number
+}
+
+/** Time per hooked function or kind, all plugins together: shows where hooks pile up. */
+function groupSites(key: (label: string) => string): HookTotal[] {
+	const groups = new Map<string, HookTotal & { ids: Set<string> }>()
+	for (const entry of stats.values())
+		for (const site of entry.sites.values()) {
+			if (site.calls <= 0) continue
+			const name = key(site.label)
+			let group = groups.get(name)
+			if (!group) {
+				group = {
+					label: name,
+					ms: 0,
+					calls: 0,
+					max: 0,
+					plugins: 0,
+					ids: new Set(),
+				}
+				groups.set(name, group)
+			}
+			group.ms += site.ms
+			group.calls += site.calls
+			if (site.max > group.max) group.max = site.max
+			group.ids.add(entry.id)
+		}
+	return [...groups.values()]
+		.map(({ ids, ...group }) => ({ ...group, plugins: ids.size }))
+		.sort((a, b) => b.ms - a.ms)
+}
+
+export const hookedFunctions = () => groupSites(label => label)
+export const hookKinds = () => groupSites(kindOf)
+
+/** p95 and p99 of a plugin's call times, from the duration classes of all its hooks. */
+export function callPercentiles(entry: Stats) {
+	const hists = [...entry.sites.values()].map(site => site.hist)
+	return {
+		p95: percentile(hists, 0.95, entry.max),
+		p99: percentile(hists, 0.99, entry.max),
+	}
+}
+
+/** Heavy: single calls are slow. Frequent: cheap calls, but very many per second. */
+export function siteNature(site: Site) {
+	const seconds = elapsedMs() / 1000
+	const heavy =
+		site.max >= SLOW_MS || percentile([site.hist], 0.95, site.max) >= 4
+	const perSecond = site.calls / Math.max(1, seconds)
+	const frequent = perSecond >= 100
+	if (heavy && frequent)
+		return `heavy per call and called ${Math.round(perSecond)}/s`
+	if (heavy) return 'heavy per call'
+	if (frequent) return `cheap per call but called ${Math.round(perSecond)}/s`
+	return undefined
+}

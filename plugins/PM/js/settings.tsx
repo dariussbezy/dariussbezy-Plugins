@@ -1,42 +1,41 @@
 import Page from '@valenced/components/Page'
-import TableRowAssetIcon from '@valenced/components/TableRowAssetIcon'
 import { ToastActionCreators } from '@valenced/discord/actions'
 import { Design } from '@valenced/discord/design'
 import { Clipboard } from '@valenced/externals/react-native-clipboard'
 import { Component, useEffect, useReducer, useState } from 'react'
 import { ScrollView } from 'react-native'
 import manifest from '../manifest.json'
+import { HookedFunctions, Measuring, Runs, StallAnalysis } from './analysis'
 import {
 	activeSites,
 	attribution,
+	breakdown,
+	callPercentiles,
+	countFrames,
+	culprits,
 	displayName,
 	elapsedMs,
+	flux,
 	formatMs,
+	frames,
+	hookedFunctions,
+	hookKinds,
 	isSlow,
+	monitorCostMs,
 	reset,
 	SLOW_MS,
 	shareOf,
+	siteNature,
 	sorted,
 	state,
 	thread,
 } from './monitor'
 import { checkRecording, recordedMs, recording } from './recording'
 import ReviewScreen from './review'
-import type { ComponentProps, ReactNode } from 'react'
+import { clockTime, minutes, plural, Row } from './ui'
+import type { ReactNode } from 'react'
 import type { SortKey, Stats } from './monitor'
 import type { AiStorage } from './review'
-
-type RowProps = Omit<ComponentProps<typeof Design.TableRow>, 'icon'> & {
-	icon: string
-}
-
-const Row = ({ icon, ...props }: RowProps) => (
-	<Design.TableRow
-		subLabelLineClamp={4}
-		{...props}
-		icon={<TableRowAssetIcon name={icon} />}
-	/>
-)
 
 const SITES_SHOWN = 6
 
@@ -57,6 +56,16 @@ const GUIDE: [string, string, string][] = [
 		'Reset, then use Discord the way that feels slow (scroll a chat, open a server, switch channels) and come back. To confirm, disable the slowest plugin, reload and compare.',
 	],
 	[
+		'Stall analysis',
+		'MagnifyingGlassIcon',
+		"When the JS thread is busy for over 100 ms, the time is split into plugin hooks, Discord's own Flux handling and the rest (React rendering, timers, native events, garbage collection), and the plugins whose hooks took most of it are named. The split is an estimate.",
+	],
+	[
+		'Comparing runs',
+		'RefreshIcon',
+		'Save a run, change something (turn plugins off and reload, or do another activity), save another and compare the two. With every other plugin off, a run shows the baseline: the stalls Discord has on its own.',
+	],
+	[
 		'Developer Mode',
 		'WrenchIcon',
 		'With Developer Mode on in Valenced settings, startup times and plugin names are shown and more hooks are matched to their plugin. Without it, plugins show by id.',
@@ -64,31 +73,16 @@ const GUIDE: [string, string, string][] = [
 	[
 		'Limits',
 		'CircleInformationIcon',
-		'Only time on the JavaScript thread is measured, not native rendering or network. Hooks a plugin added before this one started are not counted, so keep it enabled and reload. The monitor itself adds a very small cost to every hook.',
+		'Only time on the JavaScript thread is measured, not native rendering, the UI thread or network. Hooks a plugin added before this one started are not counted, so keep it enabled and reload. The monitor itself adds a small cost to every hook; its estimate is shown under Measuring, and light mode lowers it.',
 	],
 ]
 
-function minutes(ms: number) {
-	const total = Math.max(0, Math.round(ms / 60_000))
-	if (total < 1) return 'less than a minute'
-	if (total < 60) return `${total} min`
-	return `${Math.floor(total / 60)} h ${total % 60} min`
-}
-
-/** HH:MM:SS without Intl. */
-function clockTime(at: number) {
-	const date = new Date(at)
-	const pad = (value: number) => String(value).padStart(2, '0')
-	return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
-}
-
-const plural = (count: number, word: string) =>
-	`${count} ${word}${count === 1 ? '' : 's'}`
-
 function summary(entry: Stats) {
+	const { p95, p99 } = callPercentiles(entry)
 	const parts = entry.calls
 		? [
 				`${formatMs(entry.ms)} in ${plural(entry.calls, 'call')} (${(shareOf(entry) * 100).toFixed(2)}%)`,
+				`95% of calls under ${formatMs(p95)}, 99% under ${formatMs(p99)}`,
 				`longest ${formatMs(entry.max)}`,
 			]
 		: ['Hooks have not run yet']
@@ -104,14 +98,51 @@ function report(list: Stats[]) {
 		`Measured for ${minutes(elapsedMs())}`,
 		`JS thread stalls over 100 ms: ${thread.stallCount}, ${formatMs(thread.stalledMs)} in total`,
 		`Matched by stack ${attribution.stack}, by running plugin ${attribution.context}, not identified ${attribution.unknown}`,
-		'',
 	]
+	if (breakdown.count) {
+		const total = breakdown.ms
+		const share = (value: number) => `${((value / total) * 100).toFixed(0)}%`
+		lines.push(
+			`Stalled time: plugin hooks ${share(breakdown.hookMs)}, Discord Flux handling ${share(breakdown.fluxMs)}, not measured ${share(breakdown.otherMs)} (React, timers, native events, GC)`,
+		)
+		const leaders = [...culprits.entries()]
+			.filter(([, item]) => item.stalls > 0)
+			.sort((x, y) => y[1].stalls - x[1].stalls || y[1].ms - x[1].ms)
+			.slice(0, 5)
+		for (const [id, item] of leaders)
+			lines.push(
+				`  ${displayName(id)} led ${item.stalls} of ${breakdown.count} stalls (${formatMs(item.ms)} of hook time inside stalls)`,
+			)
+		for (const stall of thread.stalls)
+			lines.push(
+				`  ${clockTime(stall.at)} stalled ${formatMs(stall.ms)}: hooks ${formatMs(stall.hookMs)}, Flux ${formatMs(stall.fluxMs)}, other ${formatMs(stall.otherMs)}${stall.slowest ? `; slowest call ${displayName(stall.slowest.id)} ${stall.slowest.label} ${formatMs(stall.slowest.ms)}` : ''}`,
+			)
+	}
+	if (!flux.calls) lines.push("Discord's Flux time could not be measured")
+	if (frames.total)
+		lines.push(
+			`JS frames late: ${frames.dropped} of ${frames.total} (JS side only)`,
+		)
+	lines.push(
+		`Monitor's own cost, estimated: ${formatMs(monitorCostMs())}${state.sampleEvery > 1 ? `, light mode (1 call in ${state.sampleEvery} timed, totals are estimates)` : ''}`,
+	)
+	const kinds = hookKinds()
+	if (kinds.length)
+		lines.push(
+			`Hooks by kind: ${kinds.map(kind => `${kind.label} ${formatMs(kind.ms)} across ${plural(kind.plugins, 'plugin')}`).join(', ')}`,
+		)
+	for (const item of hookedFunctions().slice(0, 6))
+		if (item.plugins > 1)
+			lines.push(
+				`  ${item.label}: ${formatMs(item.ms)} across ${item.plugins} plugins`,
+			)
+	lines.push('')
 	for (const entry of list) {
 		lines.push(`${displayName(entry.id)}: ${summary(entry)}`)
 		const sites = activeSites(entry)
 		for (const site of sites.slice(0, SITES_SHOWN))
 			lines.push(
-				`  ${site.label}: ${formatMs(site.ms)} in ${site.calls} calls, longest ${formatMs(site.max)}`,
+				`  ${site.label}: ${formatMs(site.ms)} in ${site.calls} calls, longest ${formatMs(site.max)}${siteNature(site) ? `, ${siteNature(site)}` : ''}`,
 			)
 	}
 	return lines.join('\n')
@@ -130,15 +161,17 @@ function pluginRows(entry: Stats, open: boolean, toggle: (id: string) => void) {
 	]
 	if (!open) return rows
 	const sites = activeSites(entry).slice(0, SITES_SHOWN)
-	for (const site of sites)
+	for (const site of sites) {
+		const nature = siteNature(site)
 		rows.push(
 			<Row
 				key={`${entry.id}|${site.label}`}
 				icon="ArrowSmallRightIcon"
 				label={site.label}
-				subLabel={`${formatMs(site.ms)} in ${plural(site.calls, 'call')} · longest ${formatMs(site.max)}${site.slow ? ` · ${site.slow} over ${SLOW_MS} ms` : ''}`}
+				subLabel={`${formatMs(site.ms)} in ${plural(site.calls, 'call')} · longest ${formatMs(site.max)}${site.slow ? ` · ${site.slow} over ${SLOW_MS} ms` : ''}${nature ? ` · ${nature}` : ''}`}
 			/>,
 		)
+	}
 	if (!sites.length)
 		rows.push(
 			<Row
@@ -216,7 +249,11 @@ function SettingsPage({ storage }: { storage?: AiStorage }) {
 	// The numbers change all the time, so the page refreshes while it is open.
 	useEffect(() => {
 		const timer = setInterval(rerender, 1000)
-		return () => clearInterval(timer)
+		const release = countFrames()
+		return () => {
+			clearInterval(timer)
+			release()
+		}
 	}, [])
 
 	const list = sorted(sortBy)
@@ -309,6 +346,8 @@ function SettingsPage({ storage }: { storage?: AiStorage }) {
 							}}
 						/>
 					</Design.TableRowGroup>
+					<StallAnalysis />
+					<Measuring storage={storage} />
 					<Design.TableRadioGroup
 						title="Sort plugins by"
 						value={sortBy}
@@ -343,6 +382,8 @@ function SettingsPage({ storage }: { storage?: AiStorage }) {
 							/>
 						)}
 					</Design.TableRowGroup>
+					<HookedFunctions />
+					{storage && <Runs storage={storage} />}
 					<Design.TableRowGroup title="Quick guide">
 						{GUIDE.map(([label, icon, subLabel]) => (
 							<Row key={label} icon={icon} label={label} subLabel={subLabel} />
