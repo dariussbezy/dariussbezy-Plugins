@@ -98,7 +98,6 @@ function TranslateSheet({ request }: { request: Request }) {
 	const [query, setQuery] = useState('')
 	const [measured, setMeasured] = useState(0)
 	const [busy, setBusy] = useState(false)
-
 	const goTo = (next: Page) => {
 		setQuery('')
 		setPage(next)
@@ -108,13 +107,15 @@ function TranslateSheet({ request }: { request: Request }) {
 		if (message) toast(message)
 	}
 
-	const activateOnce = () => {
+	const armOnce = () =>
 		setArmed({
 			tl: target,
 			sl: source,
 			oneShot: true,
 			resume: armed?.oneShot ? armed.resume : armed,
 		})
+	const activateOnce = () => {
+		armOnce()
 		finish(
 			`Translate once is ready. Translate the draft to ${languageName(target)}; your usual language will return after.`,
 		)

@@ -4,6 +4,7 @@ import { installTextBridge } from './bridge'
 import { patchChatBar } from './chat-bar'
 import {
 	onChannelChanged,
+	patchNativeInput,
 	patchSend,
 	patchTextInput,
 	resetComposer,
@@ -61,6 +62,7 @@ export default plugin<{ jsonStorage: Settings }>({
 				},
 			),
 			patchTextInput(),
+			patchNativeInput(),
 		)
 		watch<Record<string, (...args: unknown[]) => unknown>>(
 			ctx,

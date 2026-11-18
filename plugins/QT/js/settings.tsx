@@ -73,7 +73,7 @@ const SERVICES: Record<
 > = {
 	deepl: { icon: 'KeyIcon', label: 'DeepL', hint: 'Needs your DeepL API key' },
 	groq: {
-		icon: 'SparkleIcon',
+		icon: 'RobotIcon',
 		label: 'Groq AI',
 		hint: 'AI translation, needs your Groq API key',
 	},
@@ -449,8 +449,8 @@ export default function SettingsComponent() {
 					)}
 					{tab === 'more' && (
 						<Design.TableRowGroup
-							title="Translation history & cache"
-							description="Clearing removes saved history, message translations and cached results."
+							title="Translation history"
+							description="Clearing removes saved history and message translations. Saved translations are only shown under messages; they are never reused instead of asking the service."
 						>
 							<Switch
 								name="saveHistory"
@@ -475,7 +475,7 @@ export default function SettingsComponent() {
 							<Design.TableRow
 								variant="danger"
 								icon={<TableRowAssetIcon variant="danger" name="TrashIcon" />}
-								label="Clear translation history & cache"
+								label="Clear translation history"
 								onPress={clearTranslationData}
 							/>
 						</Design.TableRowGroup>

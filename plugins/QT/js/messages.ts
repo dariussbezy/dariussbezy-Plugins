@@ -9,7 +9,7 @@ import {
 } from './env'
 import { languageName, ProviderLabels, usableProviders } from './shared'
 import { getSettings, updateSettings } from './store'
-import { clearCaches, notifyTranslated, translate } from './translate'
+import { cancelPending, notifyTranslated, translate } from './translate'
 import type { Message, MessageNode } from './env'
 import type { HistoryEntry, Provider, SavedTranslation } from './shared'
 
@@ -240,11 +240,11 @@ export function deleteHistoryEntry(entry: HistoryEntry) {
 
 export function clearTranslationData() {
 	const rows = [...translations.values()]
-	clearCaches()
+	cancelPending()
 	translations.clear()
 	updateSettings({ historyEntries: [], messageTranslations: [] })
 	for (const { channelId, messageId } of rows) refreshRow(channelId, messageId)
-	toast('Translation history, saved message translations and cache cleared')
+	toast('Translation history and saved message translations cleared')
 }
 
 /** Translates new messages in the selected channels and links sent drafts to their history entries. */

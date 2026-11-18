@@ -59,12 +59,11 @@ class HttpError extends Error {
 	}
 }
 
-const inFlight = new Map<string, Promise<TranslateResult>>()
 const cooldowns = new Map<Provider, number>()
 
-export function clearCaches() {
+/** Stops translations that are still running. Nothing is kept for reuse: every request goes to the service. */
+export function cancelPending() {
 	cancelAll()
-	inFlight.clear()
 }
 
 /* -------------------------------- providers -------------------------------- */
@@ -400,7 +399,7 @@ export function detectLanguage(
 	}, automatic)
 }
 
-/** Translates an arbitrary text with one provider, bypassing cache, rules and fallback. */
+/** Translates an arbitrary text with one provider, bypassing rules and fallback. */
 export async function translateWith(
 	provider: Provider,
 	text: string,
@@ -515,7 +514,7 @@ export function translate(
 					.slice(0, 100)
 			: []
 	const chain = usableProviders(settings)
-	const key = JSON.stringify([
+	const _key = JSON.stringify([
 		chain,
 		pretty,
 		sl,
@@ -534,9 +533,6 @@ export function translate(
 			addHistory(text, result, tl, channelId, messageId)
 		return result
 	}
-	const running = inFlight.get(key)
-	if (running) return running.then(record)
-
 	const { out, tokens } = protect(text)
 	if (!out.replace(/§\d+§/g, '').trim())
 		return Promise.resolve<TranslateResult>({ same: true, text, src: sl })
@@ -614,11 +610,6 @@ export function translate(
 		}
 		return result
 	})
-	inFlight.set(key, request)
-	const forget = () => {
-		if (inFlight.get(key) === request) inFlight.delete(key)
-	}
-	request.then(forget, forget)
 	return request.then(record)
 }
 
