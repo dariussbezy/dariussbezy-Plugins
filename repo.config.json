@@ -46,6 +46,9 @@
     },
     "dariuss.transparent-youbar": {
       "latest": "1.1.0"
+    },
+    "dariuss.no-onboarding-delay": {
+      "latest": "1.0.0"
     }
   }
 }

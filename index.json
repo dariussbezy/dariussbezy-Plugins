@@ -863,6 +863,28 @@
       "channels": {
         "latest": "1.1.0"
       }
+    },
+    "dariuss.no-onboarding-delay": {
+      "versions": {
+        "1.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/99516267e6d55be59fb28e65db426fef2c8c362f/pool/dariuss.no-onboarding-delay@1.0.0.zip",
+          "sha256": "97c8d1736b73e1f3a9d71b4da12ef7382ddfbec321e4854214989d106b0a3c73",
+          "size": 1911,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
+        }
+      },
+      "name": "No Onboarding Delay",
+      "description": "Skips the slow waits in server onboarding.",
+      "author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
+      "icon": "TimerIcon",
+      "channels": {
+        "latest": "1.0.0"
+      }
     }
   }
 }
