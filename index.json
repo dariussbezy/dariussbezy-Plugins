@@ -898,6 +898,17 @@
             },
             "discord": {}
           }
+        },
+        "1.0.1": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/24aed562c164dca72145d81d16b581e91a9f94eb/pool/dariuss.better-toasts@1.0.1.zip",
+          "sha256": "6626fbb5ed2b9d796f48fd775764b82f9e6a84730f3ac6448a5b51d14bc9ec0e",
+          "size": 5001,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
         }
       },
       "name": "Better Toasts",
@@ -905,7 +916,7 @@
       "author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
       "icon": "BellIcon",
       "channels": {
-        "latest": "1.0.0"
+        "latest": "1.0.1"
       }
     }
   }
