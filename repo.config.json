@@ -49,6 +49,9 @@
     },
     "dariuss.no-onboarding-delay": {
       "latest": "1.0.0"
+    },
+    "dariuss.better-toasts": {
+      "latest": "1.0.0"
     }
   }
 }

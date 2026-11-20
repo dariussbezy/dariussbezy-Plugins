@@ -885,6 +885,28 @@
       "channels": {
         "latest": "1.0.0"
       }
+    },
+    "dariuss.better-toasts": {
+      "versions": {
+        "1.0.0": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/579ddf19756ea5b9844ec4561e7ba2f348a0c965/pool/dariuss.better-toasts@1.0.0.zip",
+          "sha256": "7293dd0d830e86d74f93bff645e26c9e57384f9cebf838bdd77ccbcc91af347c",
+          "size": 4991,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
+        }
+      },
+      "name": "Better Toasts",
+      "description": "Choose how long toasts stay, and add replace, pause, swipe to dismiss, tap to copy and a history of recent toasts.",
+      "author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
+      "icon": "BellIcon",
+      "channels": {
+        "latest": "1.0.0"
+      }
     }
   }
 }
