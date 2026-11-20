@@ -1,0 +1,18 @@
+{
+	"format": 1,
+	"id": "dariuss.better-toasts",
+	"name": "Better Toasts",
+	"description": "Choose how long toasts stay, and add replace, pause, swipe to dismiss, tap to copy and a history of recent toasts.",
+	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
+	"icon": "BellIcon",
+	"version": "1.0.0",
+	"dependencies": {
+		"valenced.api": {
+			"version": ">=1 <2"
+		},
+		"discord": {}
+	},
+	"dist": {
+		"script": "index.js"
+	}
+}
