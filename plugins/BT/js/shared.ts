@@ -22,11 +22,11 @@ export interface Settings {
 export const DefaultSettings: Settings = {
 	seconds: 3,
 	replace: true,
-	full: false,
-	copy: false,
+	full: true,
+	copy: true,
 	byLength: true,
 	history: true,
 	haptic: true,
-	pause: false,
-	swipe: false,
+	pause: true,
+	swipe: true,
 }
