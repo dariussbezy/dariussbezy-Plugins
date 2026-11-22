@@ -18,7 +18,7 @@ Install from the **latest** channel and enable **Allow updates**.
 | --- | --- |
 | [Adv. Message Logger](plugins/AML/README.md) | Keep a local journal of edited and deleted messages, keep them visible in chat and compare edits. |
 | [Better Toasts](plugins/BT/README.md) | Choose how long toasts stay, and add replace, pause, swipe to dismiss, tap to copy and a history of recent toasts. |
-| [Custom Quick Reactions](plugins/CQR/README.md) | Choose and reorder the quick reaction emojis shown when you long-press a message. |
+| [Custom Quick Reactions](plugins/CQR/README.md) | Choose the quick reaction emojis in the long-press menu, place each one on any spot, and show up to 3 rows. |
 | [Ghost Ping Logger](plugins/GPL/README.md) | Find mentions and replies that were deleted or edited away and get alerted. Requires Adv. Message Logger. |
 | [Jump to Ping](plugins/JTP/README.md) | Jump to unread mentions, replies and DMs from a button beside the notifications bell. |
 | [Message Actions](plugins/MA/README.md) | Reorder, hide or remove the buttons shown when you long-press a message. |

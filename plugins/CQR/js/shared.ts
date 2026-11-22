@@ -10,13 +10,18 @@ export interface SavedEmoji {
 }
 
 export interface Settings {
-	/** Emojis shown first in the quick reactions, in this order. */
-	emojis: SavedEmoji[]
+	/**
+	 * Emojis by spot in the quick reactions, row after row. An empty spot (null) shows a frequent
+	 * emoji, or nothing when filling is off.
+	 */
+	emojis: (SavedEmoji | null)[]
 	/** Fill the spots left over with Discord's frequent emojis. */
 	fill: boolean
+	/** Rows of quick reactions in the long-press menu (1 to 3). */
+	rows: number
 }
 
-export const DefaultSettings: Settings = { emojis: [], fill: true }
+export const DefaultSettings: Settings = { emojis: [], fill: true, rows: 1 }
 
 /** The emoji shape Discord's reaction row and pickers use. */
 export interface RowEmoji {
@@ -48,7 +53,10 @@ interface EmojiStore {
 const UNICODE = 0
 const GUILD = 1
 
-export const lookups: { unicode?: UnicodeEmojis } = {}
+export const lookups: { unicode?: UnicodeEmojis; picker?: EmojiPicker } = {}
+
+/** Spots in one quick reaction row on this screen, from the last time Discord built it. */
+export const measured = { slots: 0 }
 
 let storage: JsonStorage<Settings> | undefined
 
@@ -56,14 +64,34 @@ export function bindStorage(value: JsonStorage<Settings> | undefined) {
 	storage = value
 }
 
-export const getSettings = (): Settings => ({
-	...DefaultSettings,
-	...storage?.cache,
-})
+/** Valid spots only, without empty spots at the end. */
+export function cleanSpots(spots: unknown): (SavedEmoji | null)[] {
+	const list = Array.isArray(spots)
+		? spots.map(spot =>
+				spot &&
+				typeof spot === 'object' &&
+				typeof (spot as SavedEmoji).name === 'string'
+					? (spot as SavedEmoji)
+					: null,
+			)
+		: []
+	while (list.length && list[list.length - 1] == null) list.pop()
+	return list
+}
+
+export const getSettings = (): Settings => {
+	const settings = { ...DefaultSettings, ...storage?.cache }
+	settings.emojis = cleanSpots(settings.emojis)
+	const rows = Math.round(Number(settings.rows))
+	settings.rows = rows >= 1 && rows <= 3 ? rows : 1
+	return settings
+}
 
 // Arrays would be merged item by item, so the whole object is always replaced.
 export const setSettings = (patch: Partial<Settings>) => {
-	void storage?.set({ ...getSettings(), ...patch }, true)
+	const next = { ...getSettings(), ...patch }
+	next.emojis = cleanSpots(next.emojis)
+	void storage?.set(next, true)
 }
 
 let version = 0
