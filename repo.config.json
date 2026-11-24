@@ -3,55 +3,55 @@
   "description": "dariussbezy's plugins for Valenced.",
   "channels": {
     "dariuss.quick-translate": {
-      "latest": "2.3.0"
+      "latest": "2.4.0"
     },
     "dariuss.jump-to-ping": {
-      "latest": "2.2.1"
+      "latest": "2.3.0"
     },
     "dariuss.voice-messages-to-text": {
-      "latest": "2.1.0"
-    },
-    "dariuss.midnight-theme": {
-      "latest": "2.1.0"
-    },
-    "dariuss.advanced-message-logger": {
       "latest": "2.2.0"
     },
+    "dariuss.midnight-theme": {
+      "latest": "3.0.0"
+    },
+    "dariuss.advanced-message-logger": {
+      "latest": "3.0.0"
+    },
     "dariuss.ghost-ping-logger": {
-      "latest": "2.1.0"
+      "latest": "2.2.0"
     },
     "dariuss.no-tap-mention": {
-      "latest": "2.1.0"
+      "latest": "2.2.0"
     },
     "dariuss.no-delete-confirmation": {
-      "latest": "1.0.0"
+      "latest": "1.1.0"
     },
     "dariuss.message-actions": {
-      "latest": "1.0.0"
+      "latest": "1.1.0"
     },
     "dariuss.custom-quick-reactions": {
-      "latest": "2.0.0"
+      "latest": "2.1.0"
     },
     "dariuss.music-controls": {
-      "latest": "2.0.0"
+      "latest": "2.1.0"
     },
     "dariuss.performance-monitor": {
-      "latest": "1.2.0"
+      "latest": "1.3.0"
     },
     "dariuss.bulk-downloads": {
-      "latest": "1.1.0"
+      "latest": "1.2.0"
     },
     "dariuss.show-blocked": {
-      "latest": "1.0.0"
-    },
-    "dariuss.transparent-youbar": {
       "latest": "1.1.0"
     },
+    "dariuss.transparent-youbar": {
+      "latest": "1.2.0"
+    },
     "dariuss.no-onboarding-delay": {
-      "latest": "1.0.0"
+      "latest": "1.1.0"
     },
     "dariuss.better-toasts": {
-      "latest": "1.0.1"
+      "latest": "1.1.0"
     }
   }
 }
