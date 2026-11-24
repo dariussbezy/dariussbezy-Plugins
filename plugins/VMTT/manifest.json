@@ -5,7 +5,7 @@
 	"description": "Transcribe voice messages below the audio, with a free server or Groq.",
 	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
 	"icon": "MicrophoneIcon",
-	"version": "2.1.0",
+	"version": "2.2.0",
 	"dependencies": {
 		"valenced.api": {
 			"version": ">=1 <2"

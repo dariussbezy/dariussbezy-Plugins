@@ -2,6 +2,7 @@ import Page from '@valenced/components/Page'
 import TableRowAssetIcon from '@valenced/components/TableRowAssetIcon'
 import { Design } from '@valenced/discord/design'
 import { ScrollView } from 'react-native'
+import { StatsRow } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 
 const GUIDE: [string, string][] = [
@@ -20,6 +21,7 @@ export default function SettingsComponent() {
 		<ScrollView keyboardShouldPersistTaps="handled">
 			<Page>
 				<Design.Stack spacing={24}>
+					<StatsRow />
 					<Design.TableRowGroup title="Quick guide">
 						{GUIDE.map(([label, subLabel]) => (
 							<Design.TableRow

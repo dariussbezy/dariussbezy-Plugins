@@ -1,8 +1,12 @@
+import { getAssetIdByName } from '@valenced/assets'
 import { TableRowAssetIcon } from '@valenced/components'
 import Page from '@valenced/components/Page'
+import { Tokens } from '@valenced/discord/common/tokens'
 import { Design } from '@valenced/discord/design'
+import { Stores } from '@valenced/discord/flux'
 import { useState, useSyncExternalStore } from 'react'
-import { ScrollView } from 'react-native'
+import { Image, Platform, ScrollView, View } from 'react-native'
+import { StatsButton } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import { MaxCacheSize, MinCacheSize } from './engine'
 import { ColorRows, Swatch } from './history'
@@ -15,6 +19,7 @@ import type {
 	EntryKind,
 	HistoryViewProps,
 	IgnoreScope,
+	IosHighlight,
 	Settings,
 } from './types'
 
@@ -41,13 +46,46 @@ type Screen =
 	| { name: 'ignored' }
 	| { name: 'servers' }
 	| { name: 'color'; key: ColorKey }
+	| { name: 'iosColor'; key: 'iosDeletedHighlight' | 'iosEditedHighlight' }
 
 const Colors = {
 	deletedMessageColor: 'Deleted message color',
 	editedMessageColor: 'Edited message color',
 	deletedNameColor: 'Deleted username color',
+	deletedHighlightColor: 'Deleted highlight color',
+	editedHighlightColor: 'Edited highlight color',
 } as const
+const HighlightKeys = new Set<ColorKey>([
+	'deletedHighlightColor',
+	'editedHighlightColor',
+])
 type ColorKey = keyof typeof Colors
+
+/**
+ * iPhone draws a highlight only in Discord's own colors (its chat cell ignores custom ones), so
+ * these are the choices there.
+ */
+type HighlightKey = 'deletedHighlightColor' | 'editedHighlightColor'
+type IosKey = 'iosDeletedHighlight' | 'iosEditedHighlight'
+const IosKeyOf: Record<HighlightKey, IosKey> = {
+	deletedHighlightColor: 'iosDeletedHighlight',
+	editedHighlightColor: 'iosEditedHighlight',
+}
+const IosTitles: Record<IosKey, string> = {
+	iosDeletedHighlight: Colors.deletedHighlightColor,
+	iosEditedHighlight: Colors.editedHighlightColor,
+}
+const IosChoices: [IosHighlight, string][] = [
+	['red', 'Red'],
+	['yellow', 'Yellow'],
+	['blurple', 'Blurple'],
+]
+/** What each iPhone choice looks like, for the preview. */
+export const IosHex: Record<IosHighlight, string> = {
+	red: '#ED4245',
+	yellow: '#F0B232',
+	blurple: '#5865F2',
+}
 
 const IgnoreGroups: [IgnoreScope | undefined, string][] = [
 	['user', 'Ignored users'],
@@ -137,6 +175,41 @@ function Screens({
 								setScreen({ name: 'main' })
 							}}
 						/>
+					</Design.Stack>
+				</Page>
+			</ScrollView>
+		)
+	}
+
+	if (screen.name === 'iosColor') {
+		const { key } = screen
+		return (
+			<ScrollView keyboardShouldPersistTaps="handled">
+				<Page>
+					<Design.Stack spacing={24}>
+						{back}
+						<Design.TableRowGroup title={IosTitles[key]}>
+							{IosChoices.map(([value, label]) => (
+								<Design.TableRow
+									key={value}
+									label={label}
+									icon={<Swatch color={IosHex[value]} />}
+									trailing={
+										settings[key] === value ? (
+											<TableRowAssetIcon name="CheckmarkLargeIcon" />
+										) : undefined
+									}
+									onPress={() => {
+										set({ [key]: value })
+										setScreen({ name: 'main' })
+									}}
+								/>
+							))}
+						</Design.TableRowGroup>
+						<Design.Text variant="text-sm/normal" color="text-muted">
+							iPhone draws the highlight box only in Discord's own colors. Red
+							and blurple add Discord's note under the message.
+						</Design.Text>
 					</Design.Stack>
 				</Page>
 			</ScrollView>
@@ -266,11 +339,80 @@ function Screens({
 						value={settings.cacheLimit}
 						onAccept={cacheLimit => set({ cacheLimit })}
 					/>
+					<Design.TableRadioGroup
+						title="Deleted and edited messages"
+						value={settings.messageStyle}
+						onChange={value =>
+							set({
+								messageStyle:
+									value === 'text' || value === 'box' ? value : 'highlight',
+							})
+						}
+					>
+						<Design.TableRadioRow
+							label="Highlight"
+							value="highlight"
+							subLabel="Colored text, a colored box and line, and a note under the message (Discord's AutoMod style)."
+						/>
+						<Design.TableRadioRow
+							label="Box"
+							value="box"
+							subLabel="Colored text with your highlight colors as box and line, without the note."
+						/>
+						<Design.TableRadioRow
+							label="Text only"
+							value="text"
+							subLabel="Only the colored text, no box and no note."
+						/>
+					</Design.TableRadioGroup>
+					<StylePreview settings={settings} />
+					<Design.TableRadioGroup
+						title="Replies to deleted messages"
+						value={settings.quoteAuthorAs}
+						onChange={value =>
+							set({ quoteAuthorAs: value === 'name' ? 'name' : 'mention' })
+						}
+					>
+						<Design.TableRadioRow
+							label="@mention"
+							value="mention"
+							subLabel="The quote mentions the author. They get pinged unless you turn the reply's mention off."
+						/>
+						<Design.TableRadioRow
+							label="@name"
+							value="name"
+							subLabel="The quote shows the author's name as plain text. Nobody is pinged."
+						/>
+					</Design.TableRadioGroup>
 					<Design.TableRowGroup title="In chat">
+						{toggle(
+							'showTag',
+							'Show a tag next to the name',
+							'TagIcon',
+							'"Deleted" or "Edited", in the highlight color.',
+						)}
+						{toggle(
+							'dismissButton',
+							'Dismiss button',
+							'XSmallIcon',
+							'Uses Discord\'s note under logged messages, with a "Dismiss" link (it brings a "?" button). Dismiss removes the edits of an edited message, or a deleted message from the chat and the history. Only with the Highlight style.',
+						)}
 						{toggle(
 							'retainDeleted',
 							'Keep deleted messages visible',
 							'TrashIcon',
+							'Deleted messages stay in the chat, marked as deleted. Off: they disappear as usual and stay only in the history.',
+						)}
+						{toggle(
+							'dimDeletedMedia',
+							'Dim photos of deleted messages',
+							'ImageIcon',
+						)}
+						{toggle(
+							'fillDeletedReplies',
+							'Show deleted messages in replies',
+							'ArrowAngleLeftUpIcon',
+							'Instead of "Original message was deleted", when the message is in the log.',
 						)}
 						{toggle(
 							'showInlineEdits',
@@ -286,16 +428,41 @@ function Screens({
 						{toggle('showEditTime', 'Show edit time', 'ClockIcon')}
 						{toggle('showSeconds', 'Show seconds in times', 'ClockIcon')}
 						{toggle('use12HourClock', 'Use a 12-hour clock', 'ClockIcon')}
-						{(Object.keys(Colors) as ColorKey[]).map(key => (
-							<Design.TableRow
-								key={key}
-								label={Colors[key]}
-								icon={icon('PaintPaletteIcon')}
-								trailing={<Swatch color={settings[key]} />}
-								arrow
-								onPress={() => setScreen({ name: 'color', key })}
-							/>
-						))}
+						{(Object.keys(Colors) as ColorKey[]).map(key => {
+							// iPhone draws highlights only in Discord's own colors: same row, fewer choices.
+							const ios = Platform.OS === 'ios' && HighlightKeys.has(key)
+							const preset = ios ? IosKeyOf[key as HighlightKey] : undefined
+							return (
+								<Design.TableRow
+									key={key}
+									label={Colors[key]}
+									subLabel={
+										!HighlightKeys.has(key)
+											? undefined
+											: settings.messageStyle === 'text'
+												? 'For Highlight and Box. Not used with Text only.'
+												: 'For Highlight and Box.'
+									}
+									icon={icon('PaintPaletteIcon')}
+									trailing={
+										<Swatch
+											color={preset ? IosHex[settings[preset]] : settings[key]}
+										/>
+									}
+									arrow
+									disabled={
+										HighlightKeys.has(key) && settings.messageStyle === 'text'
+									}
+									onPress={() =>
+										setScreen(
+											preset
+												? { name: 'iosColor', key: preset }
+												: { name: 'color', key },
+										)
+									}
+								/>
+							)
+						})}
 					</Design.TableRowGroup>
 					<Design.TableRowGroup title="Filters">
 						{toggle(
@@ -341,26 +508,18 @@ function Screens({
 							'Keep received messages after a restart so later edits and deletions are still recognized.',
 						)}
 						<Design.TableRow
-							label="Clear local history"
+							label="Clear everything"
+							subLabel="The history and the cached messages on this device."
 							icon={icon('TrashIcon')}
 							variant="danger"
 							onPress={() =>
 								confirm(
-									'Clear local history?',
-									'This removes the journal from this device.',
-									clearHistory,
-								)
-							}
-						/>
-						<Design.TableRow
-							label="Clear recent message cache"
-							icon={icon('TrashIcon')}
-							variant="danger"
-							onPress={() =>
-								confirm(
-									'Clear recent message cache?',
-									'This removes cached messages from this device.',
-									clearCache,
+									'Clear everything?',
+									'This removes the history and every cached message from this device. It cannot be undone.',
+									() => {
+										clearHistory()
+										clearCache()
+									},
 								)
 							}
 						/>
@@ -382,6 +541,7 @@ function Screens({
 							/>
 						))}
 					</Design.TableRadioGroup>
+					<StatsButton manifest={manifest} settings={() => settings} />
 					<Design.TableRowGroup title="Quick guide">
 						<Design.TableRow
 							icon={icon('CircleInformationIcon')}
@@ -401,7 +561,7 @@ function Screens({
 						<Design.TableRow
 							icon={icon('CircleInformationIcon')}
 							label="Privacy"
-							subLabel="Only messages this device received are logged. Nothing is uploaded, and messages never received cannot be recovered."
+							subLabel="Only messages this device received are logged. Logged messages stay on this device, and messages never received cannot be recovered."
 						/>
 					</Design.TableRowGroup>
 					<Design.Text
@@ -442,5 +602,187 @@ function CacheLimitInput({
 				else setDraft(String(value))
 			}}
 		/>
+	)
+}
+
+/** A semantic token as a plain color for the current theme, trying each name in turn. */
+function themeColor(names: string[], fallback: string) {
+	try {
+		const { colors, internal } = Tokens.default as unknown as {
+			colors: Record<string, unknown>
+			internal: {
+				resolveSemanticColor(theme: unknown, color: unknown): unknown
+			}
+		}
+		const theme = (Stores.ThemeStore as unknown as { theme?: string }).theme
+		for (const name of names) {
+			if (!colors[name]) continue
+			const value = internal.resolveSemanticColor(theme, colors[name])
+			if (typeof value === 'string' && value !== 'transparent') return value
+		}
+	} catch {}
+	return fallback
+}
+
+type SampleProps = {
+	style: Settings['messageStyle']
+	name: string
+	nameColor?: string
+	time: string
+	text: string
+	textColor?: string
+	box?: string
+	note?: string
+	old?: string
+	avatar: string
+}
+
+/**
+ * One chat message as Discord draws it, in the chosen style.
+ * custom: Discord has no component that draws a sample chat message.
+ */
+function Sample(props: SampleProps) {
+	const boxed = props.box && props.style !== 'text'
+	const strong = themeColor(['TEXT_STRONG', 'HEADER_PRIMARY'], '#F2F3F5')
+	const normal = themeColor(['TEXT_DEFAULT', 'TEXT_NORMAL'], '#DBDEE1')
+	const muted = themeColor(['TEXT_MUTED'], '#949BA4')
+	const shield = getAssetIdByName('ShieldIcon')
+	return (
+		<View
+			style={{
+				flexDirection: 'row',
+				gap: 12,
+				paddingVertical: 8,
+				paddingLeft: 13,
+				paddingRight: 16,
+				borderLeftWidth: 3,
+				borderLeftColor: boxed ? props.box : 'transparent',
+				backgroundColor: boxed ? `${props.box}26` : 'transparent',
+			}}
+		>
+			<View
+				style={{
+					width: 36,
+					height: 36,
+					borderRadius: 18,
+					backgroundColor: props.avatar,
+					alignItems: 'center',
+					justifyContent: 'center',
+				}}
+			>
+				<Design.Text variant="text-md/bold" style={{ color: '#FFFFFF' }}>
+					{props.name[0]}
+				</Design.Text>
+			</View>
+			<View style={{ flex: 1, gap: 2 }}>
+				<View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+					<Design.Text
+						variant="text-md/semibold"
+						style={{ color: props.nameColor ?? strong }}
+					>
+						{props.name}
+					</Design.Text>
+					<Design.Text variant="text-xs/medium" style={{ color: muted }}>
+						{props.time}
+					</Design.Text>
+				</View>
+				{props.old ? (
+					<Design.Text variant="text-xs/normal" style={{ color: muted }}>
+						{props.old}
+					</Design.Text>
+				) : null}
+				<Design.Text
+					variant="text-md/normal"
+					style={{ color: props.textColor ?? normal }}
+				>
+					{props.text}
+				</Design.Text>
+				{props.note && props.style === 'highlight' ? (
+					<View
+						style={{
+							flexDirection: 'row',
+							alignItems: 'center',
+							gap: 6,
+							marginTop: 2,
+						}}
+					>
+						{shield ? (
+							<Image
+								source={shield}
+								style={{ width: 14, height: 14, tintColor: muted }}
+							/>
+						) : null}
+						<Design.Text variant="text-xs/medium" style={{ color: muted }}>
+							{props.note}
+						</Design.Text>
+					</View>
+				) : null}
+			</View>
+		</View>
+	)
+}
+
+/** A short chat with an edited and a deleted message, in the chosen style and colors. */
+function StylePreview({ settings }: { settings: Settings }) {
+	const style = settings.messageStyle
+	const deletedText = settings.deletedMessageColor
+	const editedText = settings.editedMessageColor
+	const chat = themeColor(
+		['BACKGROUND_BASE_LOWER', 'BACKGROUND_PRIMARY', 'BG_BASE_PRIMARY'],
+		'#313338',
+	)
+	return (
+		<Design.TableRowGroup title="Preview">
+			<View
+				style={{
+					backgroundColor: chat,
+					paddingVertical: 6,
+					borderRadius: 12,
+					overflow: 'hidden',
+				}}
+			>
+				<Sample
+					style={style}
+					name="Alex"
+					avatar="#5865F2"
+					time="Today at 12:01"
+					text="See you at 5?"
+				/>
+				<Sample
+					style={style}
+					name="Sam"
+					avatar="#3BA55C"
+					time="Today at 12:02"
+					old={settings.showInlineEdits ? 'Sure, at 6' : undefined}
+					text="Sure, at 5 then"
+					textColor={Platform.OS === 'ios' ? editedText : undefined}
+					box={
+						Platform.OS === 'ios'
+							? IosHex[settings.iosEditedHighlight]
+							: settings.editedHighlightColor
+					}
+					note="Edited"
+				/>
+				<Sample
+					style={style}
+					name="Sam"
+					nameColor={
+						settings.colorDeletedUsername
+							? settings.deletedNameColor
+							: undefined
+					}
+					avatar="#3BA55C"
+					time="Today at 12:03"
+					text="I won't make it"
+					textColor={deletedText}
+					box={
+						Platform.OS === 'ios'
+							? IosHex[settings.iosDeletedHighlight]
+							: settings.deletedHighlightColor
+					}
+					note="Deleted"
+				/>
+			</View>
+		</Design.TableRowGroup>
 	)
 }

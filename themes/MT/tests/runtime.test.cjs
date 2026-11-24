@@ -54,7 +54,7 @@ function fixture({selected=true,enabled=true,unsupported=false,bridgeError=false
  const reactBindings={...runtime.react};
  if(early){runtime.react.React=undefined;runtime.react.ReactNative=undefined;runtime.react.ReactJSXRuntime=undefined}
  const shipped=vm.runInNewContext(fs.readFileSync(path.join(root,'build/js/index.js'),'utf8'),{valenced:runtime,plugin:options=>options,console}).default;
- const themes={};for(const name of ['registerGroup','registerTheme','registerFontPack','registerIconPack'])themes[name]=(...args)=>{registered[name]=args.at(-1)};
+ const themes={};for(const name of ['registerGroup','registerTheme','registerFontPack','registerIconPack'])themes[name]=(...args)=>{registered[name]=args.at(-1);if(name==='registerIconPack')(registered.iconPacks??={})[args[1]]=args.at(-1)};
  const storage={get:async()=>({enhancedLayout:enabled})};
  return {hooks,native,originalCall,errors,registered,memo,identity,
   async start(){shipped.preInit({themes});Object.assign(runtime.react,reactBindings);await shipped.init();await shipped.start({themes,jsonStorage:storage,cleanup:fn=>cleanups.push(fn),plugin:{startedLate:false,reportError:e=>errors.push(e),requireReload(){}}});await Promise.resolve()},
@@ -75,6 +75,13 @@ test('official bundle registers local wallpaper, Figtree variants and original m
  assert.equal(f.hooks.has(f.memo),false);await f.stop();
 });
 
+test('only the moon icon pack is registered, without the old outline pack',async()=>{
+ const f=fixture({enabled:false});await f.start();
+ assert.equal(f.registered.iconPacks.outline,undefined);
+ assert.deepEqual(Object.keys(f.registered.iconPacks),['moon']);
+ assert.equal(f.registered.iconPacks.moon.icons.HomeIcon,'assets/moon.png');await f.stop();
+});
+
 test('real React 19 preserves the native header parent, type and handlers',async()=>{
  const f=fixture();let tree;const onPress=()=>{};
  await act(async()=>{await f.start();tree=Renderer.create(f.render('header',{testID:'native-header',onPress}))});
@@ -88,28 +95,13 @@ test('real React 19 preserves the native header parent, type and handlers',async
  assert.equal(f.errors.length,0);await act(async()=>tree.unmount());
 });
 
-test('theme switches update rounding without reparenting native controls',async()=>{
- const f=fixture({selected:false});let tree;
- await act(async()=>{await f.start();tree=Renderer.create(f.render('header',{style:{height:56,borderRadius:0}}))});
- const native=tree.root.findByType('NativeHeader');
- assert.equal(native.props.style.borderRadius,0);
- await act(async()=>{await f.native.callNativeMethod('valenced.themes.setColors',[JSON.stringify({plugin:'dariuss.midnight-theme'})]);f.refreshTheme()});
- assert.equal(tree.root.findByType('NativeHeader'),native);
- assert.equal(Object.assign({},...native.props.style).borderRadius,16);
- assert.equal(tree.root.findAllByType('View').length,0);
- await act(async()=>{await f.native.callNativeMethod('valenced.themes.setColors',[null]);f.refreshTheme()});
- assert.equal(native.props.style.borderRadius,0);
- await act(async()=>{await f.stop();tree.unmount()});
-});
-
-test('composer keeps its own clipping, height and layout options',async()=>{
- for(const overflow of ['visible','hidden']){
+test('native header and composer keep their own style while Midnight is selected',async()=>{
+ for(const kind of ['header','composer']){
   const f=fixture();let tree;
-  await act(async()=>{await f.start();tree=Renderer.create(f.render('composer',{style:{overflow,height:56}}))});
-  const styles=tree.root.findByType('NativeComposer').props.style;
-  const flat=Object.assign({},...styles);
-  assert.equal(flat.overflow,overflow);assert.equal(flat.height,56);assert.equal(flat.borderRadius,14);
-  assert.equal(flat.marginHorizontal,undefined);assert.equal(flat.borderWidth,undefined);
+  const style={height:56,borderRadius:0,overflow:'hidden'};
+  await act(async()=>{await f.start();tree=Renderer.create(f.render(kind,{style}))});
+  const native=tree.root.findByType(kind==='header'?'NativeHeader':'NativeComposer');
+  assert.equal(native.props.style,style,kind+' style must not be changed');
   assert.equal(tree.root.findAllByType('View').length,0);
   await act(async()=>{await f.stop();tree.unmount()});
  }
@@ -136,10 +128,10 @@ test('Home icon uses the moon pack on the mobile navigation button',async()=>{
  await f.stop();
 });
 
-test('wallpaper uses a light blur and native controls keep opaque base colors',async()=>{
+test('wallpaper is softened like desktop panels and native controls keep opaque base colors',async()=>{
  const f=fixture({enabled:false});await f.start();
  const theme=f.registered.registerTheme;
- assert.equal(theme.background.blur,3);
+ assert.equal(theme.background.blur,8);assert.equal(theme.background.dimming,0.6);
  for(const base of ['dark','darker','midnight','light'])for(const token of ['BACKGROUND_BASE_LOWER','CHAT_INPUT_BACKGROUND','CHANNELTEXTAREA_BACKGROUND','BACKGROUND_FLOATING']){
   assert.match(theme.getColors().semantic[base][token],/^#[0-9a-f]{6}$/i,base+'/'+token);
  }
@@ -210,7 +202,7 @@ test('custom icon packs are respected and missing icon renderers fall back safel
  }
 });
 
-test('the selected moon pack works independently of color theme and rounding',async()=>{
+test('the selected moon pack works independently of the color theme',async()=>{
  const f=fixture({selected:false,enabled:false,icons:'moon'});let tree;
  await act(async()=>{await f.start();tree=Renderer.create(f.render('navigation'))});
  assert.equal(tree.root.findAllByType('NativeIconImage').length,1);
@@ -226,4 +218,16 @@ test('native icon rendering errors restore the original button icon',async()=>{
  assert.equal(tree.root.findAllByType('NativeHomeButton').length,1);
  assert.equal(f.errors.length,1);
  await act(async()=>{await f.stop();tree.unmount()});
+});
+
+test('saved Midnight colors are refreshed on start, other themes are left alone',async()=>{
+ const f=fixture({enabled:false});await f.start();await new Promise(r=>setTimeout(r,0));
+ const saved=JSON.parse(f.native.callNativeMethodSync()).colors;
+ assert.equal(saved.plugin,'dariuss.midnight-theme');
+ assert.equal(JSON.stringify(saved.values),JSON.stringify(f.registered.registerTheme.getColors()));
+ assert.equal(saved.values.semantic.dark.REDESIGN_CHANNEL_NAME_TEXT,'#91A6CA');
+ await f.stop();
+ const other=fixture({selected:false,enabled:false});await other.start();await new Promise(r=>setTimeout(r,0));
+ assert.equal(JSON.parse(other.native.callNativeMethodSync()).colors?.values,undefined);
+ await other.stop();
 });

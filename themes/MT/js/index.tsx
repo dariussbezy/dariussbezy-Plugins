@@ -1,12 +1,16 @@
 /// <reference types="@valenced/themes-api" />
 
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
+import { applyLook, readLook, refreshColors } from './look'
 import palette from './palette.json'
 
 let Settings: ((props: any) => any) | undefined
 
-export default plugin<{ jsonStorage: { enhancedLayout: boolean } }>({
-	jsonStorage: { load: true, default: { enhancedLayout: true } },
+export default plugin<{ jsonStorage: Record<string, never> }>({
+	jsonStorage: { load: true, default: {} },
 	preInit({ themes }) {
+		const look = readLook()
 		themes.registerGroup('midnight', {
 			name: 'Midnight',
 			description: 'Midnight by refact0r, adapted for mobile by dariuss.',
@@ -15,13 +19,18 @@ export default plugin<{ jsonStorage: { enhancedLayout: boolean } }>({
 			name: 'Midnight (Auto)',
 			description:
 				"Blue accents, translucent navy panels and the original Midnight wallpaper. Follows Discord's light or dark appearance.",
-			getColors: () => palette,
-			background: {
-				path: 'assets/wallpaper.png',
-				opacity: 1,
-				blur: 3,
-				dimming: 0.7,
-			},
+			getColors: () => applyLook(palette, look),
+			// As on desktop by default: surfaces at 60% over the wallpaper, softened like its panel blur.
+			...(look.wallpaper
+				? {
+						background: {
+							path: 'assets/wallpaper.png',
+							opacity: look.brightness,
+							blur: look.blur,
+							dimming: look.dimming,
+						},
+					}
+				: {}),
 		})
 		const families: Record<
 			string,
@@ -60,14 +69,14 @@ export default plugin<{ jsonStorage: { enhancedLayout: boolean } }>({
 		Settings = (await import('./settings')).default
 	},
 	async start({ jsonStorage, cleanup, plugin: instance }) {
+		cleanup(startStatsFor(manifest, jsonStorage))
+		void refreshColors(manifest.id, palette)
 		const { startAppearance } = await import('./layout')
-		const settings = await jsonStorage.get()
-		cleanup(
-			startAppearance(settings.enhancedLayout !== false, (error: unknown) =>
-				instance.reportError(error),
-			),
-		)
+		cleanup(startAppearance((error: unknown) => instance.reportError(error)))
 		if (instance.startedLate) instance.requireReload()
 	},
-	SettingsComponent: props => (Settings ? Settings(props) : null),
+	SettingsComponent: withStats(manifest, props =>
+		// Rendered as its own component, so its hooks never mix with the wrapper's.
+		Settings ? <Settings {...props} /> : null,
+	),
 })

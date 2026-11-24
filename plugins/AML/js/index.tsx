@@ -1,4 +1,7 @@
 import { onAnyFluxEventDispatched } from '@valenced/discord/flux'
+import { AppState } from 'react-native'
+import { startStats } from '../../../lib/stats'
+import manifest from '../manifest.json'
 import {
 	configureAlerts,
 	confirm,
@@ -35,6 +38,11 @@ import type {
 /** Settings that change how rows are drawn in chat. */
 const InlineKeys: (keyof Settings)[] = [
 	'retainDeleted',
+	'showTag',
+	'dismissButton',
+	'iosDeletedHighlight',
+	'iosEditedHighlight',
+	'dimDeletedMedia',
 	'showInlineEdits',
 	'colorDeletedUsername',
 	'deletedMessageColor',
@@ -45,6 +53,9 @@ const InlineKeys: (keyof Settings)[] = [
 	'showSeconds',
 	'use12HourClock',
 	'retentionDays',
+	'messageStyle',
+	'deletedHighlightColor',
+	'editedHighlightColor',
 ]
 
 /** What dependents receive. It forwards to the running instance, so it can be handed out in init. */
@@ -116,6 +127,7 @@ export default plugin<{ jsonStorage: Data }>({
 			entries: () => journal.state().entries,
 			providers,
 			report,
+			remove: entries => journal.remove(entries),
 		})
 
 		// Ignoring: an id list in the settings, plus a name for each so the list stays readable.
@@ -177,6 +189,12 @@ export default plugin<{ jsonStorage: Data }>({
 		const restored = journal.load(await jsonStorage.get())
 		if (settings().rememberReceived) engine.restore(restored)
 
+		// A swipe away from the app kills it without stopping the plugin: save when it goes to the background.
+		const appState = AppState.addEventListener('change', state => {
+			if (state !== 'active') void journal.flush()
+		})
+		cleanup(() => appState.remove())
+
 		// Registered first, so it runs last: save, then drop everything held in memory.
 		cleanup(async () => {
 			try {
@@ -195,10 +213,17 @@ export default plugin<{ jsonStorage: Data }>({
 			string,
 			(payload: FluxMessageEvent) => FluxMessageEvent | undefined
 		> = {
-			MESSAGE_CREATE: payload => payload,
+			MESSAGE_CREATE: inline.onCreate,
 			MESSAGE_UPDATE: payload => payload,
 			MESSAGE_DELETE: inline.onDelete,
 			MESSAGE_DELETE_BULK: inline.onDeleteBulk,
+			// Changes made while the app was in the background arrive here, not as MESSAGE_* events.
+			BACKGROUND_SYNC_CHANNEL_MESSAGES: inline.onBackgroundSync,
+			// Channel loads: capture finds deletions missed while offline, then retained ones are put back.
+			LOAD_MESSAGES_SUCCESS: inline.onLoaded as never,
+			LOAD_MESSAGES_SUCCESS_CACHED: inline.onLoaded as never,
+			// The chat as saved on the phone, shown first after a restart.
+			LOCAL_MESSAGES_LOADED: inline.onLoaded as never,
 		}
 		cleanup(
 			onAnyFluxEventDispatched(payload => {
@@ -206,6 +231,12 @@ export default plugin<{ jsonStorage: Data }>({
 				if (!handle || isSynthetic(payload)) return payload
 				const event = payload as unknown as FluxMessageEvent
 				if (event.type === 'MESSAGE_CREATE') received++
+				// A local delete is the user dismissing a message on this device, never a deletion.
+				if (
+					event.type === 'MESSAGE_DELETE' &&
+					(event as { local?: boolean }).local
+				)
+					return inline.onDismiss(event) as typeof payload | undefined
 				try {
 					if (engine.observe(event)) journal.touched()
 				} catch (error) {
@@ -217,6 +248,13 @@ export default plugin<{ jsonStorage: Data }>({
 
 		inline.start()
 		cleanup(inline.stop)
+
+		cleanup(
+			startStats({
+				manifest,
+				settings: () => journal.state().settings,
+			}),
+		)
 
 		let previous = journal.state()
 		cleanup(

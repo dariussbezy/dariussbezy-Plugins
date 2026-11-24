@@ -6,6 +6,10 @@ type MemberStore = {
 	getMember(guildId: string, userId: string): { roles?: string[] } | undefined
 }
 type UserStore = { getCurrentUser(): { id: string } | undefined }
+type GuildSettings = {
+	isSuppressEveryoneEnabled?(guildId: string): boolean
+	isSuppressRolesEnabled?(guildId: string): boolean
+}
 
 const currentUserId = () =>
 	(Stores as unknown as { UserStore?: UserStore }).UserStore?.getCurrentUser()
@@ -24,11 +28,22 @@ function myRoles(guildId: string, userId: string) {
 function pings(info: PingInfo, guildId: string, settings: Settings) {
 	const me = currentUserId()
 	if (!me) return false
+	// Like Discord's own check: your "Suppress @everyone" and "Suppress roles" server settings
+	// mean those never pinged you.
+	const guild = (
+		Stores as unknown as { UserGuildSettingsStore?: GuildSettings }
+	).UserGuildSettingsStore
+	const suppressEveryone =
+		!!guildId && !!guild?.isSuppressEveryoneEnabled?.(guildId)
+	const suppressRoles = !!guildId && !!guild?.isSuppressRolesEnabled?.(guildId)
+	const mentionsMe = info.mentions.includes(me)
 	return (
-		(settings.direct && (info.mentioned || info.mentions.includes(me))) ||
-		(settings.replies && info.replyTo === me) ||
-		(settings.everyone && info.everyone) ||
+		(settings.direct && (info.mentioned || mentionsMe)) ||
+		// A reply pings only when its mention was left on, which puts you in its mentions.
+		(settings.replies && info.replyTo === me && mentionsMe) ||
+		(settings.everyone && info.everyone && !suppressEveryone) ||
 		(settings.roles &&
+			!suppressRoles &&
 			info.roles.some(role => myRoles(guildId, me).includes(role)))
 	)
 }

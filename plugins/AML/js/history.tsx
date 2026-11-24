@@ -1,9 +1,14 @@
 import { TableRowAssetIcon } from '@valenced/components'
+import { ToastActionCreators } from '@valenced/discord/actions'
+import { Tokens } from '@valenced/discord/common/tokens'
 import { Design } from '@valenced/discord/design'
+import { Stores } from '@valenced/discord/flux'
+import { lookupModule } from '@valenced/modules/finders'
+import { withDependencies, withProps } from '@valenced/modules/finders/filters'
 import { useState } from 'react'
-import { View } from 'react-native'
+import { Keyboard, Pressable, View } from 'react-native'
 import { showDetails } from './alerts'
-import { getChannel, getGuildName } from './discord'
+import { getChannel, getGuildName, userName } from './discord'
 import type {
 	ColorRowsProps,
 	Entry,
@@ -12,6 +17,116 @@ import type {
 } from './types'
 
 const PageSize = 25
+
+/** A semantic token as a plain color for the current theme, trying each name in turn. */
+function themeColor(names: string[], fallback: string) {
+	try {
+		const { colors, internal } = Tokens.default as unknown as {
+			colors: Record<string, unknown>
+			internal: {
+				resolveSemanticColor(theme: unknown, color: unknown): unknown
+			}
+		}
+		const theme = (Stores.ThemeStore as unknown as { theme?: string }).theme
+		for (const name of names) {
+			if (!colors[name]) continue
+			const value = internal.resolveSemanticColor(theme, colors[name])
+			if (typeof value === 'string' && value !== 'transparent') return value
+		}
+	} catch {}
+	return fallback
+}
+
+/** The author as Discord shows them: server nickname, then display name, then username. */
+function displayName(entry: Entry) {
+	const { authorId, guildId, author } = entry.before
+	const members = (
+		Stores as unknown as {
+			GuildMemberStore?: {
+				getNick?(guildId: string, userId: string): string | null
+			}
+		}
+	).GuildMemberStore
+	return (
+		(guildId ? members?.getNick?.(guildId, authorId) : undefined) ??
+		userName(authorId) ??
+		author
+	)
+}
+
+type ProfileSheet = {
+	default(options: {
+		userId: string
+		channelId?: string
+		guildId?: string
+	}): void
+	getUserProfileActionSheetKey: unknown
+}
+
+/** Opens the author's profile, as tapping a mention in chat does. */
+function openProfile(entry: Entry) {
+	const byExports = withProps<ProfileSheet>('getUserProfileActionSheetKey')
+	const { relative } = withDependencies
+	const sheet =
+		lookupModule(byExports, { cached: false })[0] ??
+		// modules/user_profile/native/showUserProfileActionSheet.tsx, before it loads: matched by its
+		// helper modules right after it, then loaded.
+		lookupModule(
+			withDependencies([
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				relative(1),
+				relative(2),
+				null,
+				relative(3),
+				null,
+				null,
+				null,
+			]).and(byExports),
+			{ cached: false, initialize: true },
+		)[0]
+	if (typeof sheet?.default !== 'function') {
+		ToastActionCreators.open('dariuss.advanced-message-logger.profile', {
+			text: "Discord's profile could not be opened from here.",
+		})
+		return
+	}
+	const { authorId, channelId, guildId } = entry.before
+	sheet.default({ userId: authorId, channelId, guildId: guildId || undefined })
+}
+
+/** The author as a mention pill, like in chat. Tapping it opens their profile. */
+function Mention({ entry }: { entry: Entry }) {
+	return (
+		// custom: Discord has no mention component outside the chat; its own press area, so the tap
+		// opens the profile instead of the entry.
+		<Pressable
+			accessibilityRole="button"
+			hitSlop={6}
+			onPress={() => openProfile(entry)}
+			style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+		>
+			<Design.Text
+				variant="text-md/semibold"
+				style={{
+					color: themeColor(['MENTION_FOREGROUND', 'TEXT_LINK'], '#C9CDFB'),
+					backgroundColor: themeColor(
+						['MENTION_BACKGROUND', 'BACKGROUND_MENTIONED'],
+						'#5865F23D',
+					),
+					borderRadius: 4,
+					paddingHorizontal: 2,
+				}}
+			>
+				@{displayName(entry)}
+			</Design.Text>
+		</Pressable>
+	)
+}
 export const EmptyFilter: HistoryFilter = {
 	query: '',
 	kind: 'all',
@@ -278,23 +393,35 @@ export function HistoryView({
 			)}
 			<Design.TableRowGroup title={`History · ${matching.length}`}>
 				{matching.length ? (
-					matching
-						.slice(0, limit)
-						.map(entry => (
-							<Design.TableRow
-								key={`${entry.before.channelId}:${entry.before.id}:${entry.kind}:${entry.at}`}
-								label={`${entry.before.author} · ${entry.kind === 'edited' ? 'Edited' : 'Deleted'}`}
-								subLabel={`${new Date(entry.at).toLocaleString()}\n${entry.before.content || '(No text)'}`}
-								subLabelLineClamp={3}
-								icon={
-									<TableRowAssetIcon
-										name={entry.kind === 'edited' ? 'PencilIcon' : 'TrashIcon'}
-									/>
-								}
-								arrow
-								onPress={() => showDetails(entry)}
-							/>
-						))
+					matching.slice(0, limit).map(entry => (
+						<Design.TableRow
+							key={`${entry.before.channelId}:${entry.before.id}:${entry.kind}:${entry.at}`}
+							label={
+								// custom: the mention and the event side by side, the mention pressable on its own.
+								<View
+									style={{
+										flexDirection: 'row',
+										alignItems: 'center',
+										flexWrap: 'wrap',
+									}}
+								>
+									<Mention entry={entry} />
+									<Design.Text variant="text-md/semibold">
+										{entry.kind === 'edited' ? ' · Edited' : ' · Deleted'}
+									</Design.Text>
+								</View>
+							}
+							subLabel={`${new Date(entry.at).toLocaleString()}\n${entry.before.content || '(No text)'}`}
+							subLabelLineClamp={3}
+							icon={
+								<TableRowAssetIcon
+									name={entry.kind === 'edited' ? 'PencilIcon' : 'TrashIcon'}
+								/>
+							}
+							arrow
+							onPress={() => showDetails(entry)}
+						/>
+					))
 				) : (
 					<Design.TableRow
 						label={
@@ -341,34 +468,78 @@ export function ColorRows({
 		([, color]) => color.toUpperCase() === current,
 	)
 	return (
-		<Design.TableRowGroup title={title}>
-			{presets.map(([label, color], index) => (
-				<Design.TableRow
-					key={label}
-					label={label}
-					onPress={() => onSelect(color)}
-					trailing={
-						// custom: Discord has no native color swatch component.
-						<View
-							style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-						>
+		<Design.Stack spacing={12}>
+			<Design.TableRowGroup title={title}>
+				{presets.map(([label, color], index) => (
+					<Design.TableRow
+						key={label}
+						label={label}
+						onPress={() => onSelect(color)}
+						trailing={
+							// custom: Discord has no native color swatch component.
 							<View
-								style={{
-									width: 20,
-									height: 20,
-									borderRadius: 10,
-									backgroundColor: color,
-								}}
-							/>
-							<View style={{ width: 20 }}>
-								{index === selected ? (
-									<TableRowAssetIcon name="CircleCheckIcon" />
-								) : null}
+								style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+							>
+								<View
+									style={{
+										width: 20,
+										height: 20,
+										borderRadius: 10,
+										backgroundColor: color,
+									}}
+								/>
+								<View style={{ width: 20 }}>
+									{index === selected ? (
+										<TableRowAssetIcon name="CircleCheckIcon" />
+									) : null}
+								</View>
 							</View>
-						</View>
-					}
-				/>
-			))}
-		</Design.TableRowGroup>
+						}
+					/>
+				))}
+			</Design.TableRowGroup>
+			<HexInput value={value} onSelect={onSelect} />
+		</Design.Stack>
+	)
+}
+
+/** Any color by its hex code, under the presets, applied with its own button like a preset. */
+function HexInput({
+	value,
+	onSelect,
+}: {
+	value: string
+	onSelect(color: string): void
+}) {
+	const [text, setText] = useState(value.toUpperCase())
+	const parsed = /^#?([0-9a-f]{6})$/i.exec(text.trim())
+	const apply = () => {
+		if (!parsed) return
+		// Close the keyboard first: a focused field that unmounts can keep the old screen drawn.
+		Keyboard.dismiss()
+		onSelect(`#${parsed[1].toUpperCase()}`)
+	}
+	return (
+		<Design.Stack spacing={8}>
+			<Design.TextInput
+				label="Custom color (HEX)"
+				description={
+					parsed || !text.trim()
+						? 'Any color as six hex digits, for example #FF5555.'
+						: 'Not a color yet: type six hex digits, for example #FF5555.'
+				}
+				placeholder="#RRGGBB"
+				value={text}
+				maxLength={7}
+				onChange={setText}
+				returnKeyType="done"
+			/>
+			<Design.Button
+				text="Use this color"
+				variant="primary"
+				disabled={!parsed}
+				onPress={apply}
+			/>
+		</Design.Stack>
 	)
 }

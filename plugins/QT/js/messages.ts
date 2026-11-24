@@ -251,7 +251,10 @@ export function clearTranslationData() {
 export function onIncomingMessage(event: {
 	message?: Message
 	channelId?: string
+	optimistic?: boolean
 }) {
+	// The temporary copy shown while sending has the nonce as its id; wait for the real message.
+	if (event.optimistic) return
 	const settings = getSettings()
 	const message = event.message
 	const channelId = String(event.channelId ?? message?.channel_id ?? '')

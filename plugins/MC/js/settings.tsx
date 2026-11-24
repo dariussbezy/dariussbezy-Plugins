@@ -1,7 +1,8 @@
 import Page from '@valenced/components/Page'
 import TableRowAssetIcon from '@valenced/components/TableRowAssetIcon'
 import { Design } from '@valenced/discord/design'
-import { Linking, Platform, ScrollView } from 'react-native'
+import { Linking, ScrollView } from 'react-native'
+import { StatsRow } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import { refresh, restorePlayer, useMusic } from './music'
 import { APP_URL, androidBridge } from './native'
@@ -10,7 +11,6 @@ import { presenceReady } from './presence'
 import { openSearch } from './search'
 import { ButtonIds, setSetting, useSettings } from './shared'
 import { reconnect } from './spotify'
-import { blurStatus, svgStatus } from './transparent'
 import type { ComponentProps } from 'react'
 import type {
 	ButtonId,
@@ -225,7 +225,7 @@ export default function SettingsComponent() {
 						<SwitchRow
 							icon="SparklesIcon"
 							label="Transparent"
-							subLabel={`A see-through player that shows the chat behind it. Blur: ${Platform.OS === 'ios' ? (blurStatus() ?? 'not found, plain translucent fill') : 'translucent fill'}. Gradients: ${svgStatus() ?? 'not found, plain borders'}.`}
+							subLabel="A see-through player that shows the chat behind it."
 							value={settings.transparent}
 							onValueChange={value => setSetting('transparent', value)}
 						/>
@@ -239,6 +239,17 @@ export default function SettingsComponent() {
 							/>
 						)}
 					</Design.TableRowGroup>
+					{settings.transparent && (
+						<Design.TableRowGroup>
+							<SwitchRow
+								icon="EyeDropperIcon"
+								label="Frosted glass"
+								subLabel="On: blurred, whitish glass. Off: clear glass that only tints the chat behind it."
+								value={settings.frosted}
+								onValueChange={value => setSetting('frosted', value)}
+							/>
+						</Design.TableRowGroup>
+					)}
 					{settings.transparent && (
 						<Design.TableRadioGroup<TransparencyLevel>
 							title="Transparency"
@@ -262,6 +273,7 @@ export default function SettingsComponent() {
 					<Design.TableRowGroup title="Compact player preview">
 						<Player previewMode="compact" />
 					</Design.TableRowGroup>
+					<StatsRow />
 					<Design.TableRowGroup title="Quick guide">
 						{GUIDE.map(([label, icon, subLabel]) => (
 							<Row key={label} icon={icon} label={label} subLabel={subLabel} />

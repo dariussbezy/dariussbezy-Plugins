@@ -58,6 +58,20 @@ const messageStore = () =>
 const JUMP_STEP = 400
 const JUMP_TRIES = 14
 
+/** Discord's own message route (notifications, message links): right server for threads too. */
+interface Routing {
+	transitionToMessage(
+		channelId: string,
+		messageId: string,
+		options?: Record<string, unknown>,
+	): void
+	transitionToStaticChannelRoute(...args: unknown[]): void
+}
+const findRouting = () =>
+	lookupModule(
+		withProps<Routing>('transitionToMessage', 'transitionToStaticChannelRoute'),
+	)[0]
+
 const findActions = () =>
 	lookupModule(withProps<MessageActions>('jumpToMessage', 'fetchMessages'))[0]
 
@@ -86,7 +100,8 @@ function landed(channelId: string, messageId: string) {
  */
 function jumpWhenReady(channelId: string, messageId: string) {
 	let tries = 0
-	let lastJump = 0
+	// The route already asked for the message: wait before jumping again.
+	let lastJump = Date.now()
 	const next = () => {
 		const timer = setTimeout(() => {
 			timers.delete(timer)
@@ -123,20 +138,17 @@ export function navigate(channelId: string, messageId?: string) {
 	)
 	if (!router) throw new Error('Discord channel routing is unavailable')
 	// The channel is always routed to (the chat can be hidden behind the channel list even when it is
-	// the selected one). With Discord's jump available the route leaves the message id out and the
-	// jump runs on the loaded channel; without it, the route carries the id as before.
-	const canJump = !!findActions()
-	router.transitionToGuild(
-		channel.guild_id || '@me',
-		channelId,
-		canJump ? undefined : target,
-		{ openChannel: true },
-	)
-	if (target && canJump) {
-		if (selectedChannelStore()?.getChannelId() === channelId)
-			discordJump(channelId, target)
-		jumpWhenReady(channelId, target)
-	}
+	// the selected one). A message goes through Discord's own route, the one its notifications use,
+	// so the chat jumps natively; the check after it repeats Discord's jump only if the message did
+	// not load.
+	const routing = findRouting()
+	if (target && typeof routing?.transitionToMessage === 'function')
+		routing.transitionToMessage(channelId, target)
+	else
+		router.transitionToGuild(channel.guild_id || '@me', channelId, target, {
+			openChannel: true,
+		})
+	if (target && findActions()) jumpWhenReady(channelId, target)
 }
 
 /** Closes the ping sheet first so its dismissal cannot swallow the navigation. */

@@ -2,10 +2,8 @@ export type Piece = { kind: 'same' | 'removed' | 'added'; text: string }
 
 const tokens = (text: string) => text.match(/\s+|[^\s]+/g) ?? []
 
-/** A word-level difference between two versions of a text, found with the longest common subsequence. */
-export function diffWords(before: string, after: string): Piece[] {
-	const a = tokens(before)
-	const b = tokens(after)
+/** Longest common subsequence of two token lists, as same/removed/added pieces. */
+function lcs(a: string[], b: string[], before: string, after: string): Piece[] {
 	// Tables for very long messages would be large; those fall back to a plain before/after.
 	if (a.length * b.length > 250000)
 		return [
@@ -41,5 +39,37 @@ export function diffWords(before: string, after: string): Piece[] {
 	}
 	while (i < a.length) push('removed', a[i++])
 	while (j < b.length) push('added', b[j++])
+	return pieces
+}
+
+/**
+ * The difference between two versions of a text: by words, then by letters inside a changed word,
+ * so "bomba:" to "bomba" marks only the ":".
+ */
+export function diffWords(before: string, after: string): Piece[] {
+	const words = lcs(tokens(before), tokens(after), before, after)
+	const pieces: Piece[] = []
+	for (let k = 0; k < words.length; k++) {
+		const piece = words[k]
+		const next = words[k + 1]
+		if (piece.kind === 'removed' && next?.kind === 'added') {
+			const letters = lcs(
+				[...piece.text],
+				[...next.text],
+				piece.text,
+				next.text,
+			)
+			const kept = letters
+				.filter(part => part.kind === 'same')
+				.reduce((sum, part) => sum + part.text.length, 0)
+			// Only when the versions are mostly alike; otherwise letter marks would be noise.
+			if (kept * 2 >= Math.max(piece.text.length, next.text.length)) {
+				pieces.push(...letters)
+				k++
+				continue
+			}
+		}
+		pieces.push(piece)
+	}
 	return pieces
 }

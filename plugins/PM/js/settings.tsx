@@ -4,6 +4,7 @@ import { Design } from '@valenced/discord/design'
 import { Clipboard } from '@valenced/externals/react-native-clipboard'
 import { Component, useEffect, useReducer, useState } from 'react'
 import { ScrollView } from 'react-native'
+import { StatsRow } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import { HookedFunctions, Measuring, Runs, StallAnalysis } from './analysis'
 import {
@@ -384,6 +385,7 @@ function SettingsPage({ storage }: { storage?: AiStorage }) {
 					</Design.TableRowGroup>
 					<HookedFunctions />
 					{storage && <Runs storage={storage} />}
+					<StatsRow />
 					<Design.TableRowGroup title="Quick guide">
 						{GUIDE.map(([label, icon, subLabel]) => (
 							<Row key={label} icon={icon} label={label} subLabel={subLabel} />

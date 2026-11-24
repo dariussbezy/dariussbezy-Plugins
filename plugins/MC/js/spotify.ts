@@ -679,9 +679,15 @@ export function startSpotify(): () => void {
 		}),
 	)
 
-	for (const type of ['LOGOUT', 'SPOTIFY_ACCOUNT_ACCESS_TOKEN_REVOKED'])
+	// The revoke event is SPOTIFY_ACCOUNT_ACCESS_TOKEN_REVOKE, with the account it concerns.
+	for (const type of ['LOGOUT', 'SPOTIFY_ACCOUNT_ACCESS_TOKEN_REVOKE'])
 		undo.push(
 			onFluxEventDispatched(type, (event: Raw) => {
+				const account = (event as { accountId?: string } | undefined)?.accountId
+				const current = (fallbackCredentials as { accountId?: string } | null)
+					?.accountId
+				if (type !== 'LOGOUT' && account && current && account !== current)
+					return event
 				epoch++
 				generation++
 				pollInFlight = connectInFlight = null

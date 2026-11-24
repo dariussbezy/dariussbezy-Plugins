@@ -10,6 +10,8 @@ import { instead } from '@valenced/patcher'
 import { useReRender } from '@valenced/utils/react'
 import { cloneElement, useEffect } from 'react'
 import { View } from 'react-native'
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import { CountBadge } from './badge'
 import { cancelNavigation, SHEET_KEY } from './navigation'
 import { capture, drop, getRows, openRow, resetPings, totalOf } from './pings'
@@ -43,6 +45,7 @@ export default plugin<{ jsonStorage: Settings }>({
 		default: DefaultSettings,
 	},
 	start({ cleanup, jsonStorage, logger, plugin }) {
+		cleanup(startStatsFor(manifest, jsonStorage))
 		// The profile bar button can only be patched before it first renders.
 		if (plugin.startedLate) {
 			plugin.requireReload()
@@ -117,7 +120,7 @@ export default plugin<{ jsonStorage: Settings }>({
 	stop({ plugin }) {
 		plugin.requireReload()
 	},
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 })
 
 /**

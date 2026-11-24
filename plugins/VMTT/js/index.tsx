@@ -1,6 +1,7 @@
 import { onFluxEventDispatched } from '@valenced/discord/flux'
 import { getJsonStorage } from '@valenced/json-storage'
 import { pluginStorageDirFor } from '@valenced/plugins/constants'
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import { patchRows } from './inline'
 import { patchMessageMenu } from './menu'
@@ -19,6 +20,7 @@ interface TranscriptBridge {
 export default plugin<{ jsonStorage: Settings }>({
 	jsonStorage: { load: true, default: DefaultSettings },
 	async start({ cleanup, jsonStorage, plugin: instance }) {
+		cleanup(startStatsFor(manifest, jsonStorage))
 		await jsonStorage.get()
 		const history = getJsonStorage<History>(
 			`${pluginStorageDirFor(manifest.id)}/transcripts.json`,
@@ -75,5 +77,5 @@ export default plugin<{ jsonStorage: Settings }>({
 	stop({ plugin: instance }) {
 		instance.requireReload()
 	},
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 })

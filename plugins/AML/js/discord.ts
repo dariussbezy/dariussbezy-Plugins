@@ -123,10 +123,61 @@ type Router = {
 	): void
 }
 
+type MessageActions = {
+	fetchMessages(options: unknown): unknown
+	jumpToMessage(options: {
+		channelId: string
+		messageId: string
+		flash?: boolean
+		jumpType?: string
+	}): void
+}
+
+type LoadedMessages = {
+	jumpTargetId?: string | null
+	ready?: boolean
+	loadingMore?: boolean
+	has?(id: string): boolean
+}
+
+const JUMP_STEP = 400
+const JUMP_TRIES = 14
+let jumpTimer: ReturnType<typeof setTimeout> | undefined
+
+/** Discord's own message route (notifications, message links): right server for threads too. */
+type Routing = {
+	transitionToMessage(
+		channelId: string,
+		messageId: string,
+		options?: Record<string, unknown>,
+	): void
+	transitionToStaticChannelRoute(...args: unknown[]): void
+}
+const routing = () =>
+	lookupModule(
+		withProps<Routing>('transitionToMessage', 'transitionToStaticChannelRoute'),
+	)[0]
+
+const messageActions = () =>
+	lookupModule(withProps<MessageActions>('jumpToMessage', 'fetchMessages'))[0]
+
+const isLanded = (channelId: string, messageId: string) => {
+	const loaded = (
+		stores().MessageStore as unknown as
+			| { getMessages?(id: string): LoadedMessages | undefined }
+			| undefined
+	)?.getMessages?.(channelId)
+	if (!loaded || loaded.ready === false || loaded.loadingMore) return false
+	if (!loaded.has?.(messageId)) return false
+	return 'jumpTargetId' in loaded ? loaded.jumpTargetId === messageId : true
+}
+
 /**
  * Opens a message in its chat. The guild always comes from the channel itself:
  * a guild id saved with the message can be empty or stale and would otherwise
  * open the right message id inside the wrong place.
+ * The channel is opened first and Discord's own jump runs once it is showing, repeated until the
+ * message is loaded and is the jump target, so old messages land exactly too.
  * @returns false when the channel or Discord's router is unavailable.
  */
 export function jumpToMessage(channelId: string, messageId: string) {
@@ -138,7 +189,47 @@ export function jumpToMessage(channelId: string, messageId: string) {
 	const guildId = isDirect(channel)
 		? '@me'
 		: (channel.guild_id ?? channel.guildId ?? '@me')
-	router.transitionToGuild(guildId, channelId, messageId, { openChannel: true })
+	const jump = () =>
+		messageActions()?.jumpToMessage({
+			channelId,
+			messageId,
+			flash: true,
+			jumpType: 'ANIMATED',
+		})
+	// Discord's own route carries the message, so its chat screen jumps natively, as it does for a
+	// notification. The check below repeats Discord's jump only if the message did not load.
+	const route = routing()
+	if (typeof route?.transitionToMessage === 'function')
+		route.transitionToMessage(channelId, messageId)
+	else
+		router.transitionToGuild(guildId, channelId, messageId, {
+			openChannel: true,
+		})
+	if (!messageActions()) return true
+	clearTimeout(jumpTimer)
+	let tries = 0
+	let lastJump = Date.now()
+	const next = () => {
+		jumpTimer = setTimeout(() => {
+			tries++
+			const selected = (
+				stores().SelectedChannelStore as unknown as
+					| { getChannelId(): string | null | undefined }
+					| undefined
+			)?.getChannelId()
+			if (selected === channelId) {
+				const settled = lastJump > 0 && Date.now() - lastJump >= JUMP_STEP * 2
+				if (isLanded(channelId, messageId) && lastJump > 0) {
+					if (settled) return
+				} else if (lastJump === 0 || settled) {
+					jump()
+					lastJump = Date.now()
+				}
+			}
+			if (tries < JUMP_TRIES) next()
+		}, JUMP_STEP)
+	}
+	next()
 	return true
 }
 

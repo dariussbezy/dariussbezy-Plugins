@@ -1,5 +1,7 @@
 import { onFluxEventDispatched } from '@valenced/discord/flux'
 import { withProps } from '@valenced/modules/finders/filters'
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import { installTextBridge } from './bridge'
 import { patchChatBar } from './chat-bar'
 import {
@@ -32,6 +34,7 @@ import type { Settings } from './shared'
 export default plugin<{ jsonStorage: Settings }>({
 	jsonStorage: { load: true, default: DefaultSettings },
 	async start({ cleanup, jsonStorage, plugin: self }) {
+		cleanup(startStatsFor(manifest, jsonStorage))
 		const ctx: Ctx = { cleanup, report: error => self.reportError(error) }
 
 		cleanup(await initStore(jsonStorage))
@@ -77,5 +80,5 @@ export default plugin<{ jsonStorage: Settings }>({
 
 		if (self.startedLate) self.requireReload()
 	},
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 })

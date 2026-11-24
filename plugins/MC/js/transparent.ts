@@ -104,6 +104,8 @@ export function withAlpha(color: unknown, alpha: number): string | undefined {
 
 export interface TransparentLook {
 	dark: boolean
+	/** Frosted glass (blur and a white sheen) instead of clear glass. */
+	frosted: boolean
 	/** Outer card: radius, hairline border, soft shadow (iOS) and the tinted translucent body. */
 	card: ViewStyle
 	/** Inner clip that keeps the layers inside the rounded corners. */
@@ -155,6 +157,14 @@ export function resolveColor(
 
 type BlurComponent = (props: Record<string, unknown>) => ReactElement | null
 let blurView: BlurComponent | null | undefined
+/** When a lookup last failed. A miss is tried again later: early in startup the module may not be loaded yet. */
+let blurMissAt = 0
+let blurMisses = 0
+/** Waits longer after each miss (3 s, 6 s, 12 s... up to a minute), so a missing module costs little. */
+const retryAfter = (misses: number) =>
+	Math.min(60_000, 3000 * 2 ** Math.max(0, misses - 1))
+/** Never trust the finder's saved miss from an earlier run. */
+const Fresh = { cached: false, initialize: true } as const
 
 const isComponent = (value: unknown): value is BlurComponent =>
 	typeof value === 'function' ||
@@ -167,36 +177,85 @@ export const blurStatus = () => {
 	return blurSource
 }
 
-/** Discord's native blur view, iOS only; null when it cannot be found or is not a component. */
-function findBlurView(): BlurComponent | null {
-	if (Platform.OS !== 'ios') return null
-	if (blurView !== undefined) return blurView
-	blurView = null
-	const candidates: [string, () => unknown][] = [
-		...['BackgroundBlurView', 'BackgroundBlurFill', 'VisualEffectView'].map(
-			(name): [string, () => unknown] => [
-				`Design.${name}`,
-				() => (Design as any)[name],
-			],
-		),
-		...[
+/** The id of Discord's blur target around the main screen on Android (MainNavigator). */
+let blurTarget = 'mainNavigator'
+
+/**
+ * Android: Discord's own VisualEffectView, which blurs what is behind it by sampling the main screen
+ * (a DCDVisualEffectViewTarget with the MainNavigator id), the way its own floating surfaces do.
+ * Only on devices where Discord itself turns modern blurring on.
+ */
+function androidCandidates(): [string, () => unknown][] {
+	try {
+		return androidLookups()
+	} catch {
+		return []
+	}
+}
+
+function androidLookups(): [string, () => unknown][] {
+	const native = lookupModule(
+		withProps<any>('MODERN_ANDROID_BLURRING_AVAILABLE'),
+		Fresh,
+	)[0] as any
+	if (native?.MODERN_ANDROID_BLURRING_AVAILABLE !== true) return []
+	const navigator = lookupModule(
+		withProps<any>('MAIN_NAVIGATOR_ID', 'getChannelScreen'),
+		Fresh,
+	)[0] as any
+	if (typeof navigator?.MAIN_NAVIGATOR_ID === 'string')
+		blurTarget = navigator.MAIN_NAVIGATOR_ID
+	return [
+		[
 			'VisualEffectView',
-			'VisualEffectViewIOS',
-			'VisualEffectViewThemed',
-			'BackgroundBlurView',
-			'BackgroundBlurFill',
-		].map((name): [string, () => unknown] => [
-			name,
 			() => {
-				const found = lookupModule(withName<any>(name))[0] as any
+				const found = lookupModule(
+					withName<any>('VisualEffectView'),
+					Fresh,
+				)[0] as any
 				return found?.default ?? found
 			},
-		]),
-		[
-			'native VisualEffectView',
-			() => requireNativeComponent('VisualEffectView'),
 		],
+		['Design.BackgroundBlurView', () => (Design as any).BackgroundBlurView],
 	]
+}
+
+/** Discord's native blur view; null when it cannot be found or is not a component. */
+function findBlurView(): BlurComponent | null {
+	if (blurView) return blurView
+	if (blurView === null && Date.now() - blurMissAt < retryAfter(blurMisses))
+		return null
+	blurView = null
+	const candidates: [string, () => unknown][] =
+		Platform.OS === 'android'
+			? androidCandidates()
+			: [
+					...[
+						'BackgroundBlurView',
+						'BackgroundBlurFill',
+						'VisualEffectView',
+					].map((name): [string, () => unknown] => [
+						`Design.${name}`,
+						() => (Design as any)[name],
+					]),
+					...[
+						'VisualEffectView',
+						'VisualEffectViewIOS',
+						'VisualEffectViewThemed',
+						'BackgroundBlurView',
+						'BackgroundBlurFill',
+					].map((name): [string, () => unknown] => [
+						name,
+						() => {
+							const found = lookupModule(withName<any>(name), Fresh)[0] as any
+							return found?.default ?? found
+						},
+					]),
+					[
+						'native VisualEffectView',
+						() => requireNativeComponent('VisualEffectView'),
+					],
+				]
 	for (const [source, get] of candidates) {
 		try {
 			const component = get()
@@ -207,21 +266,37 @@ function findBlurView(): BlurComponent | null {
 			}
 		} catch {}
 	}
+	if (!blurView) {
+		blurMissAt = Date.now()
+		blurMisses++
+	}
 	return blurView ?? null
 }
 
 /** Real blur layer to put first inside the card; renders nothing where it is unavailable. */
 export function TransparentBlur({
 	dark,
+	frosted = true,
 }: {
 	dark: boolean
+	/** Clear glass has no blur. */
+	frosted?: boolean
 }): ReactElement | null {
+	if (!frosted) return null
 	const View = findBlurView()
 	if (!View) return null
 	return createElement(View, {
 		pointerEvents: 'none',
 		style: StyleSheet.absoluteFill,
 		blurAmount: 0.5,
+		// Android: Discord's VisualEffectView props, pointing the blur at the main screen. iOS keeps
+		// exactly the props it had.
+		...(Platform.OS === 'android'
+			? {
+					blurTheme: dark ? 'dark' : 'light',
+					android_blurTargetViewNativeId: blurTarget,
+				}
+			: null),
 		blurEffectName: dark
 			? 'UIBlurEffectStyleSystemThinMaterialDark'
 			: 'UIBlurEffectStyleSystemThinMaterialLight',
@@ -231,6 +306,7 @@ export function TransparentBlur({
 export function buildTransparent(
 	theme: unknown,
 	level: TransparencyLevel,
+	frosted = true,
 ): TransparentLook {
 	const row = TransparencyTable[level]
 	const dark = theme !== 'light'
@@ -246,6 +322,7 @@ export function buildTransparent(
 	const body = withAlpha(surface, alpha)
 	return {
 		dark,
+		frosted,
 		card: {
 			borderWidth: 1,
 			borderColor: `rgba(${WHITE},${dark ? row.edge * 0.6 : row.edge})`,
@@ -317,8 +394,10 @@ export function buildTransparent(
 			textShadowRadius: 4,
 			textShadowOffset: { width: 0, height: 1 },
 		},
-		sheen: row.sheen,
-		spot: row.spot,
+		// Clear glass keeps only a faint top sheen, so it does not turn whitish.
+		sheen: frosted ? row.sheen : row.sheen * 0.25,
+		// Android draws the radial spot as a dark patch, so only iOS gets it.
+		spot: frosted && Platform.OS === 'ios' ? row.spot : 0,
 		handle: withAlpha(muted, 0.9),
 		ring: `rgba(${WHITE},0.9)`,
 	}
@@ -326,11 +405,11 @@ export function buildTransparent(
 
 /** The transparent look for the current theme, or null when the "Transparent" setting is off. */
 export function useTransparent(): TransparentLook | null {
-	const { transparent, transparency } = useSettings()
+	const { transparent, transparency, frosted } = useSettings()
 	const { theme } = (Design as any).useThemeContext()
 	return useMemo(
-		() => (transparent ? buildTransparent(theme, transparency) : null),
-		[transparent, transparency, theme],
+		() => (transparent ? buildTransparent(theme, transparency, frosted) : null),
+		[transparent, transparency, frosted, theme],
 	)
 }
 
@@ -339,10 +418,14 @@ export type Corners = [number, number, number, number]
 
 type SvgKit = Record<string, any>
 let svgKit: SvgKit | null | undefined
+let svgMissAt = 0
+let svgMisses = 0
 
 /** react-native-svg as shipped inside Discord: gradients for the rim lighting. */
-function findSvg(): SvgKit | null {
-	if (svgKit !== undefined) return svgKit
+export function findSvg(): SvgKit | null {
+	if (svgKit) return svgKit
+	if (svgKit === null && Date.now() - svgMissAt < retryAfter(svgMisses))
+		return null
 	svgKit = null
 	try {
 		const found = lookupModule(
@@ -354,10 +437,15 @@ function findSvg(): SvgKit | null {
 				'RadialGradient',
 				'Stop',
 			),
+			Fresh,
 		)[0] as any
 		const kit = found?.default?.Svg ? found.default : found
 		if (kit?.Svg && kit.Path && kit.Defs && kit.Stop) svgKit = kit
 	} catch {}
+	if (!svgKit) {
+		svgMissAt = Date.now()
+		svgMisses++
+	}
 	return svgKit ?? null
 }
 

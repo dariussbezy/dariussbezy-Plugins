@@ -3,6 +3,7 @@ import Page from '@valenced/components/Page'
 import { Design } from '@valenced/discord/design'
 import { useEffect, useMemo, useState } from 'react'
 import { ScrollView } from 'react-native'
+import { StatsRow } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import { isGhostPing } from './ghost'
 import { DefaultSettings, readSettings } from './shared'
@@ -142,6 +143,7 @@ export default function SettingsComponent({
 							onPress={() => setScreen('color')}
 						/>
 					</Design.TableRowGroup>
+					<StatsRow />
 					<Design.TableRowGroup title="Quick guide">
 						<Design.TableRow
 							icon={icon('CircleInformationIcon')}

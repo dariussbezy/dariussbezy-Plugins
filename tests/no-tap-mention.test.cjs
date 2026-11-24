@@ -20,6 +20,8 @@ test('native message callback is blocked while avatar and long press stay intact
   '@valenced/patcher':{after:(owner,key,callback)=>{const old=owner[key];owner[key]=function(...args){return callback(old.apply(this,args),args)??old.apply(this,args);};return()=>{owner[key]=old;};},instead:()=>()=>{}},
   react:React,
   './settings':{default:()=>null},
+  '../../../lib/stats-ui':{startStatsFor:()=>()=>{},withStats:(_manifest,inner)=>inner},
+  '../manifest.json':{id:'dariuss.no-tap-mention',version:'0.0.0'},
  };
  const source=fs.readFileSync('plugins/NTM/js/index.ts','utf8');
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;

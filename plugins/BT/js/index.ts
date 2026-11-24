@@ -4,6 +4,8 @@ import { Clipboard } from '@valenced/externals/react-native-clipboard'
 import { instead } from '@valenced/patcher'
 import { cloneElement, isValidElement } from 'react'
 import { Vibration } from 'react-native'
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import { applied, remember } from './log'
 import SettingsComponent from './settings'
 import { DefaultSettings } from './shared'
@@ -11,7 +13,6 @@ import type { ReactElement, ReactNode } from 'react'
 import type { Settings } from './shared'
 
 /** How long Discord keeps a toast on its own. */
-const DISCORD_MS = 5000
 /** A toast slides in before it counts as shown: closing it sooner after opening hides it. */
 const ENTER_MS = 700
 
@@ -96,8 +97,9 @@ function adjust(
 
 export default plugin<{ jsonStorage: Settings }>({
 	jsonStorage: { load: true, default: DefaultSettings },
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 	async start({ cleanup, jsonStorage, logger }) {
+		cleanup(startStatsFor(manifest, jsonStorage))
 		// Android can start the plugin before its saved settings are read, which made the options look off.
 		await jsonStorage.get()
 		const settings = () => ({ ...DefaultSettings, ...jsonStorage.cache })
@@ -144,7 +146,9 @@ export default plugin<{ jsonStorage: Settings }>({
 								Math.max(0, lastText.length - 40) * EXTRA_MS_PER_CHAR,
 							)
 						// With pause on, only our timer closes the toast, so it can be stopped while touched.
-						const closeByHand = applied.pause || ms + ENTER_MS < DISCORD_MS
+						// Discord honours any duration (default 3 s) and queues toasts, so a timer of our
+						// own is only needed for pause: it could otherwise close the next toast early.
+						const closeByHand = applied.pause
 						if (options && typeof options === 'object') {
 							const duration = applied.pause ? LONG_MS : ms
 							if (isNew) options.duration = duration
@@ -156,7 +160,6 @@ export default plugin<{ jsonStorage: Settings }>({
 						clearTimeout(timer)
 						deadline = Date.now() + ms + ENTER_MS
 						visibleUntil = deadline
-						// Discord ignores a duration shorter than its own, so a short toast is closed by hand.
 						if (closeByHand)
 							timer = setTimeout(
 								() => ToastActionCreators.close(),
@@ -234,23 +237,25 @@ export default plugin<{ jsonStorage: Settings }>({
 							}
 						}
 						if (!target || !key) return
-						// Not undone on stop: this just passes through once the plugin is off.
-						instead(target as never, key, ((
-							args: unknown[],
-							original: (...args: unknown[]) => unknown,
-						) => {
-							const ret = Reflect.apply(original, undefined, args)
-							if (!active || ret == null) return ret
-							try {
-								return change(
-									ret as ReactNode,
-									args[0] as Record<string, unknown> | undefined,
-								)
-							} catch (error) {
-								logger.error(`Could not change ${label}`, error)
-								return ret
-							}
-						}) as never)
+						// Undone on stop, so enabling the plugin again does not stack another layer.
+						cleanup(
+							instead(target as never, key, ((
+								args: unknown[],
+								original: (...args: unknown[]) => unknown,
+							) => {
+								const ret = Reflect.apply(original, undefined, args)
+								if (!active || ret == null) return ret
+								try {
+									return change(
+										ret as ReactNode,
+										args[0] as Record<string, unknown> | undefined,
+									)
+								} catch (error) {
+									logger.error(`Could not change ${label}`, error)
+									return ret
+								}
+							}) as never),
+						)
 					} catch (error) {
 						logger.error(`Could not patch ${label}`, error)
 					}

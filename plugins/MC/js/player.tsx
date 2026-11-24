@@ -18,6 +18,8 @@ import { control, formatTime, openPlayer, positionOf, useMusic } from './music'
 import { openSearch } from './search'
 import { lazyStyles, setDockMode, useSettings } from './shared'
 import {
+	findSvg,
+	resolveColor,
 	TransparentBlur,
 	TransparentRadius,
 	TransparentRim,
@@ -32,9 +34,9 @@ const AnimatedView = Animated.createAnimatedComponent(View)
 
 const IDLE_HIDE_MS = 5 * 60 * 1000
 /** Horizontal wave period in px, shared by the wave function and the loop animation. */
-const WAVE_PERIOD = 192
-const WAVE_HEIGHT = 18
-const COLUMN_STEP = 3
+const WAVE_PERIOD = 168
+const WAVE_HEIGHT = 20
+const COLUMN_STEP = 2
 /** Duration of one wave loop when the tempo of the song is unknown. */
 const STEADY_LOOP_MS = 8000
 
@@ -108,13 +110,47 @@ function useAppActive() {
 	return active
 }
 
-function wave(x: number) {
-	const t = ((x % WAVE_PERIOD) + WAVE_PERIOD) % WAVE_PERIOD
-	const hill = (center: number, width: number, height: number) => {
-		const d = Math.abs(t - center)
-		return d < width ? (height * (1 + Math.cos((d / width) * Math.PI))) / 2 : 0
+/** Smooth periodic wave (a sum of three sines), centered on the middle of the lane. */
+function wave(x: number, period: number, amplitude: number, phase: number) {
+	const u = (x / period) * Math.PI * 2 + phase
+	return (
+		WAVE_HEIGHT / 2 +
+		amplitude *
+			(0.62 * Math.sin(u) +
+				0.28 * Math.sin(2 * u + 1.3) +
+				0.1 * Math.sin(3 * u + 0.4))
+	)
+}
+
+/**
+ * SVG path of one wave tile: samples every 6 px joined by cubic curves (Catmull-Rom), so the line
+ * stays smooth at any size instead of a chain of short straight pieces.
+ */
+function wavePath(
+	length: number,
+	period: number,
+	amplitude: number,
+	phase: number,
+) {
+	const step = 6
+	const points: [number, number][] = []
+	for (let x = -step; x <= length + step * 2; x += step)
+		points.push([x, wave(x, period, amplitude, phase)])
+	let d = `M${points[1][0]},${points[1][1].toFixed(2)}`
+	for (let i = 1; i < points.length - 2; i++) {
+		const [p0, p1, p2, p3] = [
+			points[i - 1],
+			points[i],
+			points[i + 1],
+			points[i + 2],
+		]
+		const c1x = p1[0] + (p2[0] - p0[0]) / 6
+		const c1y = p1[1] + (p2[1] - p0[1]) / 6
+		const c2x = p2[0] - (p3[0] - p1[0]) / 6
+		const c2y = p2[1] - (p3[1] - p1[1]) / 6
+		d += `C${c1x.toFixed(2)},${c1y.toFixed(2)} ${c2x.toFixed(2)},${c2y.toFixed(2)} ${p2[0]},${p2[1].toFixed(2)}`
 	}
-	return 9 - hill(32, 22, 6) - hill(112, 36, 3) - hill(170, 12, 1)
+	return d
 }
 
 interface SeekProps {
@@ -146,6 +182,7 @@ function WaveBar({
 	const [drag, setDrag] = useState<number | null>(null)
 	const reduceMotion = useReduceMotion()
 	const shift = useRef(new Animated.Value(0)).current
+	const swell = useRef(new Animated.Value(1)).current
 	const live = useRef({ width, disabled, onPreview, onSeek })
 	live.current = { width, disabled, onPreview, onSeek }
 	const startX = useRef(0)
@@ -221,14 +258,32 @@ function WaveBar({
 			})
 	}, [handler])
 
+	const { theme } = (Design as any).useThemeContext()
+	const color = resolveColor(theme, ['TEXT_LINK', 'INTERACTIVE_ACTIVE'])
+	// react-native-svg needs a plain color string, not a Discord token.
+	const kit = color ? findSvg() : null
+	const Svg = kit?.Svg
+	const Path = kit?.Path
 	const tileWidth = width + WAVE_PERIOD + COLUMN_STEP + 1
+	const front = useMemo(
+		() => (kit ? wavePath(tileWidth, WAVE_PERIOD, 5.2, 0) : ''),
+		[kit, tileWidth],
+	)
+	// Only when react-native-svg cannot be found: thin columns under the wave.
 	const columns = useMemo(
 		() =>
-			Array.from({ length: Math.ceil(tileWidth / COLUMN_STEP) }, (_, i) => {
-				const y = wave(i * COLUMN_STEP)
-				return { left: i * COLUMN_STEP, top: y - 0.5, height: 10.5 - y }
-			}),
-		[tileWidth],
+			kit
+				? []
+				: Array.from({ length: Math.ceil(tileWidth / COLUMN_STEP) }, (_, i) => {
+						const y = wave(i * COLUMN_STEP, WAVE_PERIOD, 5.2, 0)
+						const mid = WAVE_HEIGHT / 2
+						return {
+							left: i * COLUMN_STEP,
+							top: Math.min(y, mid) - 1,
+							height: Math.abs(y - mid) + 2,
+						}
+					}),
+		[kit, tileWidth],
 	)
 
 	useEffect(() => {
@@ -236,7 +291,7 @@ function WaveBar({
 		shift.setValue(0)
 		const loop = Animated.loop(
 			Animated.timing(shift, {
-				toValue: -WAVE_PERIOD,
+				toValue: 1,
 				duration: STEADY_LOOP_MS,
 				easing: Easing.linear,
 				useNativeDriver: true,
@@ -246,6 +301,21 @@ function WaveBar({
 		loop.start()
 		return () => loop.stop()
 	}, [playing, reduceMotion, shift])
+
+	// The wave swells while playing and settles to a quiet ripple when paused.
+	useEffect(() => {
+		Animated.timing(swell, {
+			toValue: playing ? 1 : 0.28,
+			duration: reduceMotion ? 0 : 450,
+			easing: Easing.out(Easing.cubic),
+			useNativeDriver: true,
+			isInteraction: false,
+		}).start()
+	}, [playing, reduceMotion, swell])
+	const frontX = shift.interpolate({
+		inputRange: [0, 1],
+		outputRange: [0, -WAVE_PERIOD],
+	})
 
 	const value = drag ?? progress
 	const bar = (
@@ -277,6 +347,8 @@ function WaveBar({
 				<View
 					style={[
 						styles.track,
+						// Only the part still to play: the played part is the wave itself.
+						{ left: Math.max(0, Math.min(width, width * value)) },
 						skin?.track ? { backgroundColor: skin.track } : null,
 					]}
 				/>
@@ -286,18 +358,55 @@ function WaveBar({
 						{ width: Math.max(0, Math.min(width, width * value)) },
 					]}
 				>
-					<AnimatedView
-						style={[
-							styles.tile,
-							{ width: tileWidth, transform: [{ translateX: shift }] },
-						]}
-					>
-						{columns.map(column => (
-							<View key={column.left} style={[styles.column, column]} />
-						))}
-					</AnimatedView>
+					{kit ? (
+						<AnimatedView
+							style={[styles.layers, { transform: [{ scaleY: swell }] }]}
+						>
+							<AnimatedView
+								style={[
+									styles.tile,
+									{
+										width: tileWidth,
+										transform: [{ translateX: frontX }],
+									},
+								]}
+							>
+								<Svg width={tileWidth} height={WAVE_HEIGHT}>
+									<Path
+										d={front}
+										fill="none"
+										stroke={color}
+										strokeWidth={3}
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+								</Svg>
+							</AnimatedView>
+						</AnimatedView>
+					) : (
+						<AnimatedView
+							style={[
+								styles.tile,
+								{ width: tileWidth, transform: [{ translateX: frontX }] },
+							]}
+						>
+							{columns.map(column => (
+								<View key={column.left} style={[styles.column, column]} />
+							))}
+						</AnimatedView>
+					)}
 				</View>
 			</View>
+			<View
+				pointerEvents="none"
+				style={[
+					styles.halo,
+					{
+						left: Math.max(-6, Math.min(width - 18, value * width - 12)),
+						transform: [{ scale: drag === null ? 1 : 1.35 }],
+					},
+				]}
+			/>
 			<View
 				pointerEvents="none"
 				style={[
@@ -696,7 +805,7 @@ export function Player({ previewMode }: { previewMode: PlayerMode }) {
 						{ borderRadius: TransparentRadius.card },
 					]}
 				>
-					<TransparentBlur dark={skin.dark} />
+					<TransparentBlur dark={skin.dark} frosted={skin.frosted} />
 					<TransparentRim
 						look={skin}
 						id="mc-preview"
@@ -799,7 +908,23 @@ const useWaveStyles = lazyStyles(() =>
 			height: WAVE_HEIGHT,
 			overflow: 'hidden',
 		},
-		tile: { height: WAVE_HEIGHT },
+		layers: {
+			position: 'absolute',
+			top: 0,
+			left: 0,
+			right: 0,
+			height: WAVE_HEIGHT,
+		},
+		tile: { position: 'absolute', top: 0, left: 0, height: WAVE_HEIGHT },
+		halo: {
+			position: 'absolute',
+			top: 4,
+			width: 24,
+			height: 24,
+			borderRadius: 12,
+			backgroundColor: Tokens.default.colors.TEXT_LINK,
+			opacity: 0.2,
+		},
 		column: {
 			position: 'absolute',
 			width: COLUMN_STEP + 1,

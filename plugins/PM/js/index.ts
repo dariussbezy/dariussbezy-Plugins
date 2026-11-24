@@ -1,3 +1,5 @@
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import { DefaultAiSettings } from './ai'
 import { install, state } from './monitor'
 import SettingsComponent from './settings'
@@ -15,10 +17,11 @@ export default plugin<{ jsonStorage: AiSettings }>({
 	// Valenced registers the settings page when it sees a plugin become started. Without a start
 	// lifecycle that happens at once during boot, before its settings screen listens, so the page
 	// would not open. An empty start lets the status change arrive a tick later, like other plugins.
-	async start({ jsonStorage }) {
+	async start({ cleanup, jsonStorage }) {
+		cleanup(startStatsFor(manifest, jsonStorage))
 		const saved = await jsonStorage.get()
 		// Light mode is a saved choice: apply it as soon as the settings are read.
 		state.sampleEvery = saved?.lightMode ? 10 : 1
 	},
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 })

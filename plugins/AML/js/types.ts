@@ -32,6 +32,8 @@ export type Entry = {
 	after?: PingInfo & { content: string }
 }
 
+export type IosHighlight = 'red' | 'yellow' | 'blurple'
+
 export const DefaultSettings = {
 	logEdits: true,
 	logDeletes: true,
@@ -48,11 +50,39 @@ export const DefaultSettings = {
 	rememberReceived: true,
 	retentionDays: 7,
 	retainDeleted: true,
+	/** A "Deleted" / "Edited" tag next to the name, like Discord's app tag. */
+	showTag: false,
+	/**
+	 * Discord's own note under logged messages, with its "Dismiss message" link (and the "?" help
+	 * button that comes with it). Dismiss removes the edits of an edited message, or a deleted message.
+	 */
+	dismissButton: false,
+	/** Dims the photos and files of deleted messages. */
+	dimDeletedMedia: true,
+	/** Replies to a deleted message show it from the log instead of "Original message was deleted". */
+	fillDeletedReplies: true,
+	/** Who a reply to a deleted message quotes: a mention (<@id>) or the plain @name. */
+	quoteAuthorAs: 'mention' as 'mention' | 'name',
 	showInlineEdits: true,
 	colorDeletedUsername: true,
 	deletedMessageColor: '#ED4245',
 	editedMessageColor: '#A0A3AA',
 	deletedNameColor: '#ED4245',
+	/** Box and line behind a deleted message. */
+	deletedHighlightColor: '#ED4245',
+	/**
+	 * iPhone draws highlights only in Discord's own colors: yellow (mention), blurple (ephemeral)
+	 * or red (AutoMod).
+	 */
+	iosDeletedHighlight: 'red' as IosHighlight,
+	iosEditedHighlight: 'blurple' as IosHighlight,
+	/** Box and line behind an edited message. */
+	editedHighlightColor: '#A0A3AA',
+	/**
+	 * Highlight: box, line and Discord's note. Box: box and line without the note (custom colors on
+	 * iPhone too). Text: only the colored text.
+	 */
+	messageStyle: 'highlight' as 'highlight' | 'box' | 'text',
 	showDeletedTime: false,
 	showEditTime: false,
 	showSeconds: false,

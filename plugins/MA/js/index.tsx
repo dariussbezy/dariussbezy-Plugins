@@ -2,6 +2,8 @@ import { ActionSheetActionCreators } from '@valenced/discord/actions'
 import { Design } from '@valenced/discord/design'
 import { instead } from '@valenced/patcher'
 import { cloneElement, isValidElement, useSyncExternalStore } from 'react'
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import { arrange, iconsOf, sectionsOf } from './reorder'
 import SettingsComponent from './settings'
 import {
@@ -85,8 +87,9 @@ function remember(sections: string[][], icons: Map<string, IconInfo>) {
 
 export default plugin<{ jsonStorage: Settings }>({
 	jsonStorage: { load: true, default: DefaultSettings },
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 	start({ cleanup, jsonStorage, logger }) {
+		cleanup(startStatsFor(manifest, jsonStorage))
 		bindStorage(jsonStorage)
 		const wrappers = new WeakMap<Component, Component>()
 

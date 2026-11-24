@@ -31,7 +31,7 @@ Install from the **latest** channel and enable **Allow updates**.
 | [Show Blocked](plugins/SB/README.md) | Show messages from blocked and ignored users as normal messages, with options for pings, DMs and exclusions. |
 | [Transparent YOUBAR](plugins/TY/README.md) | Make the YouBar transparent, in the same style as the Music Controls player. |
 | [Voice Messages To Text](plugins/VMTT/README.md) | Transcribe voice messages below the audio, with a free server or Groq. |
-| [Midnight Mobile](themes/MT/README.md) | Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon. |
+| [Midnight Mobile](themes/MT/README.md) | Midnight for Discord mobile, close to the desktop theme: navy surfaces over the original wallpaper, blue accents, Figtree and the moon logo. |
 
 Midnight's colors, Figtree font and moon icon are selected under **Settings → Themes**. Font and icon changes require a restart.
 

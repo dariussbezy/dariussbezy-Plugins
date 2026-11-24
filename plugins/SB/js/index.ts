@@ -1,5 +1,7 @@
 import { Stores } from '@valenced/discord/flux'
 import { instead } from '@valenced/patcher'
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import SettingsComponent from './settings'
 import { DefaultSettings } from './shared'
 import type { Settings } from './shared'
@@ -35,6 +37,7 @@ interface ChannelStoreLike {
 export default plugin<{ jsonStorage: Settings }>({
 	jsonStorage: { load: true, default: DefaultSettings },
 	start({ cleanup, jsonStorage, logger }) {
+		cleanup(startStatsFor(manifest, jsonStorage))
 		const relationships = Stores.RelationshipStore as unknown as
 			| RelationshipStoreLike
 			| undefined
@@ -48,6 +51,17 @@ export default plugin<{ jsonStorage: Settings }>({
 			logger.warn('RelationshipStore or ChannelStore not found')
 			return
 		}
+
+		// Screens read these answers through the store: tell them a setting changed.
+		cleanup(
+			jsonStorage.subscribe(() => {
+				try {
+					;(relationships as { emitChange?(): void }).emitChange?.()
+				} catch (error) {
+					logger.error('Could not refresh after a settings change', error)
+				}
+			}),
+		)
 
 		const pingsMe = (message: MessageLike) => {
 			if (message.mention_everyone ?? message.mentionEveryone) return true
@@ -107,5 +121,5 @@ export default plugin<{ jsonStorage: Settings }>({
 			patch('isIgnoredForMessage', 'ignored'),
 		)
 	},
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 })

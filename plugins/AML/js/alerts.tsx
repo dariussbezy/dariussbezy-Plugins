@@ -67,6 +67,7 @@ export function showDetails(entry: Entry, related: readonly Entry[] = [entry]) {
 			: entry.kind === 'edited'
 				? `Before\n${text(entry)}\n\nAfter\n${entry.after?.content || '(No text)'}`
 				: text(entry)
+	const edits = related.filter(item => item.kind === 'edited')
 	AlertActionCreators.openAlert(
 		Keys.details,
 		<Design.AlertModal
@@ -84,10 +85,11 @@ export function showDetails(entry: Entry, related: readonly Entry[] = [entry]) {
 						}}
 					/>
 					<Design.AlertActionButton
-						text={related.length > 1 ? 'Remove history' : 'Remove from history'}
+						text={edits.length ? 'Remove edit history' : 'Remove from history'}
 						variant="destructive"
 						onPress={() => {
-							removeEntries(related)
+							// On an edited message only the edits go; the message and a logged deletion stay.
+							removeEntries(edits.length ? edits : related)
 							close(Keys.details)
 						}}
 					/>

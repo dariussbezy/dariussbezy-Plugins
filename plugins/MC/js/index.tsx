@@ -1,3 +1,5 @@
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import { clearBridge } from './bridge'
 import { patchYouBar } from './inject'
 import { startMusic } from './music'
@@ -12,6 +14,7 @@ export default plugin<{ jsonStorage: Settings }>({
 		default: DefaultSettings,
 	},
 	async start({ cleanup, jsonStorage, plugin }) {
+		cleanup(startStatsFor(manifest, jsonStorage))
 		await jsonStorage.get()
 		setStorage(jsonStorage)
 
@@ -22,5 +25,5 @@ export default plugin<{ jsonStorage: Settings }>({
 		// The YouBar is already rendered when the plugin starts late; it cannot be re-patched live.
 		if (plugin.startedLate) plugin.requireReload()
 	},
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 })

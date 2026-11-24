@@ -1,8 +1,13 @@
 import { Dispatcher } from '@valenced/discord/common/flux'
-import { onFluxEventDispatched } from '@valenced/discord/flux'
-import { getModules } from '@valenced/modules/finders'
-import { withName } from '@valenced/modules/finders/filters'
-import { instead } from '@valenced/patcher'
+import { Tokens } from '@valenced/discord/common/tokens'
+import { Stores } from '@valenced/discord/flux'
+import { getModules, lookupModule } from '@valenced/modules/finders'
+import {
+	withDependencies,
+	withName,
+	withProps,
+} from '@valenced/modules/finders/filters'
+import { before, instead } from '@valenced/patcher'
 import { Platform, processColor } from 'react-native'
 import { getMessage } from './discord'
 import { isFormatted, parseMarkdown, plainText } from './markdown'
@@ -28,6 +33,13 @@ type Row = {
 		usernameColor?: number
 		editedColor?: number
 		edited?: string
+		tagText?: string | null
+		tagAccessibilityLabel?: string | null
+		tagVerified?: boolean | null
+		tagType?: string | null
+		tagTextColor?: number
+		tagBackgroundColor?: number
+		attachmentsOpacity?: number
 	}
 	backgroundHighlight?: { backgroundColor: number; gutterColor: number }
 }
@@ -40,9 +52,15 @@ type GenerateArgs = {
 	}
 }
 type RowGenerator = { generate(args: GenerateArgs): Row | undefined }
+type LoadedMessage = {
+	id: string
+	channel_id?: string
+	message_reference?: { message_id?: string; channel_id?: string } | null
+	referenced_message?: unknown
+}
 type LoadedMessages = {
 	channelId?: string
-	messages: { id: string }[]
+	messages: LoadedMessage[]
 	hasMoreBefore?: boolean
 	hasMoreAfter?: boolean
 }
@@ -52,18 +70,42 @@ type DeleteEvent = {
 	channelId?: string
 	guildId?: string
 }
+type SyncEvent = {
+	changesByChannelId?: Record<
+		string,
+		{ deleted_message_ids?: string[] } | undefined
+	>
+}
+
+type SendOptions = {
+	messageReference?: { message_id?: string; channel_id?: string } | null
+	allowedMentions?: {
+		parse?: string[]
+		replied_user?: boolean
+		users?: string[]
+	}
+}
+type MessageSender = {
+	sendMessage(
+		channelId: string,
+		message: { content?: string },
+		...rest: unknown[]
+	): unknown
+}
 
 export type InlineHost = {
 	settings(): Settings
 	entries(): readonly Entry[]
 	providers: ReadonlySet<InlineProvider>
 	report(error: unknown): void
+	remove(entries: readonly Entry[]): void
 }
 
 const Red = '#ed4245'
 const Grey = '#939aa8'
 const keyOf = (id: string, channelId: string) => `${channelId}:${id}`
-const isSnowflake = (id: string) => /^\d+$/.test(id)
+const isSnowflake = (id: string | undefined): id is string =>
+	typeof id === 'string' && /^\d+$/.test(id)
 const colorOr = (value: string | undefined, fallback: string) =>
 	value && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback
 // 12-hour times contain a narrow no-break space before AM/PM that renders as a wide gap.
@@ -80,6 +122,94 @@ const clock = (at: number, settings: Settings) =>
 function nativeColor(value: string) {
 	const color = processColor(value)
 	return typeof color === 'number' ? color : undefined
+}
+
+type AutomodKit = {
+	embed(args: {
+		errorMessage: string
+		colors: unknown
+	}): Record<string, unknown>
+	colors(theme: string): unknown
+}
+let automod: AutomodKit | undefined
+let automodTries = 0
+
+type AutomodEmbeds = {
+	createAutomodBlockedMessageEmbed(args: {
+		errorMessage: string
+		colors: unknown
+	}): Record<string, unknown>
+}
+const { relative } = withDependencies
+/** MessageFailedStates.AUTO_MODERATION_BLOCKED_MESSAGE in Discord's renderer. */
+const AutomodFailureState = 2
+
+const currentTheme = () =>
+	(Stores.ThemeStore as unknown as { theme?: string } | undefined)?.theme ??
+	'dark'
+
+/** Discord's muted text color for the current theme, as a native color. */
+function mutedText() {
+	try {
+		const { colors, internal } = Tokens.default as unknown as {
+			colors: Record<string, unknown>
+			internal: {
+				resolveSemanticColor(theme: unknown, color: unknown): unknown
+			}
+		}
+		const value = internal.resolveSemanticColor(
+			currentTheme(),
+			colors.TEXT_MUTED,
+		)
+		return typeof value === 'string' ? nativeColor(value) : undefined
+	} catch {
+		return undefined
+	}
+}
+
+/**
+ * Discord's helpers for the AutoMod "blocked message" footer, found once. Not cached: a miss
+ * before the modules load would otherwise be remembered across restarts (it was on iOS).
+ */
+function findAutomod(): AutomodKit | undefined {
+	if (automod || automodTries > 20) return automod
+	automodTries++
+	try {
+		const byExports = withProps<AutomodEmbeds>(
+			'createAutomodBlockedMessageEmbed',
+		)
+		const embeds =
+			lookupModule(byExports, { cached: false })[0] ??
+			// modules/messages/native/renderer/createMessageFailedEmbed.tsx, followed by its two icons.
+			lookupModule(
+				withDependencies([
+					null,
+					null,
+					null,
+					relative(1),
+					null,
+					relative(2),
+					null,
+					null,
+				]).and(byExports),
+				{ cached: false, initialize: true },
+			)[0]
+		const colors = lookupModule(
+			withName<(theme: string) => unknown>('resolveMessageContentColors'),
+			{ cached: false },
+		)[0]
+		if (
+			typeof embeds?.createAutomodBlockedMessageEmbed === 'function' &&
+			typeof colors === 'function'
+		)
+			automod = {
+				embed: args => embeds.createAutomodBlockedMessageEmbed(args),
+				colors,
+			}
+	} catch {
+		// Falls back to Discord's ephemeral note.
+	}
+	return automod
 }
 
 /**
@@ -126,6 +256,59 @@ export function createInline(host: InlineHost) {
 	}
 
 	/**
+	 * Discord's own ephemeral note for this message, built by Discord as if the message were
+	 * ephemeral, so its "Dismiss message" link works. The label replaces "Only you can see this".
+	 */
+	function discordNote(
+		args: GenerateArgs,
+		generate: (args: GenerateArgs) => Row | undefined,
+		label: string,
+	) {
+		try {
+			const source = args.message as
+				| (GenerateArgs['message'] & { flags?: number })
+				| undefined
+			const record = source?.merge?.({
+				flags: Number(source.flags ?? 0) | (1 << 6),
+			}) as GenerateArgs['message'] | undefined
+			const marked = record
+				? (generate({ ...args, message: record }) as
+						| Record<string, unknown>
+						| undefined)
+				: undefined
+			const note = (marked?.message as Record<string, unknown> | undefined)
+				?.ephemeralIndication as { content?: unknown[] } | undefined
+			if (!note || !Array.isArray(note.content)) return undefined
+			const links = note.content.filter(
+				part =>
+					typeof part === 'object' &&
+					part !== null &&
+					(part as { type?: string }).type !== 'text',
+			)
+			// The link keeps Discord's action; its words become just "Dismiss".
+			const relabel = (part: unknown): unknown => {
+				if (Array.isArray(part)) return part.map(relabel)
+				if (!part || typeof part !== 'object') return part
+				const node = part as Record<string, unknown>
+				if (node.type === 'text' && typeof node.content === 'string')
+					return { ...node, content: 'Dismiss' }
+				return 'content' in node
+					? { ...node, content: relabel(node.content) }
+					: node
+			}
+			return {
+				...note,
+				content: [
+					{ type: 'text', content: `${label} · ` },
+					...(links.length ? links.map(relabel) : note.content),
+				],
+			}
+		} catch {
+			return undefined
+		}
+	}
+
+	/**
 	 * Colors for the line and box behind a message. The shape comes from a row Discord draws for a
 	 * mention, so the native cell receives exactly what it expects.
 	 */
@@ -138,18 +321,91 @@ export function createInline(host: InlineHost) {
 		gutterColor: number,
 		label: string,
 	) {
-		// The "ephemeral" style takes its gutter from the colors, and comes with a one-line note.
-		// iOS draws a mention's gutter in yellow whatever the colors say, so it uses only this.
-		;(row.message as Record<string, unknown>).ephemeralIndication = {
-			content: [{ type: 'text', content: label }],
-			// Both are required strings: null crashes the Android decoder. A blank link leaves the
-			// "?" button without a target, so it is blank on Android.
-			helpArticleLink:
-				Platform.OS === 'ios' ? 'https://support.discord.com' : '',
-			helpButtonAccessibilityLabel: Platform.OS === 'ios' ? label : '',
+		const style = host.settings().messageStyle
+		// "Text only": the colored text stays, without the box, the line and Discord's note.
+		if (style === 'text') return
+		// With the Dismiss button on, the note is Discord's own (with "Dismiss message" and "?").
+		const note =
+			style === 'highlight' && host.settings().dismissButton
+				? discordNote(args, generate, label)
+				: undefined
+		if (note && Platform.OS !== 'ios')
+			(row.message as Record<string, unknown>).ephemeralIndication = note
+		// "Highlight" adds a note under the message: Discord's own AutoMod footer (shield and text,
+		// no help button). "Box" is the colors alone.
+		if (style === 'highlight' && !note) {
+			const kit = findAutomod()
+			const message = row.message as Record<string, unknown>
+			if (kit) {
+				const theme =
+					(Stores.ThemeStore as unknown as { theme?: string } | undefined)
+						?.theme ?? 'dark'
+				const notice = kit.embed({
+					errorMessage: label,
+					colors: kit.colors(theme),
+				})
+				// Android reads iconURL, the iOS decoder reads iconUrl.
+				message.embeds = [
+					...(Array.isArray(message.embeds) ? message.embeds : []),
+					{ ...notice, iconUrl: notice.iconURL },
+				]
+			} else {
+				// Without the helpers: the same footer built by hand (a "message failed" embed in the
+				// AutoMod state), so Discord's ephemeral note and its "?" button are never needed.
+				message.embeds = [
+					...(Array.isArray(message.embeds) ? message.embeds : []),
+					{
+						type: 'text',
+						messageSendError: label,
+						failureState: AutomodFailureState,
+						disableBackgroundColor: true,
+						bodyTextColor: mutedText(),
+					},
+				]
+			}
 		}
 		if (Platform.OS === 'ios') {
-			row.backgroundHighlight = { backgroundColor, gutterColor }
+			// iOS ignores backgroundHighlight (its chat cell, read from the decompiled app): it draws a
+			// box and a line only in its own theme colors, for a mention (yellow), Discord's ephemeral
+			// note (blurple), or that note with an AutoMod "blocked" footer (red). So iPhone offers
+			// those three looks instead of any color.
+			const message = row.message as Record<string, unknown>
+			const settings = host.settings()
+			const look = label.startsWith('Deleted')
+				? settings.iosDeletedHighlight
+				: settings.iosEditedHighlight
+			const ours = (embed: unknown) =>
+				(embed as { failureState?: number })?.failureState ===
+				AutomodFailureState
+			const others = (
+				Array.isArray(message.embeds) ? message.embeds : []
+			).filter(embed => !ours(embed))
+			if (look === 'yellow') {
+				message.mentioned = true
+				if (note) message.ephemeralIndication = note
+				return
+			}
+			// Blurple and red: Discord's ephemeral note carries the label (with its help button).
+			message.ephemeralIndication = note ?? {
+				content: [{ type: 'text', content: label }],
+				// iOS requires a valid address here.
+				helpArticleLink: 'https://support.discord.com',
+				helpButtonAccessibilityLabel: label,
+			}
+			// Red needs an AutoMod footer next to the note: an empty one, without an icon, so only the
+			// note shows.
+			message.embeds =
+				look === 'red'
+					? [
+							...others,
+							{
+								type: 'text',
+								messageSendError: '',
+								failureState: AutomodFailureState,
+								disableBackgroundColor: true,
+							},
+						]
+					: others
 			return
 		}
 		let template: Row['backgroundHighlight']
@@ -271,24 +527,19 @@ export function createInline(host: InlineHost) {
 			row.message.editedColor = nativeColor(tint)
 			// iOS draws its own fixed colors for the highlight, so the chosen color goes on the text there.
 			if (Platform.OS === 'ios') row.message.textColor = nativeColor(tint)
-			if (settings.showEditTime)
+			if (settings.showEditTime && !deletion)
 				row.message.edited = `edited ${clock(edits[edits.length - 1].at, settings)}`
-			const background = nativeColor(`${tint}26`)
-			const gutter = nativeColor(`${tint}`)
+			const box = colorOr(settings.editedHighlightColor, tint)
+			const background = nativeColor(`${box}26`)
+			const gutter = nativeColor(box)
+			// A deleted message shows only that it was deleted.
 			if (
+				!deletion &&
 				!row.backgroundHighlight &&
 				background !== undefined &&
 				gutter !== undefined
 			) {
-				highlight(
-					row,
-					args,
-					generate,
-					original,
-					background,
-					gutter,
-					'Edited message',
-				)
+				highlight(row, args, generate, original, background, gutter, 'Edited')
 			}
 		}
 
@@ -297,30 +548,57 @@ export function createInline(host: InlineHost) {
 			if (tint !== undefined) {
 				row.message.textColor = tint
 				row.message.timestampColor = tint
-				const background = nativeColor(
-					`${colorOr(settings.deletedMessageColor, Red)}26`,
+				const box = colorOr(
+					settings.deletedHighlightColor,
+					colorOr(settings.deletedMessageColor, Red),
 				)
-				if (background !== undefined)
+				const background = nativeColor(`${box}26`)
+				const gutter = nativeColor(box)
+				if (background !== undefined && gutter !== undefined)
 					highlight(
 						row,
 						args,
 						generate,
 						original,
 						background,
-						tint,
-						// An edited message keeps its edit time next to the name, so the deletion time goes here.
-						settings.showDeletedTime && edits.length
-							? `Deleted message · ${clock(deletion.at, settings)}`
-							: 'Deleted message',
+						gutter,
+						'Deleted',
 					)
 			}
-			if (
-				settings.showDeletedTime &&
-				!edits.length &&
-				Array.isArray(row.message.content)
-			) {
-				row.message.edited = `deleted ${clock(deletion.at, settings)}`
-				row.message.editedColor = tint
+			if (Array.isArray(row.message.content)) {
+				// Next to the text: the deletion time, or nothing (no "edited" on a deleted message).
+				if (settings.showDeletedTime) {
+					row.message.edited = `deleted ${clock(deletion.at, settings)}`
+					row.message.editedColor = tint
+				} else if (edits.length || message.edited) {
+					;(row.message as Record<string, unknown>).edited = null
+				}
+			}
+		}
+		if (deletion && settings.dimDeletedMedia)
+			row.message.attachmentsOpacity = 0.5
+		// Discord's tag next to the name (where "APP" goes), only when the author has none.
+		if (settings.showTag && !message.tagText && (deletion || edits.length)) {
+			const label = deletion ? 'DELETED' : 'EDITED'
+			const background = nativeColor(
+				deletion
+					? colorOr(
+							settings.deletedHighlightColor,
+							colorOr(settings.deletedMessageColor, Red),
+						)
+					: colorOr(
+							settings.editedHighlightColor,
+							colorOr(settings.editedMessageColor, Grey),
+						),
+			)
+			if (background !== undefined) {
+				row.message.tagText = label
+				row.message.tagAccessibilityLabel = label
+				row.message.tagVerified = false
+				// Discord's plain text tag type ("SERVER"), without the bot checkmark.
+				row.message.tagType = 'b'
+				row.message.tagBackgroundColor = background
+				row.message.tagTextColor = nativeColor('#ffffff')
 			}
 		}
 		const nameColor =
@@ -332,6 +610,10 @@ export function createInline(host: InlineHost) {
 		if (name !== undefined) {
 			row.message.usernameColor = name
 			row.message.colorString = name
+			// Role gradients and Nitro name styles are drawn from these instead of the plain color.
+			const named = row.message as Record<string, unknown>
+			named.roleColor = name
+			named.roleColors = null
 		}
 		return row
 	}
@@ -399,6 +681,27 @@ export function createInline(host: InlineHost) {
 		return true
 	}
 
+	/**
+	 * A local MESSAGE_DELETE: "Dismiss message" in Discord's note. On a deleted message the log entry
+	 * goes and the message leaves the chat; on an edited one only the edits go and the message stays.
+	 */
+	function onDismiss<T extends DeleteEvent>(payload: T): T | undefined {
+		if (isSynthetic(payload) || !payload.id || !payload.channelId)
+			return payload
+		const key = keyOf(payload.id, payload.channelId)
+		const entries = entriesOf(key)
+		if (!entries.length) return payload
+		if (entries.some(entry => entry.kind === 'deleted')) {
+			retained.delete(key)
+			rendered.delete(key)
+			host.remove(entries)
+			return payload
+		}
+		changed.add(key)
+		host.remove(entries.filter(entry => entry.kind === 'edited'))
+		return undefined
+	}
+
 	/** MESSAGE_DELETE: turn the deletion into a redraw when the message is retained. */
 	function onDelete<T extends DeleteEvent>(payload: T): T | undefined {
 		if (isSynthetic(payload) || !payload.id || !payload.channelId)
@@ -437,14 +740,111 @@ export function createInline(host: InlineHost) {
 		return remaining.length ? { ...payload, ids: remaining } : undefined
 	}
 
-	/** Adds retained deleted messages back when a channel's messages load. */
-	function onLoaded<T extends LoadedMessages>(payload: T): T {
-		if (
-			!rendererFound ||
-			!payload.channelId ||
-			!Array.isArray(payload.messages)
-		)
+	/**
+	 * Background sync removes the messages deleted while the app was away, without a MESSAGE_DELETE.
+	 * Retained ones are taken out of the list and redrawn as deleted instead.
+	 */
+	function onBackgroundSync<T extends SyncEvent>(payload: T): T {
+		const changes = payload.changesByChannelId
+		if (isSynthetic(payload) || !changes || typeof changes !== 'object')
 			return payload
+		let next: SyncEvent['changesByChannelId'] | undefined
+		for (const [channelId, change] of Object.entries(changes)) {
+			const ids = change?.deleted_message_ids
+			if (!Array.isArray(ids) || !ids.length) continue
+			const kept = new Set<string>()
+			for (const id of ids) {
+				const location = { id, channelId }
+				if (kept.has(id) || !keep(location)) continue
+				kept.add(id)
+				void Promise.resolve().then(() => {
+					if (retained.has(keyOf(id, channelId)))
+						dispatch(refreshEvent(location))
+				})
+			}
+			if (!kept.size) continue
+			next ??= { ...changes }
+			next[channelId] = {
+				...change,
+				deleted_message_ids: ids.filter(id => !kept.has(id)),
+			}
+		}
+		return next ? { ...payload, changesByChannelId: next } : payload
+	}
+
+	/** A message rebuilt from its log snapshot, in the gateway's shape. */
+	function rawOf(before: Entry['before']) {
+		const id = isSnowflake(before.id) ? BigInt(before.id) : 0n
+		return {
+			...before.original,
+			id: before.id,
+			channel_id: before.channelId,
+			guild_id: before.guildId || undefined,
+			author: before.original?.author ?? {
+				id: before.authorId,
+				username: before.author,
+				bot: before.bot,
+			},
+			content:
+				typeof before.original?.content === 'string'
+					? before.original.content
+					: before.content,
+			timestamp:
+				before.original?.timestamp ??
+				new Date(Number((id >> 22n) + 1420070400000n)).toISOString(),
+			state: 'SENT',
+			flags: 0,
+			type: 0,
+			attachments: before.original?.attachments ?? [],
+			embeds: before.original?.embeds ?? [],
+			reactions: [],
+			mentions: before.mentions.map(userId => ({ id: userId })),
+			mention_roles: before.roles,
+			mention_everyone: before.everyone,
+		}
+	}
+
+	/**
+	 * A reply whose message was deleted comes with referenced_message: null, which Discord shows as
+	 * "Original message was deleted". When the log has that message, it goes back in.
+	 */
+	function fillReply<T extends LoadedMessage>(message: T): T {
+		const reference = message?.message_reference
+		if (
+			!host.settings().fillDeletedReplies ||
+			message.referenced_message !== null ||
+			!reference?.message_id
+		)
+			return message
+		const channelId = reference.channel_id ?? message.channel_id
+		if (!channelId) return message
+		const deleted = entriesOf(keyOf(reference.message_id, channelId)).find(
+			entry => entry.kind === 'deleted',
+		)
+		return deleted
+			? { ...message, referenced_message: rawOf(deleted.before) }
+			: message
+	}
+
+	function onCreate<T extends { message?: unknown }>(payload: T): T {
+		const message = payload.message as LoadedMessage | undefined
+		if (!message || typeof message !== 'object') return payload
+		const filled = fillReply(message)
+		return filled === message ? payload : { ...payload, message: filled }
+	}
+
+	/** Adds retained deleted messages back when a channel's messages load. */
+	function onLoaded<T extends LoadedMessages>(loaded: T): T {
+		if (!Array.isArray(loaded.messages)) return loaded
+		const messages = loaded.messages.map(message =>
+			message && typeof message === 'object' ? fillReply(message) : message,
+		)
+		const payload = messages.some(
+			(message, at) => message !== loaded.messages[at],
+		)
+			? { ...loaded, messages }
+			: loaded
+		if (!rendererFound || !payload.channelId) return payload
 		const present = new Set(payload.messages.map(message => message.id))
 		const sorted = payload.messages
 			.map(message => message.id)
@@ -477,33 +877,7 @@ export function createInline(host: InlineHost) {
 				payload.hasMoreAfter === false
 			if (!(inside || older || newer || empty)) continue
 			present.add(before.id)
-			restored.push({
-				...before.original,
-				id: before.id,
-				channel_id: before.channelId,
-				guild_id: before.guildId || undefined,
-				author: before.original?.author ?? {
-					id: before.authorId,
-					username: before.author,
-					bot: before.bot,
-				},
-				content:
-					typeof before.original?.content === 'string'
-						? before.original.content
-						: before.content,
-				timestamp:
-					before.original?.timestamp ??
-					new Date(Number((id >> 22n) + 1420070400000n)).toISOString(),
-				state: 'SENT',
-				flags: 0,
-				type: 0,
-				attachments: before.original?.attachments ?? [],
-				embeds: before.original?.embeds ?? [],
-				reactions: [],
-				mentions: before.mentions.map(userId => ({ id: userId })),
-				mention_roles: before.roles,
-				mention_everyone: before.everyone,
-			})
+			restored.push(rawOf(before))
 			retained.set(key, {
 				id: before.id,
 				channelId: before.channelId,
@@ -512,34 +886,89 @@ export function createInline(host: InlineHost) {
 			changed.add(key)
 		}
 		if (!restored.length) return payload
-		const newestFirst = (a: { id: string }, b: { id: string }) =>
-			isSnowflake(a.id) && isSnowflake(b.id)
-				? BigInt(a.id) > BigInt(b.id)
-					? -1
-					: BigInt(a.id) < BigInt(b.id)
-						? 1
-						: 0
-				: 0
+		// Keep the order the list came in: newest first from the server, possibly oldest first from the phone.
+		const list = payload.messages
+		const first = list[0]?.id
+		const last = list[list.length - 1]?.id
+		const oldestFirst =
+			list.length > 1 &&
+			isSnowflake(first) &&
+			isSnowflake(last) &&
+			BigInt(first) < BigInt(last)
+		const order = (a: { id: string }, b: { id: string }) => {
+			if (!isSnowflake(a.id) || !isSnowflake(b.id)) return 0
+			const sign =
+				BigInt(a.id) > BigInt(b.id) ? -1 : BigInt(a.id) < BigInt(b.id) ? 1 : 0
+			return oldestFirst ? -sign : sign
+		}
 		return {
 			...payload,
-			messages: [...payload.messages, ...(restored as { id: string }[])].sort(
-				newestFirst,
-			),
+			messages: [...list, ...(restored as LoadedMessage[])].sort(order),
 		} as T
 	}
 
-	function start() {
-		for (const type of [
-			'LOAD_MESSAGES_SUCCESS',
-			'LOAD_MESSAGES_SUCCESS_CACHED',
-		]) {
-			removers.push(
-				onFluxEventDispatched<LoadedMessages & { type: string }>(
-					type,
-					onLoaded,
-				),
-			)
+	/** Turns a reply to a retained deleted message into a message that quotes it. */
+	function quoteDeleted<T extends unknown[]>(args: T): T {
+		const [channelId, message, , options] = args as unknown as [
+			string,
+			{ content?: string } | undefined,
+			unknown,
+			SendOptions | undefined,
+		]
+		const reference = options?.messageReference
+		if (
+			!options ||
+			!reference?.message_id ||
+			!message ||
+			typeof channelId !== 'string'
+		)
+			return args
+		const key = keyOf(reference.message_id, reference.channel_id ?? channelId)
+		const deletion = retained.has(key) ? retainedDeletion(key) : undefined
+		if (!deletion) return args
+		const snapshot = deletion.before
+		const asName = host.settings().quoteAuthorAs === 'name'
+		const mention = asName ? `@${snapshot.author}` : `<@${snapshot.authorId}>`
+		// A mention with the reply's ping turned off: shown, but that user is not notified.
+		const silent = !asName && options.allowedMentions?.replied_user === false
+		const attachments = snapshot.original?.attachments
+		const files = Array.isArray(attachments) ? attachments.length : 0
+		const text = String(snapshot.original?.content ?? snapshot.content).trim()
+		const parts = [
+			text,
+			files ? `(${files} attachment${files > 1 ? 's' : ''})` : '',
+		].filter(Boolean)
+		const own = message.content ?? ''
+		const room = Math.max(0, 1990 - own.length - mention.length)
+		let quoted = parts.join(' ') || '(No text)'
+		if (quoted.length > room)
+			quoted = `${quoted.slice(0, Math.max(0, room - 1))}…`
+		const quote = `${mention}: ${quoted}`
+			.split('\n')
+			.map(line => `> ${line}`)
+			.join('\n')
+		const next = [...args]
+		next[1] = { ...message, content: room ? `${quote}\n${own}` : own }
+		const { replied_user: _, ...mentions } = options.allowedMentions ?? {}
+		if (silent) {
+			// Users mentioned in your own text still get pinged; only the quoted author does not.
+			const users = [...own.matchAll(/<@!?(\d+)>/g)]
+				.map(match => match[1])
+				.filter(id => id !== snapshot.authorId)
+			mentions.parse = (
+				mentions.parse ?? ['users', 'roles', 'everyone']
+			).filter(kind => kind !== 'users')
+			mentions.users = [...new Set(users)]
 		}
+		next[3] = {
+			...options,
+			messageReference: undefined,
+			...(options.allowedMentions ? { allowedMentions: mentions } : {}),
+		}
+		return next as T
+	}
+
+	function start() {
 		const patched = new WeakSet<object>()
 		removers.push(
 			getModules(
@@ -569,13 +998,42 @@ export function createInline(host: InlineHost) {
 				},
 			),
 		)
+		// A deleted message kept on screen no longer exists on the server, so a reply to it fails.
+		// The reply goes out as a normal message that quotes the deleted one instead.
+		removers.push(
+			getModules(
+				// The MessageActions module.
+				withProps<MessageSender & { jumpToMessage: unknown }>(
+					'sendMessage',
+					'jumpToMessage',
+				),
+				actions => {
+					if (patched.has(actions)) return
+					patched.add(actions)
+					removers.push(
+						before(actions, 'sendMessage', args => {
+							try {
+								return quoteDeleted(args)
+							} catch (error) {
+								host.report(error)
+								return args
+							}
+						}),
+					)
+				},
+			),
+		)
 		scheduleReconcile(true)
 	}
 
 	return {
 		start,
+		onCreate,
 		onDelete,
+		onDismiss,
 		onDeleteBulk,
+		onLoaded,
+		onBackgroundSync,
 		refresh: () => scheduleReconcile(true),
 		stop() {
 			// Clear retained rows while the row hook can still redraw them.

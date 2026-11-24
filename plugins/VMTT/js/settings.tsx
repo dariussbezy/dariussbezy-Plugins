@@ -3,6 +3,7 @@ import TableRowAssetIcon from '@valenced/components/TableRowAssetIcon'
 import { Design } from '@valenced/discord/design'
 import { useState, useSyncExternalStore } from 'react'
 import { ScrollView } from 'react-native'
+import { StatsRow } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import { getRuntime } from './runtime'
 import {
@@ -201,6 +202,7 @@ export default function SettingsComponent({
 							onPress={() => runtime?.clear()}
 						/>
 					</Design.TableRowGroup>
+					<StatsRow />
 					<Design.TableRowGroup title="Quick guide">
 						<Design.TableRow
 							icon={<TableRowAssetIcon name="CircleInformationIcon" />}

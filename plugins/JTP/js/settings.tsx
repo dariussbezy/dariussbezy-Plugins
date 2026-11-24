@@ -2,6 +2,7 @@ import Page from '@valenced/components/Page'
 import TableRowAssetIcon from '@valenced/components/TableRowAssetIcon'
 import { Design } from '@valenced/discord/design'
 import { ScrollView } from 'react-native'
+import { StatsRow } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import { DefaultSettings } from './shared'
 import { openPingSheet } from './sheet'
@@ -148,6 +149,7 @@ export default function SettingsComponent({
 							onPress={openPingSheet}
 						/>
 					</Design.TableRowGroup>
+					<StatsRow />
 					<Design.TableRowGroup title="Quick guide">
 						<Design.TableRow
 							label="Open the list"

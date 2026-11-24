@@ -5,7 +5,7 @@
 	"description": "Disable tapping a message author's name to insert a mention.",
 	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
 	"icon": "PersonIcon",
-	"version": "2.1.0",
+	"version": "2.2.0",
 	"dependencies": {
 		"valenced.api": {
 			"version": ">=1 <2"

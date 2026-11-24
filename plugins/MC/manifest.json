@@ -9,7 +9,7 @@
 		"kmmiio99o.dev <879393496627306587>"
 	],
 	"icon": "MusicIcon",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"dependencies": {
 		"valenced.api": {
 			"version": ">=1 <2"

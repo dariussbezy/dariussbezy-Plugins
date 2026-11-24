@@ -8,6 +8,16 @@ export type FluxMessageEvent = {
 	ids?: string[]
 	channelId?: string
 	guildId?: string
+	/** BACKGROUND_SYNC_CHANNEL_MESSAGES: what changed while the app was in the background. */
+	changesByChannelId?: Record<string, SyncChanges | undefined>
+	/** LOAD_MESSAGES_SUCCESS: one unbroken page of messages from the server. */
+	messages?: RawMessage[]
+}
+
+export type SyncChanges = {
+	new_messages?: RawMessage[]
+	modified_messages?: RawMessage[]
+	deleted_message_ids?: string[]
 }
 
 export const MaxCacheSize = 200000
@@ -201,6 +211,9 @@ export function createEngine(env: Env) {
 		return toSnapshot(env.stored(channelId, id) ?? {}, channelId, guildId)
 	}
 
+	/** Deletions already logged: Discord reports your own deletions twice, background sync again. */
+	const gone = new Set<string>()
+
 	function log(kind: Entry['kind'], before: Snapshot, after?: Snapshot) {
 		const settings = env.settings()
 		if (
@@ -208,6 +221,12 @@ export function createEngine(env: Env) {
 			!(kind === 'edited' ? settings.logEdits : settings.logDeletes)
 		)
 			return
+		if (kind === 'deleted') {
+			const key = keyOf(before.channelId, before.id)
+			if (gone.has(key)) return
+			gone.add(key)
+			if (gone.size > 2000) gone.delete(gone.values().next().value!)
+		}
 		env.record({
 			kind,
 			at: Date.now(),
@@ -216,8 +235,63 @@ export function createEngine(env: Env) {
 		})
 	}
 
+	/**
+	 * A page from the server has no gaps, so a message seen earlier whose id falls inside the page but
+	 * is not in it was deleted while Discord was not connected (no MESSAGE_DELETE ever came).
+	 */
+	function findMissed(event: FluxMessageEvent) {
+		const { channelId, messages } = event
+		if (!channelId || !Array.isArray(messages) || messages.length < 2)
+			return false
+		const ids = messages
+			.map(message => message?.id)
+			.filter((id): id is string => typeof id === 'string' && /^\d+$/.test(id))
+		if (ids.length < 2) return false
+		const present = new Set(ids)
+		const sorted = ids.map(BigInt).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+		const low = sorted[0]
+		const high = sorted[sorted.length - 1]
+		let seen = false
+		for (const snapshot of [...recent.values()]) {
+			if (snapshot.channelId !== channelId || present.has(snapshot.id)) continue
+			if (!/^\d+$/.test(snapshot.id)) continue
+			const id = BigInt(snapshot.id)
+			// Ephemeral messages (only you can see them) are never in pages from the server.
+			const flags = Number(snapshot.original?.flags ?? 0)
+			if (id <= low || id >= high || flags & 64) continue
+			log('deleted', snapshot)
+			recent.delete(keyOf(channelId, snapshot.id))
+			seen = true
+		}
+		return seen
+	}
+
 	/** Reads one MESSAGE_* event. Must run before Discord's stores handle it. */
-	function observe(event: FluxMessageEvent) {
+	function observe(event: FluxMessageEvent): boolean {
+		if (event.type === 'BACKGROUND_SYNC_CHANNEL_MESSAGES') {
+			let seen = false
+			for (const [channelId, changes] of Object.entries(
+				event.changesByChannelId ?? {},
+			)) {
+				if (!changes) continue
+				const each = (type: string, messages: RawMessage[] | undefined) => {
+					for (const message of Array.isArray(messages) ? messages : [])
+						if (message?.id && observe({ type, message, channelId }))
+							seen = true
+				}
+				each('MESSAGE_CREATE', changes.new_messages)
+				each('MESSAGE_UPDATE', changes.modified_messages)
+				const ids = changes.deleted_message_ids
+				if (
+					Array.isArray(ids) &&
+					ids.length &&
+					observe({ type: 'MESSAGE_DELETE_BULK', ids, channelId })
+				)
+					seen = true
+			}
+			return seen
+		}
+		if (event.type === 'LOAD_MESSAGES_SUCCESS') return findMissed(event)
 		const { message } = event
 		const channelId =
 			event.channelId ?? message?.channel_id ?? message?.channelId
@@ -225,7 +299,7 @@ export function createEngine(env: Env) {
 			!channelId ||
 			(env.settings().captureMode === 'loaded' && !env.loaded(channelId))
 		)
-			return
+			return false
 		if (event.type === 'MESSAGE_CREATE' && message) {
 			const created = toSnapshot(message, channelId, event.guildId)
 			if (created) remember(created)

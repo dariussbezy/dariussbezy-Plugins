@@ -1,7 +1,10 @@
+import { getModuleWithImportedPath } from '@valenced/discord/utils/modules/finders'
 import { getModules } from '@valenced/modules/finders'
-import { withName, withProps } from '@valenced/modules/finders/filters'
+import { withProps } from '@valenced/modules/finders/filters'
 import { after, instead } from '@valenced/patcher'
 import { cloneElement, isValidElement } from 'react'
+import { startStats } from '../../../lib/stats'
+import manifest from '../manifest.json'
 import SettingsComponent from './settings'
 import {
 	bindStorage,
@@ -10,6 +13,8 @@ import {
 	keyOf,
 	lookups,
 	measured,
+	mergedFor,
+	placeOf,
 	resolve,
 } from './shared'
 import type { ReactElement, ReactNode } from 'react'
@@ -17,7 +22,11 @@ import type { EmojiPicker, RowEmoji, Settings, UnicodeEmojis } from './shared'
 
 type ReactionRow = {
 	useEmojisForReactionRow: (
-		channel: { getGuildId?(): string | null | undefined },
+		channel: {
+			id?: string
+			guild_id?: string | null
+			getGuildId?(): string | null | undefined
+		},
 		maxWidth: number,
 		slotWidth: number,
 	) => (RowEmoji | null)[]
@@ -31,6 +40,16 @@ type Row = ReactElement<{ children?: ReactNode; style?: unknown }>
 
 const frequent: { hook?: FrequentEmojis['useFrequentlyUsedReactionEmojis'] } =
 	{}
+/** EmojiIntention.REACTION. */
+const ReactionIntention = 0
+const emojiRules: {
+	locked?: (args: {
+		emoji: RowEmoji
+		channel: unknown
+		intention: number
+	}) => boolean
+} = {}
+
 /** Spots in one row (emojis plus the picker button), from the last time the row was built. */
 let slots = 0
 
@@ -38,20 +57,31 @@ let slots = 0
  * Every spot of the quick reactions, row after row: your emoji where you put one, otherwise the
  * next frequent emoji (when filling is on). The picker button takes the very last spot.
  */
-function arrange(base: (RowEmoji | null)[], more: RowEmoji[]) {
-	const { emojis, fill, rows } = getSettings()
+function arrange(
+	base: (RowEmoji | null)[],
+	more: RowEmoji[],
+	channel: Parameters<ReactionRow['useEmojisForReactionRow']>[0],
+) {
+	const { rows } = getSettings()
+	// The server's or DM's own emojis, with the ones set for everywhere on the spots it leaves empty.
+	const { emojis, fill } = mergedFor(placeOf(channel))
 	const total = rows * slots - 1
 	if (!emojis.length && rows === 1) return base
-	const saved = emojis.map(spot => (spot ? resolve(spot) : null))
+	// Discord hides emojis it would refuse as reactions here (locked, Nitro-only): so does this row.
+	const usable = (emoji: RowEmoji) =>
+		(emoji as { available?: boolean }).available !== false &&
+		!emojiRules.locked?.({ emoji, channel, intention: ReactionIntention })
+	const saved = emojis.map(spot => {
+		const emoji = spot ? resolve(spot) : null
+		return emoji && usable(emoji) ? emoji : null
+	})
 	const taken = new Set(
 		saved.filter((emoji): emoji is RowEmoji => emoji != null).map(keyOf),
 	)
 	const pool: RowEmoji[] = []
 	if (fill || !emojis.length)
 		for (const emoji of [...base, ...more]) {
-			// Custom emojis that are not available (left server, needs Nitro) cannot react.
-			if (!emoji || (emoji as { available?: boolean }).available === false)
-				continue
+			if (!emoji || !usable(emoji)) continue
 			const key = keyOf(emoji)
 			if (taken.has(key)) continue
 			taken.add(key)
@@ -105,6 +135,10 @@ export default plugin<{ jsonStorage: Settings }>({
 	start({ cleanup, jsonStorage, logger }) {
 		bindStorage(jsonStorage)
 		cleanup(
+			startStats({
+				manifest,
+				settings: getSettings,
+			}),
 			getModules(
 				// modules/emojis/native/useFrequentlyUsedReactionEmojis
 				withProps<FrequentEmojis>('useFrequentlyUsedReactionEmojis'),
@@ -134,7 +168,7 @@ export default plugin<{ jsonStorage: Settings }>({
 								if (!Array.isArray(result)) return result
 								slots = result.length + 1
 								measured.slots = slots
-								return arrange(result, Array.isArray(more) ? more : [])
+								return arrange(result, Array.isArray(more) ? more : [], args[0])
 							} catch (error) {
 								logger.error('Custom Quick Reactions failed:', error)
 								return result
@@ -144,9 +178,18 @@ export default plugin<{ jsonStorage: Settings }>({
 				},
 			),
 			getModules(
-				// modules/action_sheet/native/components/EmojiRow.tsx
-				withName('EmojiRow'),
-				namespace => {
+				// modules/emojis/EmojiUtils: Discord's own check for its reaction row.
+				withProps<{
+					isEmojiFilteredOrLocked: NonNullable<typeof emojiRules.locked>
+				}>('isEmojiFilteredOrLocked'),
+				utils => {
+					emojiRules.locked = args => utils.isEmojiFilteredOrLocked(args)
+				},
+			),
+			// By path: another EmojiRow exists in the server emoji settings.
+			getModuleWithImportedPath(
+				'modules/action_sheet/native/components/EmojiRow.tsx',
+				(namespace: unknown) => {
 					const host = namespace as {
 						default: (...args: unknown[]) => ReactNode
 					}
@@ -162,7 +205,6 @@ export default plugin<{ jsonStorage: Settings }>({
 						}),
 					)
 				},
-				{ returnNamespace: true },
 			),
 			getModules(
 				// modules/emoji_picker/native/openEmojiPickerActionSheet.tsx, loaded the first time the picker opens
@@ -181,6 +223,7 @@ export default plugin<{ jsonStorage: Settings }>({
 			() => {
 				bindStorage(undefined)
 				lookups.unicode = undefined
+				emojiRules.locked = undefined
 				lookups.picker = undefined
 				frequent.hook = undefined
 			},

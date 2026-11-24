@@ -3,7 +3,7 @@ import { DefaultSettings } from './types'
 import type { Data, Entry, Settings, Snapshot } from './types'
 
 const Day = 24 * 60 * 60 * 1000
-const SaveDelay = 2000
+const SaveDelay = 1000
 
 export type JournalState = { settings: Settings; entries: Entry[] }
 
@@ -18,6 +18,15 @@ export function normalizeSettings(
 	if (![0, 1, 7, 30].includes(settings.retentionDays))
 		settings.retentionDays = 7
 	if (settings.captureMode !== 'loaded') settings.captureMode = 'all'
+	if (settings.quoteAuthorAs !== 'name') settings.quoteAuthorAs = 'mention'
+	for (const key of ['iosDeletedHighlight', 'iosEditedHighlight'] as const)
+		if (!['red', 'yellow', 'blurple'].includes(settings[key]))
+			settings[key] = DefaultSettings[key]
+	if (!['highlight', 'box', 'text'].includes(settings.messageStyle))
+		settings.messageStyle = 'highlight'
+	for (const key of ['deletedHighlightColor', 'editedHighlightColor'] as const)
+		if (!/^#[0-9a-f]{6}$/i.test(String(settings[key])))
+			settings[key] = DefaultSettings[key]
 	if (
 		typeof settings.cacheLimit !== 'number' ||
 		!Number.isFinite(settings.cacheLimit)

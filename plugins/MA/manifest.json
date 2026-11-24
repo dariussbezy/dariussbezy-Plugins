@@ -5,7 +5,7 @@
 	"description": "Reorder, hide or remove the buttons shown when you long-press a message.",
 	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
 	"icon": "SettingsIcon",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"dependencies": {
 		"valenced.api": {
 			"version": ">=1 <2"

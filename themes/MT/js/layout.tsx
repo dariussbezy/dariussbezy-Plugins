@@ -1,4 +1,3 @@
-import { Stores } from '@valenced/discord/flux'
 import { getModules } from '@valenced/modules/finders'
 import {
 	createFilterGenerator,
@@ -11,30 +10,20 @@ import { afterJSX } from '@valenced/react/jsx-runtime'
 import * as React from 'react'
 
 export const ProviderId = 'dariuss.midnight-theme'
-const SurfaceRadii = new Map([
-	['ChannelHeader', 16],
-	['ChatInput', 14],
-	['ChannelListLayout', 18],
-])
-const Names = new Set([...SurfaceRadii.keys(), 'GuildsBarMessages', 'ChatIcon'])
+/** The Home button and its icon: the moon replaces the icon only there. */
+const Names = new Set(['GuildsBarMessages', 'ChatIcon'])
 type Element = React.ReactElement<any>
 type IconState = {
 	active: boolean
 	renderer: React.ElementType<any> | null
 	source: { uri: string } | null
 }
-let active = false
 let icons: IconState = { active: false, renderer: null, source: null }
 let NavigationContext: React.Context<boolean> | undefined
 let reportIconError: (error: unknown) => void = () => {}
 const listeners = new Set<() => void>()
 const emit = () => {
 	for (const listener of listeners) listener()
-}
-function setActive(value: boolean) {
-	if (value === active) return
-	active = value
-	emit()
 }
 function setIcons(patch: Partial<IconState>) {
 	if (
@@ -52,7 +41,6 @@ function subscribe(listener: () => void) {
 		listeners.delete(listener)
 	}
 }
-const snapshot = () => active
 const iconSnapshot = () => icons
 export function isMidnightSelection(state: any): boolean {
 	return state?.colors?.plugin === ProviderId
@@ -102,35 +90,6 @@ export function decorateElement(
 		original.key === null ? { original } : { key: original.key, original },
 	)
 }
-function Surface({ original }: { original: Element }) {
-	const enabled = React.useSyncExternalStore(subscribe, snapshot, snapshot)
-	const store = (Stores as any).ThemeStore
-	const light = React.useSyncExternalStore(
-		React.useCallback(
-			(listener: () => void) => {
-				store?.addChangeListener?.(listener)
-				return () => store?.removeChangeListener?.(listener)
-			},
-			[store],
-		),
-		() => store?.theme === 'light',
-		() => false,
-	)
-	const borderRadius = SurfaceRadii.get(componentName(original.type) ?? '')
-	if (
-		!enabled ||
-		borderRadius === undefined ||
-		original.props.style === undefined
-	)
-		return original
-	// Style existing surfaces without adding a Yoga parent, insets or clipping.
-	return React.cloneElement(original, {
-		style: [
-			original.props.style,
-			{ borderRadius, borderColor: light ? '#5973A021' : '#6888E424' },
-		],
-	})
-}
 function NavigationScope({ original }: { original: Element }) {
 	return React.createElement(
 		NavigationContext!.Provider,
@@ -139,7 +98,7 @@ function NavigationScope({ original }: { original: Element }) {
 	)
 }
 class IconFallback extends React.Component<
-	{ original: Element; children: React.ReactNode },
+	{ original: Element; children?: React.ReactNode },
 	{ failed: boolean }
 > {
 	state = { failed: false }
@@ -163,19 +122,17 @@ function MoonIcon({ original }: { original: Element }) {
 	if (!navigation || !state.active || !state.renderer || !state.source)
 		return original
 	// Discord's BaseIconImage resolves semantic color tokens and the original icon size.
-	return React.createElement(IconFallback, {
-		original,
-		children: React.createElement(state.renderer, {
+	return React.createElement(
+		IconFallback,
+		{ original },
+		React.createElement(state.renderer, {
 			...original.props,
 			source: state.source,
 			resizeMode: 'contain',
 		}),
-	})
+	)
 }
-export function startAppearance(
-	roundedSurfaces: boolean,
-	report: (error: unknown) => void,
-): () => void {
+export function startAppearance(report: (error: unknown) => void): () => void {
 	let running = true
 	let refreshQueued = false
 	const cleanup: (() => void)[] = []
@@ -191,7 +148,6 @@ export function startAppearance(
 	const release = () => {
 		running = false
 		for (const fn of cleanup.splice(0).reverse()) fn()
-		setActive(false)
 		setIcons({ active: false, renderer: null, source: null })
 		hooked.clear()
 		reportIconError = () => {}
@@ -203,11 +159,8 @@ export function startAppearance(
 	const refresh = () => {
 		if (!running) return
 		try {
-			const state = readSelection()
-			setActive(roundedSurfaces && isMidnightSelection(state))
-			setIcons({ active: isMidnightIconSelection(state) })
+			setIcons({ active: isMidnightIconSelection(readSelection()) })
 		} catch (error) {
-			setActive(false)
 			setIcons({ active: false })
 			reportSafely(error)
 		}
@@ -257,18 +210,10 @@ export function startAppearance(
 						if (hasBaseIcon(namespace))
 							setIcons({ renderer: namespace.BaseIconImage })
 						for (const { type, name } of resolveTargets(namespace, Names)) {
-							if (
-								hooked.has(type) ||
-								(SurfaceRadii.has(name) && !roundedSurfaces)
-							)
-								continue
+							if (hooked.has(type)) continue
 							hooked.add(type)
 							const Decorator =
-								name === 'GuildsBarMessages'
-									? NavigationScope
-									: name === 'ChatIcon'
-										? MoonIcon
-										: Surface
+								name === 'GuildsBarMessages' ? NavigationScope : MoonIcon
 							cleanup.push(
 								afterJSX(type, element => decorateElement(element, Decorator)),
 							)

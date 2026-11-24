@@ -4,6 +4,7 @@ import { Design } from '@valenced/discord/design'
 import { Stores } from '@valenced/discord/flux'
 import { useState } from 'react'
 import { ScrollView } from 'react-native'
+import { StatsRow } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import { DefaultSettings } from './shared'
 import type { PluginSettingsComponent } from '@valenced/plugins/types'
@@ -137,6 +138,7 @@ export default function SettingsComponent({
 							setDraft('')
 						}}
 					/>
+					<StatsRow />
 					<Design.TableRowGroup title="Quick guide">
 						{GUIDE.map(([label, subLabel]) => (
 							<Design.TableRow

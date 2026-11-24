@@ -5,6 +5,7 @@ import TableRowAssetIcon from '@valenced/components/TableRowAssetIcon'
 import { Design } from '@valenced/discord/design'
 import { useSyncExternalStore } from 'react'
 import { ScrollView } from 'react-native'
+import { StatsRow } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import {
 	getSettings,
@@ -208,6 +209,7 @@ export default function SettingsComponent() {
 							}
 						/>
 					</Design.TableRowGroup>
+					<StatsRow />
 					<Design.TableRowGroup title="Quick guide">
 						{GUIDE.map(([label, subLabel]) => (
 							<Design.TableRow

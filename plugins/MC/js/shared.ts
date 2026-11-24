@@ -12,6 +12,8 @@ export interface Settings {
 	transparent: boolean
 	/** How see-through the transparent look is. */
 	transparency: TransparencyLevel
+	/** Frosted: blurred, whitish glass. Off: clear glass that only tints what is behind it. */
+	frosted: boolean
 	/** Show "Listening to YouTube Music / SoundCloud" on the Discord profile. */
 	listeningStatus: boolean
 	expandedShuffle: boolean
@@ -35,6 +37,7 @@ export const DefaultSettings: Settings = {
 	animatedWave: true,
 	transparent: true,
 	transparency: 'medium',
+	frosted: false,
 	listeningStatus: false,
 	expandedShuffle: true,
 	expandedPrevious: true,

@@ -2,6 +2,8 @@ import { ActionSheetActionCreators } from '@valenced/discord/actions'
 import { getModules } from '@valenced/modules/finders'
 import { withProps } from '@valenced/modules/finders/filters'
 import { instead } from '@valenced/patcher'
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import SettingsComponent from './settings'
 import type { ReactElement } from 'react'
 
@@ -47,8 +49,9 @@ const FALLBACK_TITLE = 'Delete Message'
 const LEGACY_ALERT = 'legacy-alert-'
 
 export default plugin({
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 	start({ cleanup, logger }) {
+		cleanup(startStatsFor(manifest))
 		let intl: Intl | undefined
 		// `t` is a lazy proxy, so a message is read directly instead of checked with `in`.
 		const text = (key: string) => {

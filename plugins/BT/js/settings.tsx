@@ -5,6 +5,7 @@ import { Design } from '@valenced/discord/design'
 import { Clipboard } from '@valenced/externals/react-native-clipboard'
 import { useState } from 'react'
 import { ScrollView } from 'react-native'
+import { StatsRow } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import { DurationSlider } from './DurationSlider'
 import { applied, clearHistory, useHistory } from './log'
@@ -186,6 +187,7 @@ export default function SettingsComponent({
 					>
 						{`Better Toasts ${manifest.version}. Applies to toasts only, not to message banners.`}
 					</Design.Text>
+					<StatsRow />
 				</Design.Stack>
 			</Page>
 		</ScrollView>

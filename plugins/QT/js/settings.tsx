@@ -4,6 +4,7 @@ import Page from '@valenced/components/Page'
 import { Design } from '@valenced/discord/design'
 import { useState } from 'react'
 import { Linking, ScrollView } from 'react-native'
+import { StatsRow } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import { setArmed } from './draft'
 import { toast } from './env'
@@ -480,6 +481,7 @@ export default function SettingsComponent() {
 							/>
 						</Design.TableRowGroup>
 					)}
+					{tab === 'more' && <StatsRow />}
 					{tab === 'more' && (
 						<Design.TableRowGroup title="Quick guide">
 							{GUIDE.map(([label, icon, subLabel]) => (

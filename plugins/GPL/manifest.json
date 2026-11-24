@@ -5,7 +5,7 @@
 	"description": "Find mentions and replies that were deleted or edited away and get alerted. Requires Adv. Message Logger.",
 	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
 	"icon": "AtIcon",
-	"version": "2.1.0",
+	"version": "2.2.0",
 	"dependencies": {
 		"valenced.api": { "version": ">=1 <2" },
 		"discord": {},

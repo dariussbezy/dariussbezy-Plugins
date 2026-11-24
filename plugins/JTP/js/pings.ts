@@ -80,7 +80,7 @@ const readStates = () =>
 		getMentionChannelIds?(): Iterable<string>
 		getMentionCount(id: string): number
 		getOldestUnreadMessageId?(id: string): string | null | undefined
-		getLastAckedMessageId?(id: string): string | null | undefined
+		ackMessageId?(id: string): string | null | undefined
 		lastMessageId?(id: string): string | null | undefined
 	}>('ReadStateStore')
 const channels = () =>
@@ -224,7 +224,7 @@ function unreadBound(channelId: string): string | null {
 	const state = readStates()
 	const oldest = state?.getOldestUnreadMessageId?.(channelId)
 	if (isSnowflake(oldest)) return oldest
-	const acked = state?.getLastAckedMessageId?.(channelId)
+	const acked = state?.ackMessageId?.(channelId)
 	return isSnowflake(acked) ? nextId(acked) : null
 }
 

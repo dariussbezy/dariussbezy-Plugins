@@ -6,6 +6,8 @@ import { withProps } from '@valenced/modules/finders/filters'
 import { getNativeModule } from '@valenced/modules/native'
 import { instead } from '@valenced/patcher'
 import { cloneElement, isValidElement } from 'react'
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import { downloadAll, downloadable } from './download'
 import { placeGroup } from './menu-order'
 import type { ReactElement, ReactNode } from 'react'
@@ -50,6 +52,7 @@ function addGroup(tree: ReactNode, group: ReactElement): ReactNode {
 
 export default plugin({
 	start({ cleanup, logger }) {
+		cleanup(startStatsFor(manifest))
 		let manager: MediaManager | undefined
 		let native: MediaManager | undefined
 		// The native media manager saves any file type; a JS module exposing it is only a fallback.
@@ -121,4 +124,5 @@ export default plugin({
 			),
 		)
 	},
+	SettingsComponent: withStats(manifest),
 })

@@ -1,3 +1,5 @@
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import { isGhostPing } from './ghost'
 import SettingsComponent from './settings'
 import { DefaultSettings, readSettings } from './shared'
@@ -7,6 +9,7 @@ import type { LegacyStorage, Settings } from './shared'
 export default plugin<{ jsonStorage: Settings }>({
 	jsonStorage: { load: true, default: DefaultSettings },
 	async start({ aml, jsonStorage, cleanup, plugin: instance }) {
+		cleanup(startStatsFor(manifest, jsonStorage))
 		if (!aml) throw new Error('Adv. Message Logger is required')
 		const saved = (await jsonStorage.get()) as Settings & LegacyStorage
 		// Versions before 2 kept a journal and nested settings of their own; the journal now lives in AML.
@@ -56,5 +59,5 @@ export default plugin<{ jsonStorage: Settings }>({
 			jsonStorage.subscribe(() => aml.refreshInline()),
 		)
 	},
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 })

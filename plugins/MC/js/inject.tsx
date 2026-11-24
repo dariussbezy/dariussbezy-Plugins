@@ -547,39 +547,14 @@ function DockCard({ bar }: { bar: ReactNode }) {
 			)
 		}
 
-	// Transparent: the card sits flush on the YouBar while collapsed (square bottom corners, no seam) and
-	// rounds its bottom as it grows, driven by the same animated height as the drag and the snap.
-	const grow = ease(
-		[collapsedHeight, Math.max(expandedHeight, collapsedHeight + 1)],
-		[0, 1],
-	)
-	const radii = skin
-		? {
-				borderTopLeftRadius: TOP_RADIUS,
-				borderTopRightRadius: TOP_RADIUS,
-				borderBottomLeftRadius: ease(
-					[collapsedHeight, Math.max(expandedHeight, collapsedHeight + 1)],
-					[0, BAR_RADIUS],
-				),
-				borderBottomRightRadius: ease(
-					[collapsedHeight, Math.max(expandedHeight, collapsedHeight + 1)],
-					[0, TOP_RADIUS],
-				),
-			}
-		: {
-				borderTopLeftRadius: TOP_RADIUS,
-				borderTopRightRadius: TOP_RADIUS,
-				borderBottomLeftRadius: BAR_RADIUS,
-				borderBottomRightRadius: TOP_RADIUS,
-			}
-	const rimShape = (current: number): { corners: Corners; extra: number } => {
-		const span = Math.max(expandedHeight, collapsedHeight + 1) - collapsedHeight
-		const t = Math.min(1, Math.max(0, (current - collapsedHeight) / span))
-		return {
-			corners: [TOP_RADIUS, TOP_RADIUS, TOP_RADIUS * t, BAR_RADIUS * t],
-			extra: 12 * (1 - t),
-		}
+	// The card wraps the YouBar, so its bottom corners always follow the YouBar's rounded ones.
+	const radii = {
+		borderTopLeftRadius: TOP_RADIUS,
+		borderTopRightRadius: TOP_RADIUS,
+		borderBottomLeftRadius: BAR_RADIUS,
+		borderBottomRightRadius: TOP_RADIUS,
 	}
+	const rimCorners: Corners = [TOP_RADIUS, TOP_RADIUS, TOP_RADIUS, BAR_RADIUS]
 	const inner = (
 		<>
 			<Pressable
@@ -637,7 +612,7 @@ function DockCard({ bar }: { bar: ReactNode }) {
 				transform: [{ translateX: offsetX }],
 				...radii,
 				...(skin
-					? { ...skin.card, borderBottomWidth: grow }
+					? skin.card
 					: {
 							overflow: 'hidden',
 							borderWidth: 1,
@@ -652,13 +627,8 @@ function DockCard({ bar }: { bar: ReactNode }) {
 					pointerEvents="box-none"
 					style={[StyleSheet.absoluteFill, skin.clip, radii]}
 				>
-					<TransparentBlur dark={skin.dark} />
-					<TransparentRim
-						look={skin}
-						id="mc-dock"
-						corners={[TOP_RADIUS, TOP_RADIUS, 0, 0]}
-						shape={rimShape}
-					/>
+					<TransparentBlur dark={skin.dark} frosted={skin.frosted} />
+					<TransparentRim look={skin} id="mc-dock" corners={rimCorners} />
 					<View pointerEvents="none" style={skin.edge} />
 					{inner}
 				</AnimatedView>

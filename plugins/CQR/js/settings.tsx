@@ -18,12 +18,18 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native'
+import { StatsButton } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
+import PlacePicker, { placeName } from './places'
 import {
+	Everywhere,
 	getSettings,
 	keyOf,
+	listFor,
 	lookups,
 	measured,
+	mergedFor,
+	setList,
 	setSettings,
 	snapshot,
 	subscribe,
@@ -39,6 +45,10 @@ const MINI_ROWS = ['first', 'second', 'third']
 const MINI_COLUMNS = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
 
 const GUIDE: [string, string][] = [
+	[
+		'Servers and DMs',
+		'A server or a DM can have its own list. Its emojis replace the ones for everywhere spot by spot; the spots it leaves empty keep the emoji set for everywhere (shown faded). Choose which list to edit at the top. Rows are the same everywhere.',
+	],
 	[
 		'Adding emojis',
 		'Tap an empty spot in the preview and pick an emoji: it goes exactly there. Picking one you already have moves it.',
@@ -179,7 +189,10 @@ function Grid({
 	selected,
 	palette,
 	onPress,
+	inherited = [],
 }: {
+	/** Spots that show the emoji set for everywhere, drawn faded. */
+	inherited?: boolean[]
 	spots: (SavedEmoji | null)[]
 	perRow: number
 	size: number
@@ -272,7 +285,7 @@ function Grid({
 												? 'transparent'
 												: palette.muted,
 										borderStyle: emoji || active ? 'solid' : 'dashed',
-										opacity: pressed ? 0.6 : 1,
+										opacity: pressed ? 0.6 : inherited[index] ? 0.45 : 1,
 										transform: [{ scale: active ? 1.06 : 1 }],
 									},
 								]}
@@ -375,7 +388,14 @@ function RowChoice({
 
 export default function SettingsComponent() {
 	useSyncExternalStore(subscribe, snapshot, snapshot)
-	const { emojis, fill, rows } = getSettings()
+	const [scope, setScope] = useState(Everywhere)
+	const [picking, setPicking] = useState(false)
+	const { rows, places } = getSettings()
+	// The list being edited; back to everywhere if its server or DM list was removed.
+	const key = places[scope] ? scope : Everywhere
+	// Your own emojis for this list, and what its spots show (with the ones from everywhere).
+	const { emojis, fill } = listFor(key)
+	const merged = mergedFor(key)
 	const { width } = useWindowDimensions()
 	const palette = usePalette()
 	const [selected, setSelected] = useState<number | null>(null)
@@ -392,9 +412,9 @@ export default function SettingsComponent() {
 	const total = rows * perRow - 1
 	const spots = Array.from(
 		{ length: total },
-		(_, index) => emojis[index] ?? null,
+		(_, index) => merged.emojis[index] ?? null,
 	)
-	const hidden = emojis.slice(total).filter(Boolean).length
+	const hidden = merged.emojis.slice(total).filter(Boolean).length
 	const current =
 		selected != null && selected < total && emojis[selected] ? selected : null
 
@@ -402,12 +422,12 @@ export default function SettingsComponent() {
 		const next = [...emojis]
 		while (next.length <= Math.max(from, to)) next.push(null)
 		;[next[from], next[to]] = [next[to], next[from]]
-		setSettings({ emojis: next })
+		setList(key, { emojis: next })
 	}
 	const removeAt = (index: number) => {
 		const next = [...emojis]
 		next[index] = null
-		setSettings({ emojis: next })
+		setList(key, { emojis: next })
 		setSelected(null)
 	}
 	const add = (at?: number) => {
@@ -426,7 +446,7 @@ export default function SettingsComponent() {
 					} catch {}
 					const saved = toSaved(emoji)
 					if (!saved) return
-					const now = [...getSettings().emojis]
+					const now = [...listFor(key).emojis]
 					const existing = now.findIndex(
 						other => other != null && keyOf(other) === keyOf(saved),
 					)
@@ -436,7 +456,7 @@ export default function SettingsComponent() {
 					const spot = at ?? (free >= 0 ? free : now.length)
 					while (now.length <= spot) now.push(null)
 					now[spot] = saved
-					setSettings({ emojis: now })
+					setList(key, { emojis: now })
 				},
 				channel: currentChannel(),
 				pickerIntention: REACTION_INTENTION,
@@ -456,16 +476,57 @@ export default function SettingsComponent() {
 	}
 
 	const chosen = current != null ? emojis[current] : null
+	if (picking)
+		return (
+			<ScrollView keyboardShouldPersistTaps="handled">
+				<Page>
+					<PlacePicker
+						current={key}
+						onPick={next => {
+							setScope(next)
+							setPicking(false)
+							setSelected(null)
+						}}
+					/>
+				</Page>
+			</ScrollView>
+		)
+	const where = placeName(key)
 	return (
 		<ScrollView keyboardShouldPersistTaps="handled">
 			<Page>
 				<Design.Stack spacing={24}>
+					<Design.TableRowGroup>
+						<Design.TableRow
+							icon={
+								<TableRowAssetIcon
+									name={
+										key === Everywhere
+											? 'GlobeEarthIcon'
+											: places[key]?.kind === 'dm'
+												? 'UserIcon'
+												: 'ServerIcon'
+									}
+								/>
+							}
+							label={`Editing: ${where}`}
+							subLabel={
+								key === Everywhere
+									? `Used wherever there is no list of its own. ${Object.keys(places).length} server and DM ${Object.keys(places).length === 1 ? 'list' : 'lists'}.`
+									: `Used in ${where} instead of the list for everywhere.`
+							}
+							arrow
+							onPress={() => setPicking(true)}
+						/>
+					</Design.TableRowGroup>
 					<Design.Stack spacing={10}>
 						<Design.Text variant="heading-lg/bold">Quick reactions</Design.Text>
 						<Design.Text variant="text-sm/normal" color="text-muted">
 							{chosen
 								? `Tap any spot to move :${chosen.name}: there.`
-								: 'Your long-press menu. Tap an empty spot to add an emoji there, or an emoji to move it.'}
+								: key === Everywhere
+									? 'Your long-press menu. Tap an empty spot to add an emoji there, or an emoji to move it.'
+									: 'Faded emojis come from the list for everywhere. Tap one, or an empty spot, to put a different emoji there.'}
 						</Design.Text>
 						<Grid
 							spots={spots}
@@ -475,6 +536,7 @@ export default function SettingsComponent() {
 							selected={current}
 							palette={palette}
 							onPress={press}
+							inherited={merged.inherited}
 						/>
 						{chosen && current != null ? (
 							<Design.Stack direction="horizontal" spacing={8}>
@@ -514,7 +576,7 @@ export default function SettingsComponent() {
 							label="Fill with frequent emojis"
 							subLabel="Empty spots show your frequent emojis."
 							value={fill}
-							onValueChange={value => setSettings({ fill: value })}
+							onValueChange={value => setList(key, { fill: value })}
 						/>
 						<Design.TableRow
 							icon={<TableRowAssetIcon name="RefreshIcon" />}
@@ -523,11 +585,12 @@ export default function SettingsComponent() {
 							variant="danger"
 							disabled={!emojis.length && fill}
 							onPress={() => {
-								setSettings({ emojis: [], fill: true })
+								setList(key, { emojis: [], fill: true })
 								setSelected(null)
 							}}
 						/>
 					</Design.TableRowGroup>
+					<StatsButton manifest={manifest} settings={getSettings} />
 					<Design.TableRowGroup title="Quick guide">
 						{GUIDE.map(([label, subLabel]) => (
 							<Design.TableRow

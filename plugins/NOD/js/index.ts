@@ -1,5 +1,7 @@
 import { getModuleWithImportedPath } from '@valenced/discord/utils/modules/finders'
 import { after } from '@valenced/patcher'
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import SettingsComponent from './settings'
 
 /** Discord's server onboarding screens, found by their source path. */
@@ -19,15 +21,19 @@ const SCREENS = [
 
 /** A timer set this soon after an onboarding screen rendered belongs to it. */
 const RECENT_MS = 500
-/** Only waits of this length are skipped: shorter ones are debounces and frame work, longer ones are network timeouts. */
-const MIN_WAIT_MS = 150
-const MAX_WAIT_MS = 5000
+/**
+ * The onboarding waits, read from Discord's code: 2 s in GuildOnboardingModal, 3 s in
+ * GuildOnboardingPrompt and 3.6 s on the completed screen. Only these are skipped, so other timers
+ * (toasts, for one) keep their length.
+ */
+const ONBOARDING_WAITS = new Set([2000, 3000, 3600])
 
 type Render = Record<string, (...args: never[]) => unknown>
 
 export default plugin({
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 	start({ cleanup, logger }) {
+		cleanup(startStatsFor(manifest))
 		let lastRender = 0
 		const patched = new WeakSet<object>()
 
@@ -63,8 +69,7 @@ export default plugin({
 		) => {
 			const wait =
 				typeof ms === 'number' &&
-				ms >= MIN_WAIT_MS &&
-				ms <= MAX_WAIT_MS &&
+				ONBOARDING_WAITS.has(ms) &&
 				Date.now() - lastRender < RECENT_MS
 					? 0
 					: ms

@@ -3,6 +3,7 @@ import TableRowAssetIcon from '@valenced/components/TableRowAssetIcon'
 import { Tokens } from '@valenced/discord/common/tokens'
 import { Design } from '@valenced/discord/design'
 import { ScrollView, StyleSheet, View } from 'react-native'
+import { StatsRow } from '../../../lib/stats-ui'
 import manifest from '../manifest.json'
 import { useMc } from './bridge'
 import { LevelLabels, useGlassColors } from './glass'
@@ -142,6 +143,7 @@ export default function SettingsComponent() {
 					<Design.Text variant="text-sm/medium" color="text-muted">
 						Transparent YOUBAR {manifest.version}
 					</Design.Text>
+					<StatsRow />
 				</Design.Stack>
 			</Page>
 		</ScrollView>

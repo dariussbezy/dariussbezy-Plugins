@@ -167,12 +167,29 @@ export function installMenus(host: MenuHost) {
 								},
 							]
 						: []),
-					{
-						label: deleted ? 'Remove logged message' : 'Remove edit history',
-						icon: 'TrashIcon',
-						destructive: true,
-						action: () => host.remove(entries),
-					},
+					// Removing the edits keeps the message itself; only "Remove logged message" drops a
+					// retained deletion.
+					...(edited
+						? [
+								{
+									label: 'Remove edit history',
+									icon: 'TrashIcon',
+									action: () =>
+										host.remove(
+											entries.filter(entry => entry.kind === 'edited'),
+										),
+								},
+							]
+						: []),
+					...(deleted
+						? [
+								{
+									label: 'Remove logged message',
+									icon: 'TrashIcon',
+									action: () => host.remove(entries),
+								},
+							]
+						: []),
 				)
 			}
 			if (message.author?.id) rows.push(ignoreRow(message.author.id, 'user'))

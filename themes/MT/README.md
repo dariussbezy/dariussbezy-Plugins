@@ -1,12 +1,12 @@
 # Midnight Mobile
 
-Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon.
+Midnight for Discord mobile, as close as the app allows to refact0r's desktop theme: navy surfaces at 60% over the original wallpaper, blue accents, Figtree and the moon logo.
 
 1. Enable **Midnight Mobile** and restart Discord.
 2. Choose **Midnight** in **Valenced Settings → Themes → Color themes**.
 3. Optional: **Midnight Figtree** under Fonts and **Midnight Moon** under Icons (restart after changing).
 
-**Rounded surfaces** in the theme settings rounds the channel list, header and composer.
+Every color Discord mobile uses is set from the desktop theme's own variables (text-0 to text-5, bg-1 to bg-4, hover/active, accents and status colors), including the chat input, headers, action sheets, toasts, badges and voice controls. `scripts/make-palette.cjs` fills `js/palette.json` from `scripts/mobile-tokens.json`, the list of color names read from the Discord app; run it after a Discord update adds new ones.
 
 ## Credits
 

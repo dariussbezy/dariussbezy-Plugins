@@ -2,6 +2,8 @@ import { getModules } from '@valenced/modules/finders'
 import { withName, withProps } from '@valenced/modules/finders/filters'
 import { after } from '@valenced/patcher'
 import { cloneElement, isValidElement } from 'react'
+import { startStatsFor, withStats } from '../../../lib/stats-ui'
+import manifest from '../manifest.json'
 import SettingsComponent from './settings'
 import type { ReactElement, ReactNode } from 'react'
 
@@ -22,8 +24,9 @@ function isRenderer(value: unknown): value is Renderer {
 }
 
 export default plugin({
-	SettingsComponent,
+	SettingsComponent: withStats(manifest, SettingsComponent),
 	start({ cleanup, plugin: instance }) {
+		cleanup(startStatsFor(manifest))
 		let active = true
 		const patched = new WeakSet<object>()
 		// One stable wrapper per original callback, so React does not see new props on every render.

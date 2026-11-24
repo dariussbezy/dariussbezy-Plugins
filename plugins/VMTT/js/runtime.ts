@@ -63,9 +63,17 @@ export function createRuntime({ settings: storage, history, report }: Deps) {
 		dirty.add(id)
 		while (dirty.size > MaxTranscripts)
 			dirty.delete(dirty.values().next().value as string)
+		// Same shape as Discord's own update, guild included.
+		const guildId =
+			(
+				stores.ChannelStore?.getChannel(channelId) as
+					| { guild_id?: string | null }
+					| undefined
+			)?.guild_id ?? undefined
 		Dispatcher.dispatch({
 			type: 'MESSAGE_UPDATE',
-			message: { id, channel_id: channelId },
+			guildId,
+			message: { id, channel_id: channelId, guild_id: guildId },
 		}).catch(report)
 	}
 

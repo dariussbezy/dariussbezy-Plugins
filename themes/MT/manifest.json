@@ -2,7 +2,7 @@
 	"format": 1,
 	"id": "dariuss.midnight-theme",
 	"name": "Midnight Mobile",
-	"description": "Midnight for Discord mobile: navy panels, blue accents, Figtree and the moon icon.",
+	"description": "Midnight for Discord mobile, close to the desktop theme: navy surfaces over the original wallpaper, blue accents, Figtree and the moon logo.",
 	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
 	"contributors": [
 		"refact0r (original Midnight theme)",
@@ -10,7 +10,7 @@
 		"Erik Kennedy (Figtree)"
 	],
 	"icon": "MoonIcon",
-	"version": "2.1.0",
+	"version": "3.0.0",
 	"dependencies": {
 		"valenced.api": {
 			"version": ">=1 <2"

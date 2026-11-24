@@ -2,10 +2,10 @@
 	"format": 1,
 	"id": "dariuss.custom-quick-reactions",
 	"name": "Custom Quick Reactions",
-	"description": "Choose the quick reaction emojis in the long-press menu, place each one on any spot, and show up to 3 rows.",
+	"description": "Choose the quick reaction emojis in the long-press menu, place each one on any spot, show up to 3 rows, and give servers and DMs their own list.",
 	"author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
 	"icon": "ReactionIcon",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"dependencies": {
 		"valenced.api": {
 			"version": ">=1 <2"

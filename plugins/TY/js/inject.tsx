@@ -1,11 +1,12 @@
 import { getModuleWithImportedPath } from '@valenced/discord/utils/modules/finders'
-import { getModules } from '@valenced/modules/finders'
+import { getModules, lookupModule } from '@valenced/modules/finders'
 import {
 	createFilterGenerator,
 	FilterScopes,
+	withProps,
 } from '@valenced/modules/finders/filters'
 import { after } from '@valenced/patcher'
-import { Children, cloneElement, isValidElement } from 'react'
+import { Children, cloneElement, createElement, isValidElement } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 import { useMc } from './bridge'
 import {
@@ -44,6 +45,73 @@ const withComponentName = createFilterGenerator(
 	) => Filter<{ Result: object; Scopes: [typeof FilterScopes.Initialized] }>
 >
 
+type SvgKit = Record<string, any>
+let svgKit: SvgKit | null | undefined
+let svgMissAt = 0
+let svgMisses = 0
+
+/** react-native-svg as shipped inside Discord; a miss is tried again later, with a growing wait. */
+function findSvg(): SvgKit | null {
+	if (svgKit) return svgKit
+	const wait = Math.min(60_000, 3000 * 2 ** Math.max(0, svgMisses - 1))
+	if (svgKit === null && Date.now() - svgMissAt < wait) return null
+	svgKit = null
+	try {
+		const found = lookupModule(
+			withProps<any>('Svg', 'Rect', 'Defs', 'LinearGradient', 'Stop'),
+			{ cached: false, initialize: true },
+		)[0] as any
+		const kit = found?.default?.Svg ? found.default : found
+		if (kit?.Svg && kit.Rect && kit.Defs && kit.LinearGradient && kit.Stop)
+			svgKit = kit
+	} catch {}
+	if (!svgKit) {
+		svgMissAt = Date.now()
+		svgMisses++
+	}
+	return svgKit ?? null
+}
+
+/**
+ * The top highlight as one smooth gradient. Android draws the edges of the stacked band views as
+ * visible lines, so it uses this when react-native-svg is found (iOS keeps the bands).
+ */
+function SmoothHighlight({ alpha }: { alpha: number }) {
+	const kit = findSvg()
+	if (!kit) return null
+	const { Svg, Rect, Defs, LinearGradient, Stop } = kit
+	const top = HIGHLIGHT_BANDS[0]?.[1] ?? 1
+	return createElement(
+		Svg,
+		{ style: StyleSheet.absoluteFill, width: '100%', height: '100%' },
+		createElement(
+			Defs,
+			null,
+			createElement(
+				LinearGradient,
+				{ id: 'ty-highlight', x1: '0', y1: '0', x2: '0', y2: '1' },
+				createElement(Stop, {
+					offset: '0',
+					stopColor: 'rgb(255,255,255)',
+					stopOpacity: alpha * top,
+				}),
+				createElement(Stop, {
+					offset: '0.55',
+					stopColor: 'rgb(255,255,255)',
+					stopOpacity: 0,
+				}),
+			),
+		),
+		createElement(Rect, {
+			x: 0,
+			y: 0,
+			width: '100%',
+			height: '100%',
+			fill: 'url(#ty-highlight)',
+		}),
+	)
+}
+
 /** The layers drawn inside the bar: a soft top highlight and a light top edge (not when joined to the player). */
 export function GlassLayers({
 	colors,
@@ -73,18 +141,20 @@ export function GlassLayers({
 				},
 			]}
 		>
-			{joined
-				? null
-				: HIGHLIGHT_BANDS.map(([height, weight], index) => (
-						<View
-							// biome-ignore lint/suspicious/noArrayIndexKey: static list
-							key={index}
-							style={{
-								height: `${height * 100}%`,
-								backgroundColor: colors.highlight(look.highlight * weight),
-							}}
-						/>
-					))}
+			{joined ? null : Platform.OS === 'android' ? (
+				<SmoothHighlight alpha={look.highlight} />
+			) : (
+				HIGHLIGHT_BANDS.map(([height, weight], index) => (
+					<View
+						// biome-ignore lint/suspicious/noArrayIndexKey: static list
+						key={index}
+						style={{
+							height: `${height * 100}%`,
+							backgroundColor: colors.highlight(look.highlight * weight),
+						}}
+					/>
+				))
+			)}
 			{joined ? null : (
 				<View
 					style={{
