@@ -1,6 +1,8 @@
 import { ToastActionCreators } from '@valenced/discord/actions'
 import { getModuleWithImportedPath } from '@valenced/discord/utils/modules/finders'
 import { Clipboard } from '@valenced/externals/react-native-clipboard'
+import { lookupModule } from '@valenced/modules/finders'
+import { withProps } from '@valenced/modules/finders/filters'
 import { instead } from '@valenced/patcher'
 import { cloneElement, isValidElement } from 'react'
 import { Vibration } from 'react-native'
@@ -12,12 +14,41 @@ import { DefaultSettings } from './shared'
 import type { ReactElement, ReactNode } from 'react'
 import type { Settings } from './shared'
 
-/** How long Discord keeps a toast on its own. */
 /** A toast slides in before it counts as shown: closing it sooner after opening hides it. */
 const ENTER_MS = 700
 
 /** Pause between closing the old toast and opening the new one. */
 const REPLACE_GAP_MS = 250
+
+type ToastEntry = { toast?: unknown; key?: unknown } | undefined
+type ToastStore = {
+	getState(): { currentToastMap?: Map<string, ToastEntry> }
+	subscribe?(listener: () => void): () => void
+}
+
+/**
+ * Discord's toast store (toastUtils): each surface shows {toast: options, key}. Its ToastContainer
+ * reads toast.position, so one entry without options crashes the whole toast area.
+ */
+const toastUtils = () =>
+	lookupModule(
+		withProps<{ useToastStore: ToastStore; popToast(surface?: string): void }>(
+			'useToastStore',
+			'popToast',
+		),
+	)[0]
+
+/** Removes entries that have no toast, so Discord's container never reads a missing one. */
+function dropBrokenToasts() {
+	try {
+		const utils = toastUtils()
+		const map = utils?.useToastStore?.getState?.()?.currentToastMap
+		if (!map) return
+		for (const [surface, entry] of map)
+			if (entry && (entry.toast == null || typeof entry.toast !== 'object'))
+				utils.popToast(surface)
+	} catch {}
+}
 /** Most lines a long toast text gets. */
 const MAX_LINES = 8
 /** Messages longer than 40 characters get this much more time per character, up to the cap. */
@@ -116,6 +147,13 @@ export default plugin<{ jsonStorage: Settings }>({
 		/** A toast waiting its turn after the old one was closed. */
 		let pending: ReturnType<typeof setTimeout> | undefined
 
+		// Also clean entries other code may have left, now and whenever the store changes.
+		dropBrokenToasts()
+		try {
+			const unsubscribe =
+				toastUtils()?.useToastStore?.subscribe?.(dropBrokenToasts)
+			if (unsubscribe) cleanup(unsubscribe)
+		} catch {}
 		cleanup(() => {
 			active = false
 			clearTimeout(timer)
@@ -127,6 +165,15 @@ export default plugin<{ jsonStorage: Settings }>({
 				args: unknown[],
 				original: (...args: unknown[]) => unknown,
 			) => {
+				// A toast without options would put an empty entry in Discord's store and crash its toasts.
+				{
+					const first = args[0] as unknown
+					const options = typeof first === 'string' ? args[1] : first
+					if (!options || typeof options !== 'object') {
+						logger.warn('Ignored a toast without options', first)
+						return undefined
+					}
+				}
 				const show = () => {
 					try {
 						const first = args[0] as unknown
