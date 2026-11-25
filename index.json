@@ -97,7 +97,7 @@
       "author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
       "icon": "AtIcon",
       "channels": {
-        "latest": "2.2.0"
+        "latest": "2.2.1"
       },
       "versions": {
         "1.0.0-beta": {
@@ -161,6 +161,20 @@
             "discord": {},
             "dariuss.advanced-message-logger": {
               "version": ">=2 <3"
+            }
+          }
+        },
+        "2.2.1": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/f53e76cafeb288e3d346f30bb0df6266e75f2c64/pool/dariuss.ghost-ping-logger@2.2.1.zip",
+          "sha256": "1d3d2924bb3355ffc17234d73905ffd367be8f49944aab75cad159ff22b66a05",
+          "size": 4189,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {},
+            "dariuss.advanced-message-logger": {
+              "version": ">=2.13.0"
             }
           }
         }
@@ -1118,6 +1132,17 @@
             },
             "discord": {}
           }
+        },
+        "1.1.1": {
+          "url": "https://raw.githubusercontent.com/dariussbezy/dariussbezy-Plugins/f53e76cafeb288e3d346f30bb0df6266e75f2c64/pool/dariuss.better-toasts@1.1.1.zip",
+          "sha256": "f1cbedf86fada93e9194dacc556439ae4059cf2fa7627b12c963c0028a23f8ea",
+          "size": 6446,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {}
+          }
         }
       },
       "name": "Better Toasts",
@@ -1125,7 +1150,7 @@
       "author": "dariussbezy <908767091522420817> (https://github.com/dariussbezy \"GitHub\")",
       "icon": "BellIcon",
       "channels": {
-        "latest": "1.1.0"
+        "latest": "1.1.1"
       }
     }
   }
